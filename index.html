@@ -679,7 +679,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <div id="map"></div>
 <details id="panel" open><summary>Campbell Co., WY horizontals<br><small>API ≥ 49-005-35840 · WOGCC data</small></summary>
 <div id="count"></div>
-<label>Color by <select id="cb"><option value="s">Well status</option><option value="r" selected>Producing formation</option><option value="oc">Operator</option></select></label>
+<label>Color by <select id="cb"><option value="sg">Well status</option><option value="r" selected>Producing formation</option><option value="oc">Operator</option></select></label>
 <label>Operator <select id="op"></select></label><label>Status <select id="st"></select></label>
 <label>Highlight operator <select id="hl"></select></label><div id="leg"></div>
 <label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="trl" checked> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label>
@@ -700,18 +700,20 @@ function drawGrid(){gridLayer.clearLayers();GRID.forEach(r=>L.rectangle([[r[1],r
 drawGrid();drawRoads();drawTowns();map.on('zoomend',drawTowns);rds.onchange=()=>rds.checked?roadLayer.addTo(map):map.removeLayer(roadLayer);twn.onchange=()=>twn.checked?townLayer.addTo(map):map.removeLayer(townLayer);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(()=>{drawGrid();drawRoads();drawTowns();drawSecs();go()},50));
 new MutationObserver(()=>setTimeout(()=>{drawGrid();drawRoads();drawTowns();drawSecs();go()},50)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 const PAL=['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#0aa6b8','#c9a400','#f032e6','#7a9a01','#9a6324','#800000','#008080','#000075','#e377c2','#17becf','#bcbd22'];
-const SC={'Producing Oil Well':'#2ca02c','Producing Gas Well':'#e31a1c','Active Injector':'#1f78b4','Shut-In':'#666','Well Spudded':'#7570b3','Active Permit':'#a6a6df'};
+const GRP={'Producing Oil Well':'Active Producers','Producing Gas Well':'Active Producers','Pumping Rods':'Active Producers','Gas Lift':'Active Producers','Permanently Abandoned':'Abandoned','Subsequent Report of Abandonment':'Abandoned','Temporarily Abandoned':'Abandoned','Notice of Intent to Abandon':'Abandoned','Well Spudded':'Drilling','Active Permit':'Drilling','Shut-In':'Shut in'};
+D.forEach(d=>d.sg=GRP[d.s]||'Other');
+const SC={'Active Producers':'#2ca02c','Drilling':'#7570b3','Shut in':'#8a8a8a','Abandoned':'#e31a1c','Other':'#1f78b4'},SORD=['Active Producers','Drilling','Shut in','Abandoned','Other'];
 let cmap={};
-function build(){const k=cb.value;if(k=='s'){cmap={};D.forEach(d=>cmap[d.s]=SC[d.s]||'#999');}else{const c={};D.forEach(d=>c[d[k]]=(c[d[k]]||0)+1);const ks=Object.keys(c).sort((a,b)=>c[b]-c[a]);const FIX=k=='r'?{'Turner':'#2ca02c','Parkman':'#ff7f0e','Niobrara':'#ff69b4','Mowry':'#8b4513'}:{};const pool=PAL.filter(c=>k!='r'||!['#3cb44b','#f58231','#f032e6','#9a6324','#e6194b'].includes(c));let n=0;cmap={};ks.forEach(v=>{cmap[v]=FIX[v]||(v=='Unknown'?'#999':(n<pool.length-1?pool[n++]:'#999'))});}
+function build(){const k=cb.value;if(k=='sg'){cmap={};SORD.forEach(g=>cmap[g]=SC[g]);}else{const c={};D.forEach(d=>c[d[k]]=(c[d[k]]||0)+1);const ks=Object.keys(c).sort((a,b)=>c[b]-c[a]);const FIX=k=='r'?{'Turner':'#2ca02c','Parkman':'#ff7f0e','Niobrara':'#ff69b4','Mowry':'#8b4513'}:{};const pool=PAL.filter(c=>k!='r'||!['#3cb44b','#f58231','#f032e6','#9a6324','#e6194b'].includes(c));let n=0;cmap={};ks.forEach(v=>{cmap[v]=FIX[v]||(v=='Unknown'?'#999':(n<pool.length-1?pool[n++]:'#999'))});}
 const cnt={};D.forEach(d=>cnt[d[k]]=(cnt[d[k]]||0)+1);
-leg.innerHTML=Object.keys(cmap).filter(v=>cnt[v]).map(v=>`<div><i style="background:${cmap[v]}"></i>${v} <small>(${cnt[v]})</small></div>`).join('')+(k!='s'&&Object.keys(cnt).length>=PAL.length?'<div><i style="background:#999"></i>Other</div>':'')}
+leg.innerHTML=Object.keys(cmap).filter(v=>cnt[v]).map(v=>`<div><i style="background:${cmap[v]}"></i>${v} <small>(${cnt[v]})</small></div>`).join('')+(k!='sg'&&Object.keys(cnt).length>=PAL.length?'<div><i style="background:#999"></i>Other</div>':'')}
 const col=d=>cmap[d[cb.value]]||'#999';
 const g=L.layerGroup().addTo(map);
 function fill(id,key){const s=document.getElementById(id);s.innerHTML='<option value="">All</option>'+[...new Set(D.map(d=>d[key]))].sort().map(v=>`<option>${v}</option>`).join('')}
-fill('op','oc');fill('hl','oc');hl.options[0].text='None';fill('st','s');
+fill('op','oc');fill('hl','oc');hl.options[0].text='None';fill('st','sg');
 function pop(d){return `<b>${d.n}</b><br>API ${d.a}<br>${d.oc} <small>(${d.o})</small><br>${d.s}<br>Field: ${d.f||'-'} · Formation: ${d.r}<br>Sec-Twp-Rge: ${d.sec}<br>Spud: ${d.sd||'-'} · Compl: ${d.cd||'-'}<br>TD: ${d.td||'-'} ft · Elev: ${d.el||'-'} ft<br>SHL ${d.shl[1]}, ${d.shl[0]}`+(d.fx==2?'<br><b>Path: corrected (state GIS track was in error)</b>':d.fx?'<br><b>Path: state track with one bad vertex removed</b>':'')+(d.bhl?`<br>BHL ${d.bhl[1]}, ${d.bhl[0]}`:'')}
 function draw(){g.clearLayers();const o=op.value,s=st.value,p=pts.checked,h=hl.value;let n=0,b=[];
-const vis=D.filter(d=>!(o&&d.oc!=o||s&&d.s!=s));
+const vis=D.filter(d=>!(o&&d.oc!=o||s&&d.sg!=s));
 const ordered=h?vis.filter(d=>d.oc!=h).concat(vis.filter(d=>d.oc==h)):vis;
 ordered.forEach(d=>{n++;const c=col(d),on=!h||d.oc==h,dim=h&&!on;
 if(d.ln)L.polyline(d.ln.map(x=>[x[1],x[0]]),{color:c,weight:on?(h?(d.surv?5:4):(d.surv?3:2)):1,opacity:dim?.18:.9}).bindPopup(pop(d)).addTo(g);
