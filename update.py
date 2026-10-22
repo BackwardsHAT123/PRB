@@ -154,7 +154,8 @@ def build_wells(log):
         multi = bool(line and len(line) > 2)
         api = d["API Number"]
         if api in overrides:
-            line, fx, multi = overrides[api]["ln"], overrides[api].get("fx", 2), True
+            line, fx = overrides[api]["ln"], overrides[api].get("fx", 2)
+            multi = len(line) > 2
         rec = {"a": api, "n": d.get("Well Name and Number"), "o": d.get("Operator"), "s": d.get("Well Status"),
                "sd": d.get("Spud Date"), "cd": d.get("Completion Date"), "f": d.get("Field"), "r": form,
                "td": d.get("Depth"), "el": d.get("Elevation"),
