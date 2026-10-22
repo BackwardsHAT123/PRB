@@ -675,14 +675,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
 		}
 	}
 
-.twn.sn{font-weight:400;font-size:10px;color:var(--muted);opacity:.65;text-shadow:none;text-align:center;width:12px}.twn.tr{font-weight:600;font-size:15px;letter-spacing:.04em;color:var(--muted);opacity:.7;text-shadow:none;position:absolute;left:0;top:0;transform:translate(-50%,-50%);text-align:center}</style></head><body>
+.twn.sn{font-weight:400;font-size:10px;color:var(--muted);opacity:.65;text-shadow:none;text-align:center;width:12px}.twn.tr{font-weight:600;font-size:15px;letter-spacing:.04em;color:var(--muted);opacity:.7;text-shadow:none;position:absolute;left:0;top:0;transform:translate(-50%,-50%);text-align:center}.rig{position:relative}.rig svg{display:block}.rig .rl{position:absolute;left:30px;top:8px;white-space:nowrap;font-weight:700;font-size:11px;color:var(--town);text-shadow:-1px -1px 0 var(--halo),1px -1px 0 var(--halo),-1px 1px 0 var(--halo),1px 1px 0 var(--halo)}</style></head><body>
 <div id="map"></div>
 <details id="panel" open><summary>Campbell Co., WY horizontals<br><small>API ≥ 49-005-35840 · WOGCC data</small></summary>
 <div id="count"></div>
 <label>Color by <select id="cb"><option value="sg">Well status</option><option value="r" selected>Producing formation</option><option value="oc">Operator</option></select></label>
 <label>Operator <select id="op"></select></label><label>Status <select id="st"></select></label>
 <label>Highlight operator <select id="hl"></select></label><div id="leg"></div>
-<label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="trl" checked> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label>
+<label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="rg" checked> Active drilling rigs (inferred)</label><label><input type="checkbox" id="trl" checked> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label>
 <div id="note">Grid is township and range; roads and towns from OpenStreetMap. Lines run surface to bottom hole; 144 wells have a multi-point surveyed path (thicker).</div></details>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
@@ -738,5 +738,12 @@ const t=r[4].replace(/^0*(\d+)([NS]) 0*(\d+)([EW])$/,'T$1$2 R$3$4');
 const cx=(r[0]+r[2])/2,cy=(r[1]+r[3])/2,ins=cx>b.getWest()&&cx<b.getEast()&&cy>b.getSouth()&&cy<b.getNorth();
 L.marker(ins?[cy,cx]:[(y0+y1)/2,(x0+x1)/2],{interactive:false,icon:L.divIcon({className:'',html:'<div class="twn tr">'+t+'</div>',iconSize:[0,0],iconAnchor:[0,0]})}).addTo(trLayer)})}
 map.on('moveend',drawTR);trl.onchange=drawTR;drawTR();
+
+const RIGS=[{"rig":"Precision 719","last":"2026-10-11","age":11,"work":"Production Csg.","well":"Leavitt Trust Fed 13-2-35 PH","api":"49-005-79740","sec":"3-42N-73W","loc":[-105.60517,43.63563],"wells":["Leavitt Trust Fed 13-2 THH","Leavitt Trust Fed 13-2-35 PH","Leavitt Trust Fed 33-2-35 PH"]},{"rig":"Precision 720","last":"2026-10-16","age":6,"work":"Production Csg.","well":"Cole 4472-2326-1PH","api":"49-005-78063","sec":"14-44N-72W","loc":[-105.47417,43.78312],"wells":["COLE 4472-2326-2PH","Cole 4472-2326-1PH"]},{"rig":"Patterson 901","last":"2026-10-21","age":1,"work":"Production Csg.","well":"Davis Fed 47-72-32-29 ASH","api":"49-005-80063","sec":"32-47N-72W","loc":[-105.5403,44.00001],"wells":["Davis Fed 47-72-32-29 ASH"]},{"rig":"Nabors B16","last":"2026-10-22","age":0,"work":"Production Csg.","well":"HOWITZER 0214-35H","api":"49-005-79340","sec":"2-41N-74W","loc":[-105.71731,43.55523],"wells":["HOWITZER 0214-35H","HOWITZER 0214-36H","HOWITZER 0214-37H","HOWITZER 0214-38H"]},{"rig":"Cyclone 36 (Anschutz)","last":"2026-10-22","age":0,"work":"Intermediary","well":"Cole Fed 4171-4-21-15 NBH","api":"49-005-79729","sec":"4-41N-71W","loc":[-105.39188,43.55304],"wells":["Cole Fed 4171-4-21-14 NBH","Cole Fed 4171-4-21-15 NBH","Cole Fed 4171-4-21-16 NBH"]}];
+const rigLayer=L.layerGroup().addTo(map);
+const rigSvg='<svg viewBox="0 0 24 30" width="26" height="32" xmlns="http://www.w3.org/2000/svg"><path d="M12 2 L20 27 H4 Z" fill="none" stroke="var(--halo)" stroke-width="5" stroke-linejoin="round"/><path d="M12 2 L20 27 H4 Z M8 17 H16 M10 10 H14 M12 2 V27" fill="none" stroke="#e8590c" stroke-width="2.4" stroke-linejoin="round"/><rect x="2" y="26" width="20" height="3" rx="1" fill="#e8590c" stroke="var(--halo)" stroke-width="1"/></svg>';
+function drawRigs(){rigLayer.clearLayers();if(!rg.checked)return;RIGS.forEach(r=>{const when=r.age==0?'today':r.age==1?'yesterday':r.age+' days ago';
+L.marker([r.loc[1],r.loc[0]],{zIndexOffset:1000,icon:L.divIcon({className:'rig',html:rigSvg+'<span class="rl">'+r.rig+'</span>',iconSize:[26,32],iconAnchor:[13,30]})}).bindPopup('<b>'+r.rig+'</b><br>Sec '+r.sec+'<br>Last report: '+r.work+' on '+r.well+', '+when+' ('+r.last+')<br>Wells on this pad reported in the last 30 days: '+r.wells.join(', ')+'<br><small>Inferred from state casing call-ins, as of Oct 22, 2026</small>').addTo(rigLayer)})}
+rg.onchange=drawRigs;drawRigs();
 </script>
 </body></html>
