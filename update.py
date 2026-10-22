@@ -15,6 +15,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(ROOT, "index.html")
 HEADERS = os.path.join(ROOT, "data", "headers.json")
 OVERRIDES = os.path.join(ROOT, "data", "overrides.json")
+PROPOSED = os.path.join(ROOT, "data", "proposed.json")
 WFS = "https://dataexplorer.wogcc.wyo.gov/geoserver/wfs"
 ED = "https://dataexplorer.wogcc.wyo.gov/ED.aspx?KeyName=PKey&KeyValue={}&KeyType=Integer&DetailXML=WellDetails.xml"
 DRILL = "https://pipeline.wyo.gov/drillactivityByCallIn.cfm"
@@ -208,6 +209,11 @@ def build_wells(log):
         if fx:
             rec["fx"] = fx
         out.append(rec)
+    if os.path.exists(PROPOSED):   # proposed wells (from operator surveys) that the state has not recorded as wells yet
+        have = {r["a"] for r in out}
+        added = [p for p in json.load(open(PROPOSED)) if p["a"] not in have]
+        out += added
+        log(f"{len(added)} proposed wells added from data/proposed.json")
     out.sort(key=lambda r: r["a"])
     log(f"{len(out)} wells on map ({dropped} dropped by formation); tracks auto-cleaned: {fixed or 'none'}")
     return out
