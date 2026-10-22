@@ -732,7 +732,7 @@ if(z>=12)L.marker([r[2],r[1]],{interactive:false,icon:L.divIcon({className:'',ht
 map.on('moveend',drawSecs);secs.onchange=drawSecs;drawSecs();
 
 const trLayer=L.layerGroup().addTo(map);
-function drawTR(){trLayer.clearLayers();const z=map.getZoom();if(z<9||z>=12||!trl.checked)return;const b=map.getBounds();
+function drawTR(){trLayer.clearLayers();const z=map.getZoom();if(z<9||z>=13||!trl.checked)return;const b=map.getBounds();
 GRID.forEach(r=>{const x0=Math.max(r[0],b.getWest()),x1=Math.min(r[2],b.getEast()),y0=Math.max(r[1],b.getSouth()),y1=Math.min(r[3],b.getNorth());if(x0>=x1||y0>=y1)return;
 const t=r[4].replace(/^0*(\d+)([NS]) 0*(\d+)([EW])$/,'T$1$2 R$3$4');
 const cx=(r[0]+r[2])/2,cy=(r[1]+r[3])/2,ins=cx>b.getWest()&&cx<b.getEast()&&cy>b.getSouth()&&cy<b.getNorth();
