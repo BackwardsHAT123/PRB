@@ -675,14 +675,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
 		}
 	}
 
-.twn.sn{font-weight:400;font-size:10px;color:var(--muted);opacity:.65;text-shadow:none;text-align:center;width:12px}</style></head><body>
+.twn.sn{font-weight:400;font-size:10px;color:var(--muted);opacity:.65;text-shadow:none;text-align:center;width:12px}.twn.tr{font-weight:600;font-size:15px;letter-spacing:.04em;color:var(--muted);opacity:.7;text-shadow:none;transform:translate(-50%,-50%);text-align:center}</style></head><body>
 <div id="map"></div>
 <details id="panel" open><summary>Campbell Co., WY horizontals<br><small>API ≥ 49-005-35840 · WOGCC data</small></summary>
 <div id="count"></div>
 <label>Color by <select id="cb"><option value="s">Well status</option><option value="r" selected>Producing formation</option><option value="oc">Operator</option></select></label>
 <label>Operator <select id="op"></select></label><label>Status <select id="st"></select></label>
 <label>Highlight operator <select id="hl"></select></label><div id="leg"></div>
-<label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label>
+<label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="trl" checked> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label>
 <div id="note">Grid is township and range; roads and towns from OpenStreetMap. Lines run surface to bottom hole; 144 wells have a multi-point surveyed path (thicker).</div></details>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
@@ -728,5 +728,12 @@ function drawSecs(){secLayer.clearLayers();const z=map.getZoom();if(z<11||!secs.
 SEC.forEach(r=>{if(r[5]<w||r[3]>e||r[6]<s||r[4]>n)return;L.polygon(r[7].map(p=>[p[1],p[0]]),{pane:'base',renderer:baseR,color:cs('--grid'),weight:.8,dashArray:'3 3',fill:false,interactive:false}).addTo(secLayer);
 if(z>=12)L.marker([r[2],r[1]],{interactive:false,icon:L.divIcon({className:'',html:'<div class="twn sn">'+r[0]+'</div>',iconSize:[0,0],iconAnchor:[6,6]})}).addTo(secLayer)})}
 map.on('moveend',drawSecs);secs.onchange=drawSecs;drawSecs();
+
+const trLayer=L.layerGroup().addTo(map);
+function drawTR(){trLayer.clearLayers();const z=map.getZoom();if(z<9||z>=12||!trl.checked)return;const b=map.getBounds();
+GRID.forEach(r=>{const x0=Math.max(r[0],b.getWest()),x1=Math.min(r[2],b.getEast()),y0=Math.max(r[1],b.getSouth()),y1=Math.min(r[3],b.getNorth());if(x0>=x1||y0>=y1)return;
+const t=r[4].replace(/^0*(\d+)([NS]) 0*(\d+)([EW])$/,'T$1$2 R$3$4');
+L.marker([(y0+y1)/2,(x0+x1)/2],{interactive:false,icon:L.divIcon({className:'',html:'<div class="twn tr">'+t+'</div>',iconSize:[0,0],iconAnchor:[0,0]})}).addTo(trLayer)})}
+map.on('moveend',drawTR);trl.onchange=drawTR;drawTR();
 </script>
 </body></html>
