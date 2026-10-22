@@ -1,0 +1,27 @@
+name: Daily data update
+
+on:
+  schedule:
+    - cron: "30 11 * * *"   # 11:30 UTC = 5:30 am Mountain (daylight time)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refresh wells, headers and rigs
+        env:
+          GIT_AUTHOR_NAME: github-actions
+          GIT_AUTHOR_EMAIL: github-actions@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions
+          GIT_COMMITTER_EMAIL: github-actions@users.noreply.github.com
+        run: python3 update.py --push
