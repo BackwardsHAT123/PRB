@@ -105,6 +105,43 @@ def off_axis(p, a, b):
     return math.hypot(px - t * bx, py - t * by)
 
 
+def _dp(p, e):
+    if len(p) < 3:
+        return p
+    (x1, y1), (x2, y2) = p[0], p[-1]
+    dx, dy = x2 - x1, y2 - y1
+    L = math.hypot(dx, dy) or 1e-12
+    m, k = 0, 0
+    for n in range(1, len(p) - 1):
+        d = abs(dy * (p[n][0] - x1) - dx * (p[n][1] - y1)) / L
+        if d > m:
+            m, k = d, n
+    return _dp(p[:k + 1], e)[:-1] + _dp(p[k:], e) if m > e else [p[0], p[-1]]
+
+
+def rescale_track(line, shl, bhl):
+    """Some state tracks have the right shape but are 3.28x too short (feet/meters) measured from the surface
+    location. Detect that against the header bottom hole, scale the shape back up and pin both ends."""
+    a, b = meters(shl, bhl), meters(shl, line[-1])
+    if b < 5 or not 3.2 <= a / b <= 3.4:
+        return None
+    pts = [line[0]]
+    for p in line[1:]:
+        if p != pts[-1]:
+            pts.append(p)
+    pts = _dp(pts, 0.00006)
+    S = 1 / 0.3048
+    pts = [[shl[0] + (x - shl[0]) * S, shl[1] + (y - shl[1]) * S] for x, y in pts]
+    cum = [0.0]
+    for i in range(1, len(pts)):
+        cum.append(cum[-1] + math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]))
+    s0 = [shl[0] - pts[0][0], shl[1] - pts[0][1]]
+    s1 = [bhl[0] - pts[-1][0], bhl[1] - pts[-1][1]]
+    return [[x + s0[0] * (1 - c / cum[-1]) + s1[0] * c / cum[-1], y + s0[1] * (1 - c / cum[-1]) + s1[1] * c / cum[-1]]
+            for (x, y), c in zip(pts, cum)]
+
+
+
 def build_wells(log):
     cql = f"WellId LIKE '49-005-%' AND WellId >= '{MIN_API}' AND Slant='H'"
     wells = wfs("WELL", cql)
@@ -145,6 +182,11 @@ def build_wells(log):
         line = [[x, y] for part in t["geometry"]["coordinates"] for x, y in part] if t else None
         fx = 0
         if line and bhl and len(line) > 2:
+            scaled = rescale_track(line, shl, bhl)
+            if scaled:
+                line, fx = scaled, 4
+                fixed.append(d["API Number"] + " (rescaled)")
+        if line and bhl and len(line) > 2 and not fx:
             keep = [p for p in line if off_axis(p, shl, bhl) < OUTLIER_M]
             if len(keep) != len(line):
                 line, fx = keep, 1
