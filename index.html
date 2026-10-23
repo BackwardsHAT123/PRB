@@ -675,7 +675,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 		}
 	}
 
-.twn.sn{font-weight:400;font-size:10px;color:var(--muted);opacity:.65;text-shadow:none;text-align:center;width:12px}.twn.tr{font-weight:600;font-size:15px;letter-spacing:.04em;color:var(--muted);opacity:.7;text-shadow:none;position:absolute;left:0;top:0;transform:translate(-50%,-50%);text-align:center}.rig{position:relative}.rig svg{display:block}.rig .rl{position:absolute;left:30px;top:8px;white-space:nowrap;font-weight:700;font-size:11px;color:var(--town);text-shadow:-1px -1px 0 var(--halo),1px -1px 0 var(--halo),-1px 1px 0 var(--halo),1px 1px 0 var(--halo)}</style></head><body>
+.twn.sn{font-weight:400;font-size:10px;color:var(--muted);opacity:.65;text-shadow:none;text-align:center;width:12px}.twn.tr{font-weight:600;font-size:15px;letter-spacing:.04em;color:var(--muted);opacity:.7;text-shadow:none;position:absolute;left:0;top:0;transform:translate(-50%,-50%);text-align:center}.rig{position:relative}.rig svg{display:block}.rig .rl{position:absolute;left:30px;top:8px;white-space:nowrap;font-weight:700;font-size:11px;color:var(--town);text-shadow:-1px -1px 0 var(--halo),1px -1px 0 var(--halo),-1px 1px 0 var(--halo),1px 1px 0 var(--halo)}#panel summary{position:relative;padding:2px 24px 2px 0}#panel summary::after{content:'';position:absolute;right:4px;top:8px;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-135deg);transition:transform .15s}#panel:not([open]) summary::after{transform:rotate(45deg);top:5px}@media(max-width:600px){#panel:not([open]) small{display:none}#panel{top:10px;right:10px;width:min(270px,calc(100% - 20px))}}</style></head><body>
 <div id="map"></div>
 <details id="panel" open><summary>Campbell Co., WY horizontals<br><small>API ≥ 49-005-35840 · WOGCC data</small></summary>
 <div id="count"></div>
@@ -745,5 +745,7 @@ const rigSvg='<svg viewBox="0 0 24 30" width="26" height="32" xmlns="http://www.
 function drawRigs(){rigLayer.clearLayers();if(!rg.checked)return;RIGS.forEach(r=>{const when=r.age==0?'today':r.age==1?'yesterday':r.age+' days ago';
 L.marker([r.loc[1],r.loc[0]],{zIndexOffset:1000,icon:L.divIcon({className:'rig',html:rigSvg+'<span class="rl">'+r.rig+'</span>',iconSize:[26,32],iconAnchor:[13,30]})}).bindPopup('<b>'+r.rig+'</b><br>Sec '+r.sec+'<br>Last report: '+r.work+' on '+r.well+', '+when+' ('+r.last+')<br>Wells on this pad reported in the last 30 days: '+r.wells.join(', ')+'<br><small>Inferred from state casing call-ins, as of Oct 22, 2026</small>').addTo(rigLayer)})}
 rg.onchange=drawRigs;drawRigs();
+
+if(matchMedia('(max-width:600px)').matches)panel.open=false;
 </script>
 </body></html>
