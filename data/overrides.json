@@ -23881,5 +23881,61 @@
    ]
   ],
   "fx": 8
+ },
+ "49-019-42229": {
+  "ln": [
+   [
+    -106.28487,
+    44.07816
+   ],
+   [
+    -106.2879,
+    44.03771
+   ]
+  ],
+  "fx": 15,
+  "note": "Data fix: the state GIS track runs the wrong way (about 4.5 km north-west instead of south); straight line to the header bottom hole shown"
+ },
+ "49-019-42230": {
+  "ln": [
+   [
+    -106.28567,
+    44.07828
+   ],
+   [
+    -106.28539,
+    44.03777
+   ]
+  ],
+  "fx": 15,
+  "note": "Data fix: the state GIS track runs the wrong way (about 4.5 km north-west instead of south); straight line to the header bottom hole shown"
+ },
+ "49-019-42233": {
+  "ln": [
+   [
+    -106.28559,
+    44.07828
+   ],
+   [
+    -106.2825,
+    44.03783
+   ]
+  ],
+  "fx": 15,
+  "note": "Data fix: the state GIS track runs the wrong way (about 4.5 km north-west instead of south); straight line to the header bottom hole shown"
+ },
+ "49-019-42235": {
+  "ln": [
+   [
+    -106.28575,
+    44.07828
+   ],
+   [
+    -106.29041,
+    44.03765
+   ]
+  ],
+  "fx": 15,
+  "note": "Data fix: the state GIS track runs the wrong way (about 4.5 km north-west instead of south); straight line to the header bottom hole shown"
  }
 }

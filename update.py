@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Daily refresh for the Campbell and Converse County horizontal wells map.
+"""Daily refresh for the Campbell, Converse and Johnson County horizontal wells map.
 
 Pulls wells, tracks and statuses from the WOGCC Data Explorer (GeoServer WFS),
 fetches full headers only for new or changed wells, pulls drilling-rig call-ins
@@ -26,7 +26,10 @@ DRILL = "https://pipeline.wyo.gov/drillactivityByCallIn.cfm"
 UA = {"User-Agent": "Mozilla/5.0 (campbell-wells-map daily update)"}
 MIN_API = "49-005-35840"        # API 49005358400000 and up
 # counties on the map: (WellId prefix, first API included, name). Converse: API 49-009-28220 and up is roughly spud 2010 onward.
-COUNTIES = [("49-005-", MIN_API, "Campbell"), ("49-009-", "49-009-28220", "Converse")]
+COUNTIES = [("49-005-", MIN_API, "Campbell"), ("49-009-", "49-009-28220", "Converse"),    # Converse: API 49-009-28220 and up is roughly spud 2010 onward
+            ("49-019-", "49-019-29600", "Johnson")]                                       # Johnson: API 49-019-29600 and up is spud 2010 onward
+# generous (south, north, west, east) box per county; a surface location outside it is bad coordinates, so the well is held back
+COUNTY_BOX = {"Campbell": (43.15, 45.05, -106.45, -104.85), "Converse": (42.65, 43.65, -106.15, -104.8), "Johnson": (43.25, 44.75, -107.1, -105.85)}    # Johnson: API 49-019-29600 and up is spud 2010 onward
 RIG_DAYS = 14                   # a rig is "active" if it reported casing work this recently
 DROP_FORMATIONS = {"Big George", "Anderson"}
 FORMATION_MERGE = {"Frontier-Turner": "Turner", "Niobrara-Turner": "Niobrara"}
@@ -197,6 +200,10 @@ def build_wells(log):
             shl = [float(d["SHL Longitude (NAD83)"]), float(d["SHL Latitude (NAD83)"])]
         except (TypeError, ValueError, KeyError):
             shl = w["geometry"]["coordinates"]
+        s0, n0, w0, e0 = COUNTY_BOX[county[k]]
+        if not (s0 < shl[1] < n0 and w0 < shl[0] < e0):   # outside its county: bad coordinates, hold the well back
+            fixed.append(d["API Number"] + " (skipped: surface hole outside " + county[k] + ")")
+            continue
         try:
             bhl = [float(d["BHL Longitude (NAD83)"]), float(d["BHL Latitude (NAD83)"])]
         except (TypeError, ValueError, KeyError):
