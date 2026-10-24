@@ -11,11 +11,15 @@ from the WOGCC drilling activity report, and rewrites the data blocks in index.h
 import collections, concurrent.futures as cf, datetime, html, json, math, os, re, subprocess, sys, time
 import urllib.parse, urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import prod
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(ROOT, "index.html")
 HEADERS = os.path.join(ROOT, "data", "headers.json")
 OVERRIDES = os.path.join(ROOT, "data", "overrides.json")
 PROPOSED = os.path.join(ROOT, "data", "proposed.json")
+PRODUCTION = os.path.join(ROOT, "data", "production.json")
 WFS = "https://dataexplorer.wogcc.wyo.gov/geoserver/wfs"
 ED = "https://dataexplorer.wogcc.wyo.gov/ED.aspx?KeyName=PKey&KeyValue={}&KeyType=Integer&DetailXML=WellDetails.xml"
 DRILL = "https://pipeline.wyo.gov/drillactivityByCallIn.cfm"
@@ -290,11 +294,20 @@ def main():
     rigs = build_rigs(wells, log)
     before = open(INDEX).read()
     write_index(wells, rigs)
+    try:
+        hdr = json.load(open(HEADERS))
+        pk = {v['API Number']: k for k, v in hdr.items()}
+        prod.refresh(PRODUCTION, [(w['a'], pk[w['a']]) for w in wells if w['a'] in pk and not w.get('pr')], log)
+    except Exception as e:   # production is optional; never block the daily well update
+        log(f'production refresh failed: {e}')
     changed = open(INDEX).read() != before
+    if not changed:   # production or header data can change without the page itself changing
+        st = subprocess.run(["git", "status", "--porcelain", "data/production.json", "data/headers.json"], cwd=ROOT, capture_output=True, text=True)
+        changed = bool(st.stdout.strip())
     log("index.html " + ("updated" if changed else "unchanged"))
     if "--push" in sys.argv and changed:
         run = lambda *a: subprocess.run(a, cwd=ROOT, check=True)
-        run("git", "add", "index.html", "data/headers.json")
+        run("git", "add", "index.html", "data/headers.json", "data/production.json")
         run("git", "commit", "-q", "-m", f"Daily data update {datetime.date.today()}")
         run("git", "push", "-q", "origin", "main")
         log("pushed")
