@@ -286,6 +286,42 @@ def write_index(wells, rigs):
     open(INDEX, "w").write(s)
 
 
+def _git(*a, check=True):
+    return subprocess.run(["git", *a], cwd=ROOT, check=check, capture_output=True, text=True)
+
+
+def push_changes(wells, rigs, log, attempts=4):
+    """Commit and push. If someone else pushed while this run was working (it takes about 5 minutes), take their version
+    of everything, re-apply today's well data, header cache and production on top of it, and push again."""
+    for n in range(attempts):
+        _git("add", "index.html", "data/headers.json", "data/production.json")
+        if _git("diff", "--cached", "--quiet", check=False).returncode == 0:
+            log("nothing to commit")
+            return
+        _git("commit", "-q", "-m", f"Daily data update {datetime.date.today()}")
+        if _git("push", "-q", "origin", "main", check=False).returncode == 0:
+            log("pushed")
+            return
+        log(f"push rejected (attempt {n + 1}): repo changed during the run; re-applying onto the latest version")
+        ours = {f: json.load(open(f)) for f in (HEADERS, PRODUCTION)}
+        _git("fetch", "-q", "origin", "main")
+        _git("reset", "-q", "--hard", "origin/main")
+        for f, mine in ours.items():          # merge data caches: keep anything newer that is already on GitHub
+            theirs = json.load(open(f)) if os.path.exists(f) else {}
+            merged = dict(theirs)
+            for k, v in mine.items():
+                if k not in merged or str(v.get("u", "")) >= str(merged[k].get("u", "")):
+                    merged[k] = v
+            json.dump(merged, open(f, "w"), separators=(",", ":"))
+        if os.path.exists(OVERRIDES):          # path overrides pushed meanwhile win over this run's older copy
+            ov = json.load(open(OVERRIDES))
+            for w in wells:
+                if w["a"] in ov:
+                    w["ln"], w["fx"], w["surv"] = ov[w["a"]]["ln"], ov[w["a"]].get("fx", 2), len(ov[w["a"]]["ln"]) > 2
+        write_index(wells, rigs)
+    sys.exit("could not push after several attempts")
+
+
 def main():
     log = lambda m: print(datetime.datetime.now().strftime("%H:%M:%S"), m, flush=True)
     wells = build_wells(log)
@@ -306,11 +342,7 @@ def main():
         changed = bool(st.stdout.strip())
     log("index.html " + ("updated" if changed else "unchanged"))
     if "--push" in sys.argv and changed:
-        run = lambda *a: subprocess.run(a, cwd=ROOT, check=True)
-        run("git", "add", "index.html", "data/headers.json", "data/production.json")
-        run("git", "commit", "-q", "-m", f"Daily data update {datetime.date.today()}")
-        run("git", "push", "-q", "origin", "main")
-        log("pushed")
+        push_changes(wells, rigs, log)
 
 
 if __name__ == "__main__":
