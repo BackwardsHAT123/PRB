@@ -214,6 +214,12 @@ def build_wells(log):
             if len(keep) != len(line):
                 line, fx = keep, 1
                 fixed.append(d["API Number"])
+        if line and not bhl:   # no bottom hole to check the state track against: drop vertices no lateral could reach
+            keep = [p for p in line if meters(p, shl) < 9000]
+            if len(keep) != len(line):
+                keep = [p for n, p in enumerate(keep) if n == 0 or p != keep[n - 1]]
+                line, fx = (keep, 1) if len(keep) > 2 else (None, 0)
+                fixed.append(d["API Number"] + " (no BHL)")
         if not line:
             line = [shl, bhl] if bhl else None
         multi = bool(line and len(line) > 2)
@@ -226,7 +232,7 @@ def build_wells(log):
         rec = {"a": api, "n": d.get("Well Name and Number"), "o": d.get("Operator"), "s": d.get("Well Status") or w["properties"].get("WellStatus"),
                "sd": d.get("Spud Date"), "cd": _val(d.get("Completion Date")), "f": d.get("Field"), "r": form,
                "td": d.get("Depth"), "el": _val(d.get("Elevation")),
-               "sec": f'{d.get("SHL SEC")}-{d.get("SHL TWP")}-{d.get("SHL RGE")}',
+               "sec": f'{d.get("SHL SEC")}-{d.get("SHL TWP")}-{d.get("SHL RGE")}' if d.get("SHL SEC") else "-",
                "shl": [round(shl[0], 5), round(shl[1], 5)], "bhl": [round(bhl[0], 5), round(bhl[1], 5)] if bhl else None,
                "ln": [[round(x, 5), round(y, 5)] for x, y in line] if line else None, "surv": multi,
                "oc": operator_short(d.get("Operator")), "cty": county[k]}
