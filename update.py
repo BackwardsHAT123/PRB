@@ -67,8 +67,9 @@ def get(url, data=None, tries=4):
         except Exception as e:
             err = e
             time.sleep(3 * (i + 1))
-    if data is None:   # urllib sometimes gets a truncated read on the large track downloads; curl does not
-        out = subprocess.run(["curl", "-sL", "-m", "180", "-A", UA["User-Agent"], url], capture_output=True)
+    if True:   # urllib sometimes gets a truncated read on large downloads; curl does not
+        cmd = ["curl", "-sL", "-m", "180", "-A", UA["User-Agent"]] + (["--data-binary", data.decode()] if data else []) + [url]
+        out = subprocess.run(cmd, capture_output=True)
         if out.returncode == 0 and out.stdout:
             return out.stdout.decode("utf-8", "replace")
     raise RuntimeError(f"GET failed: {url[:90]} ({err})")
@@ -267,28 +268,30 @@ def build_rigs(wells, log):
     page = re.sub(r"<script.*?</script>|<style.*?</style>", "", get(DRILL, data=body), flags=re.S)
     rows = [[html.unescape(re.sub(r"<[^>]+>", "", c)).strip() for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", r, flags=re.S)]
             for r in re.findall(r"<tr[^>]*>(.*?)</tr>", page, flags=re.S)]
-    pos = [n for n, r in enumerate(rows) if r and r[0] == "Campbell County"]
-    if not pos:
-        log("rig report: no Campbell County section")
-        return []
-    cells = rows[pos[0] + 1]
-    rec = cells[cells.index("Well Class") + 1:] if "Well Class" in cells else []
-    idx = [n for n, x in enumerate(rec) if re.fullmatch(r"49-\d{3}-\d{5}", x)]
-    recs = [rec[a:b][:13] for a, b in zip(idx, idx[1:] + [len(rec)]) if len(rec[a:b]) >= 13]
+    recs = []        # (county, call-in record); a county's records sit in the row after the row that holds its name
+    for cname in (c[2] for c in COUNTIES):
+        pos = [n for n, r in enumerate(rows) if f"{cname} County" in r]
+        if not pos:
+            log(f"rig report: no {cname} County section")
+            continue
+        cells = rows[pos[0] + 1]
+        rec = cells[cells.index("Well Class") + 1:] if "Well Class" in cells else cells
+        idx = [n for n, x in enumerate(rec) if re.fullmatch(r"49-\d{3}-\d{5}", x)]
+        recs += [(cname, rec[a:b][:13]) for a, b in zip(idx, idx[1:] + [len(rec)]) if len(rec[a:b]) >= 13]
 
     def norm(r):
-        r = r.upper().replace("ANSCHUTZ / ", "").replace("ANSCHUTZ/", "")
+        r = r.upper().replace("ANSCHUTZ / ", "").replace("ANSCHUTZ/", "").replace("OXY / ", "")
         r = re.sub(r"^PD ?(\d+).*", r"PRECISION \1", r)
         return re.sub(r"^PRECISION (\d+)ST$", r"PRECISION \1", r)
 
     byrig = collections.defaultdict(list)
-    for r in recs:
-        byrig[norm(r[2])].append((datetime.datetime.strptime(r[1], "%m/%d/%Y").date(), r))
+    for cname, r in recs:
+        byrig[norm(r[2])].append((datetime.datetime.strptime(r[1], "%m/%d/%Y").date(), r, cname))
     byapi = {w["a"]: w for w in wells}
     rigs = []
     for rig, l in byrig.items():
         l.sort(key=lambda x: x[0])
-        d, r = l[-1]
+        d, r, cname = l[-1]
         age = (today - d).days
         if age > RIG_DAYS:
             continue
@@ -299,9 +302,9 @@ def build_rigs(wells, log):
         if not loc:
             log(f"rig {rig}: no location for {r[0]}")
             continue
-        pad = sorted({x[1][5] for x in l if x[1][8:11] == r[8:11] and (today - x[0]).days <= 30})
+        pad = sorted({x[1][5] for x in l if x[2] == cname and x[1][8:11] == r[8:11] and (today - x[0]).days <= 30})
         rigs.append({"rig": RIG_NAMES.get(rig, rig.title()), "last": str(d), "age": age, "work": r[4], "well": r[5],
-                     "api": r[0], "sec": f"{r[8]}-{r[9]}N-{r[10]}W", "loc": loc, "wells": pad})
+                     "api": r[0], "cty": cname, "sec": f"{r[8]}-{r[9]}N-{r[10]}W", "loc": loc, "wells": pad})
     rigs.sort(key=lambda r: r["age"])
     log(f"{len(recs)} call-in records; active rigs: {[(r['rig'], r['age']) for r in rigs]}")
     return rigs
