@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Daily refresh for the Campbell County horizontal wells map.
+"""Daily refresh for the Campbell and Converse County horizontal wells map.
 
 Pulls wells, tracks and statuses from the WOGCC Data Explorer (GeoServer WFS),
 fetches full headers only for new or changed wells, pulls drilling-rig call-ins
@@ -25,6 +25,8 @@ ED = "https://dataexplorer.wogcc.wyo.gov/ED.aspx?KeyName=PKey&KeyValue={}&KeyTyp
 DRILL = "https://pipeline.wyo.gov/drillactivityByCallIn.cfm"
 UA = {"User-Agent": "Mozilla/5.0 (campbell-wells-map daily update)"}
 MIN_API = "49-005-35840"        # API 49005358400000 and up
+# counties on the map: (WellId prefix, first API included, name). Converse: API 49-009-28220 and up is roughly spud 2010 onward.
+COUNTIES = [("49-005-", MIN_API, "Campbell"), ("49-009-", "49-009-28220", "Converse")]
 RIG_DAYS = 14                   # a rig is "active" if it reported casing work this recently
 DROP_FORMATIONS = {"Big George", "Anderson"}
 FORMATION_MERGE = {"Frontier-Turner": "Turner", "Niobrara-Turner": "Niobrara"}
@@ -62,6 +64,10 @@ def get(url, data=None, tries=4):
         except Exception as e:
             err = e
             time.sleep(3 * (i + 1))
+    if data is None:   # urllib sometimes gets a truncated read on the large track downloads; curl does not
+        out = subprocess.run(["curl", "-sL", "-m", "180", "-A", UA["User-Agent"], url], capture_output=True)
+        if out.returncode == 0 and out.stdout:
+            return out.stdout.decode("utf-8", "replace")
     raise RuntimeError(f"GET failed: {url[:90]} ({err})")
 
 
@@ -91,6 +97,13 @@ def parse_header(text):
             v = items[items.index(label) + 1] if items.index(label) + 1 < len(items) else ""
             d[label] = None if v in HEADER_FIELDS or v.endswith(("Lot / Tract #", "Measured From")) else v
     return d
+
+
+JUNK_VALUES = {"Well File", "Owner"}   # next row's label, read as the value when a header field is blank
+
+
+def _val(v):
+    return None if v in JUNK_VALUES else v
 
 
 def fetch_header(pkey):
@@ -148,10 +161,15 @@ def rescale_track(line, shl, bhl):
 
 
 def build_wells(log):
-    cql = f"WellId LIKE '49-005-%' AND WellId >= '{MIN_API}' AND Slant='H'"
-    wells = wfs("WELL", cql)
-    tracks = {f["properties"]["PKey"]: f for f in wfs("WELLTRACK", cql)}
-    log(f"state layer: {len(wells)} horizontal wells, {len(tracks)} tracks")
+    wells, tracks, county = [], {}, {}
+    for prefix, first, cname in COUNTIES:
+        cql = f"WellId LIKE '{prefix}%' AND WellId >= '{first}' AND Slant='H'"
+        cw = wfs("WELL", cql)
+        tracks.update({f["properties"]["PKey"]: f for f in wfs("WELLTRACK", cql)})
+        county.update({w["properties"]["PKey"]: cname for w in cw})
+        wells += cw
+        log(f"state layer, {cname}: {len(cw)} horizontal wells")
+    log(f"state layer total: {len(wells)} horizontal wells, {len(tracks)} tracks")
     cache = json.load(open(HEADERS)) if os.path.exists(HEADERS) else {}
     stale = [w["properties"]["PKey"] for w in wells
              if w["properties"]["PKey"] not in cache
@@ -203,13 +221,13 @@ def build_wells(log):
         if api in overrides:
             line, fx = overrides[api]["ln"], overrides[api].get("fx", 2)
             multi = len(line) > 2
-        rec = {"a": api, "n": d.get("Well Name and Number"), "o": d.get("Operator"), "s": d.get("Well Status"),
-               "sd": d.get("Spud Date"), "cd": d.get("Completion Date"), "f": d.get("Field"), "r": form,
-               "td": d.get("Depth"), "el": d.get("Elevation"),
+        rec = {"a": api, "n": d.get("Well Name and Number"), "o": d.get("Operator"), "s": d.get("Well Status") or w["properties"].get("WellStatus"),
+               "sd": d.get("Spud Date"), "cd": _val(d.get("Completion Date")), "f": d.get("Field"), "r": form,
+               "td": d.get("Depth"), "el": _val(d.get("Elevation")),
                "sec": f'{d.get("SHL SEC")}-{d.get("SHL TWP")}-{d.get("SHL RGE")}',
                "shl": [round(shl[0], 5), round(shl[1], 5)], "bhl": [round(bhl[0], 5), round(bhl[1], 5)] if bhl else None,
                "ln": [[round(x, 5), round(y, 5)] for x, y in line] if line else None, "surv": multi,
-               "oc": operator_short(d.get("Operator"))}
+               "oc": operator_short(d.get("Operator")), "cty": county[k]}
         if fx:
             rec["fx"] = fx
         out.append(rec)
