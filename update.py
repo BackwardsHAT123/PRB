@@ -221,6 +221,8 @@ def build_wells(log):
         if api in overrides:
             line, fx = overrides[api]["ln"], overrides[api].get("fx", 2)
             multi = len(line) > 2
+            shl = overrides[api].get("shl") or shl        # corrected surface / bottom hole points
+            bhl = overrides[api].get("bhl") or bhl
         rec = {"a": api, "n": d.get("Well Name and Number"), "o": d.get("Operator"), "s": d.get("Well Status") or w["properties"].get("WellStatus"),
                "sd": d.get("Spud Date"), "cd": _val(d.get("Completion Date")), "f": d.get("Field"), "r": form,
                "td": d.get("Depth"), "el": _val(d.get("Elevation")),
@@ -230,6 +232,8 @@ def build_wells(log):
                "oc": operator_short(d.get("Operator")), "cty": county[k]}
         if fx:
             rec["fx"] = fx
+        if api in overrides and overrides[api].get("note"):
+            rec["note"] = overrides[api]["note"]
         out.append(rec)
     if os.path.exists(PROPOSED):   # proposed wells (from operator surveys) that the state has not recorded as wells yet
         have = {r["a"] for r in out}
@@ -336,6 +340,9 @@ def push_changes(wells, rigs, log, attempts=4):
             for w in wells:
                 if w["a"] in ov:
                     w["ln"], w["fx"], w["surv"] = ov[w["a"]]["ln"], ov[w["a"]].get("fx", 2), len(ov[w["a"]]["ln"]) > 2
+                    for k in ("shl", "bhl", "note"):
+                        if ov[w["a"]].get(k):
+                            w[k] = ov[w["a"]][k]
         write_index(wells, rigs)
     sys.exit("could not push after several attempts")
 
