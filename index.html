@@ -828,7 +828,7 @@ function xRows(cb){
    const yr=y0+Math.floor((m0+i)/12),key=yr+'-'+String((m0+i)%12+1).padStart(2,'0');
    if(xfrom.value&&key<xfrom.value)continue;
    if(xto.value&&key>xto.value)break;
-   used=true;rows++;if(cb)cb(d.a,key,p.o[i],p.g[i],p.w[i]);
+   used=true;rows++;if(cb)cb(d.a,key,p.o[i],p.g[i],p.w[i],d.n);
   }
   if(used)wells++;
  }
@@ -849,8 +849,8 @@ function initExport(){
 }
 function downloadBulk(){
  try{
-  const lines=['API,Date,Oil,Gas,Water'];
-  xRows((a,key,o,g,w)=>lines.push(a.replace(/-/g,'')+','+key+'-01,'+o+','+g+','+w));
+  const lines=['API,Well Name,Date,Oil,Gas,Water'],q=s=>/[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+  xRows((a,key,o,g,w,nm)=>lines.push(a.replace(/-/g,'')+','+q((nm||'').trim())+','+key+'-01,'+o+','+g+','+w));
   const clean=s=>s.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
   const parts=['campbell_production'];
   if(xop.value)parts.push(clean(xop.value));if(xfm.value)parts.push(clean(xfm.value));
