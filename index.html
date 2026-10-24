@@ -680,7 +680,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 #plot .ph{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}#plot .ph span{display:flex;align-items:center;gap:10px;white-space:nowrap}
 #pclose{border:0;background:none;color:var(--fg);font-size:18px;line-height:1;cursor:pointer}#psvg{width:100%;height:auto;display:block;touch-action:none}
 #pro{font-size:11px;color:var(--muted);min-height:15px;font-variant-numeric:tabular-nums}.plg{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;margin-top:2px}.plg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
-.leaflet-popup-content hr{border:0;border-top:1px solid var(--line);margin:6px 0}#disp{margin-top:8px}#panel #disp summary{font-size:12px;font-weight:600;padding:2px 24px 2px 0;color:var(--fg)}#disp summary::after{top:7px!important;transform:rotate(-135deg)}#disp:not([open]) summary::after{top:4px!important;transform:rotate(45deg)}#disp label{margin:5px 0 0}</style></head><body>
+.leaflet-popup-content hr{border:0;border-top:1px solid var(--line);margin:6px 0}#disp{margin-top:8px}#panel #disp summary{font-size:12px;font-weight:600;padding:2px 24px 2px 0;color:var(--fg)}#disp summary::after{top:7px!important;transform:rotate(-135deg)}#disp:not([open]) summary::after{top:4px!important;transform:rotate(45deg)}#disp label{margin:5px 0 0}#exp{margin-top:8px}#panel #exp summary{font-size:12px;font-weight:600;padding:2px 24px 2px 0;color:var(--fg)}#exp summary::after{top:7px!important;transform:rotate(-135deg)}#exp:not([open]) summary::after{top:4px!important;transform:rotate(45deg)}#exp label{margin:5px 0 0}#exp input[type=month]{width:100%;box-sizing:border-box;margin-top:2px;padding:4px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;font:inherit}.xdate{display:flex;gap:8px}.xdate label{flex:1;min-width:0}#xinfo{margin-top:6px;color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}#xdl{width:100%}#xdl:disabled{opacity:.5;cursor:default}</style></head><body>
 <div id="map"></div>
 <details id="panel" open><summary>Campbell Co., WY horizontals<br><small>API ≥ 49-005-35840 · WOGCC data</small></summary>
 <div id="count"></div>
@@ -688,6 +688,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <label>Operator <select id="op"></select></label><label>Status <select id="st"></select></label>
 <label>Highlight operator <select id="hl"></select></label><div id="leg"></div>
 <details id="disp"><summary>Display</summary><label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="rg" checked> Active drilling rigs (inferred)</label><label><input type="checkbox" id="trl" checked> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label></details>
+<details id="exp"><summary>Export production</summary><label>Operator <select id="xop"></select></label><label>Formation <select id="xfm"></select></label><div class="xdate"><label>From <input type="month" id="xfrom"></label><label>To <input type="month" id="xto"></label></div><div id="xinfo">loading production…</div><button class="pbtn" id="xdl" disabled>Download CSV</button><div class="plg" style="color:var(--muted);margin-top:4px">Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.</div></details>
 <div id="note">Grid is township and range; roads and towns from OpenStreetMap. Well data as of <span id="asof">Oct 23, 2026</span> (updated daily). Lines run surface to bottom hole; 144 wells have a multi-point surveyed path (thicker).</div></details>
 <div id="plot" hidden><div class="ph"><b id="ptitle"></b><span><label><input type="checkbox" id="pcum"> cumulative</label><label><input type="checkbox" id="plog" checked> log scale</label><button id="pclose" aria-label="Close plot">&times;</button></span></div><svg id="psvg" role="img" aria-label="Monthly oil, gas and water production"></svg><div id="pro"></div><div class="plg" id="plegend"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -758,7 +759,7 @@ const PROD_INLINE=null;
 /* ---- production: popup summary + monthly plot ---- */
 let PROD=PROD_INLINE, plotApi=null;
 const plotEl=document.getElementById('plot'),psvg=document.getElementById('psvg'),pro=document.getElementById('pro'),plog=document.getElementById('plog');
-function loadProd(){if(PROD)return;fetch('data/production.json').then(r=>r.json()).then(j=>{PROD=j;const p=map._popup;if(p&&p.isOpen())p.update();if(plotApi)drawPlot()}).catch(()=>{PROD=false})}
+function loadProd(){if(PROD)return;fetch('data/production.json').then(r=>r.json()).then(j=>{PROD=j;if(typeof initExport==='function')initExport();const p=map._popup;if(p&&p.isOpen())p.update();if(plotApi)drawPlot()}).catch(()=>{PROD=false})}
 loadProd();
 const sum=a=>a.reduce((x,y)=>x+y,0),fmtN=n=>Math.round(n).toLocaleString('en-US'),mmyyyy=s=>s.slice(5)+'-'+s.slice(0,4);
 function prodHTML(a){
@@ -815,5 +816,50 @@ function downloadProd(a){
   document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
  }catch(e){console.error(e)}
 }
+
+/* ---- bulk production export (control panel) ---- */
+const xop=document.getElementById('xop'),xfm=document.getElementById('xfm'),xfrom=document.getElementById('xfrom'),xto=document.getElementById('xto'),xinfo=document.getElementById('xinfo'),xdl=document.getElementById('xdl');
+function xWells(){return D.filter(d=>{const p=PROD&&PROD[d.a];return p&&p.o&&(!xop.value||d.oc===xop.value)&&(!xfm.value||d.r===xfm.value)})}
+function xRows(cb){
+ let wells=0,rows=0;
+ for(const d of xWells()){
+  const p=PROD[d.a],y0=+p.s.slice(0,4),m0=+p.s.slice(5)-1;let used=false;
+  for(let i=0;i<p.o.length;i++){
+   const yr=y0+Math.floor((m0+i)/12),key=yr+'-'+String((m0+i)%12+1).padStart(2,'0');
+   if(xfrom.value&&key<xfrom.value)continue;
+   if(xto.value&&key>xto.value)break;
+   used=true;rows++;if(cb)cb(d.a,key,p.o[i],p.g[i],p.w[i]);
+  }
+  if(used)wells++;
+ }
+ return{wells,rows};
+}
+function xUpdate(){if(!PROD)return;const r=xRows();xinfo.textContent=r.wells.toLocaleString('en-US')+' wells \u00b7 '+r.rows.toLocaleString('en-US')+' rows';xdl.disabled=!r.rows}
+function initExport(){
+ if(!PROD||!xop)return;
+ const co={},cf={};let lo='9999-99',hi='0000-00';
+ D.forEach(d=>{const p=PROD[d.a];if(!p||!p.o)return;co[d.oc]=(co[d.oc]||0)+1;cf[d.r]=(cf[d.r]||0)+1;
+  const end=+p.s.slice(0,4)*12+(+p.s.slice(5)-1)+p.o.length-1,e=Math.floor(end/12)+'-'+String(end%12+1).padStart(2,'0');
+  if(p.s<lo)lo=p.s;if(e>hi)hi=e});
+ const opts=(c)=>'<option value="">All</option>'+Object.keys(c).sort((a,b)=>c[b]-c[a]||a.localeCompare(b)).map(v=>`<option value="${v}">${v} (${c[v]})</option>`).join('');
+ xop.innerHTML=opts(co);xfm.innerHTML=opts(cf);
+ xfrom.min=xto.min=lo;xfrom.max=xto.max=hi;
+ xop.onchange=xfm.onchange=xfrom.onchange=xto.onchange=xUpdate;
+ xdl.onclick=downloadBulk;xUpdate();
+}
+function downloadBulk(){
+ try{
+  const lines=['API,Date,Oil,Gas,Water'];
+  xRows((a,key,o,g,w)=>lines.push(a.replace(/-/g,'')+','+key+'-01,'+o+','+g+','+w));
+  const clean=s=>s.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  const parts=['campbell_production'];
+  if(xop.value)parts.push(clean(xop.value));if(xfm.value)parts.push(clean(xfm.value));
+  if(xfrom.value||xto.value)parts.push((xfrom.value||'start')+'_to_'+(xto.value||'latest'));
+  if(parts.length==1)parts.push('all');
+  const blob=new Blob([lines.join('\r\n')+'\r\n'],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),l=document.createElement('a');
+  l.href=url;l.download=parts.join('_')+'.csv';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+ }catch(e){console.error(e)}
+}
+if(PROD)initExport();
 </script>
 </body></html>
