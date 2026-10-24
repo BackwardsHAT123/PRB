@@ -23937,5 +23937,41 @@
   ],
   "fx": 15,
   "note": "Data fix: the state GIS track runs the wrong way (about 4.5 km north-west instead of south); straight line to the header bottom hole shown"
+ },
+ "49-005-79203": {
+  "ln": [
+   [
+    -105.45197,
+    43.5347
+   ],
+   [
+    -105.4612,
+    43.4903
+   ]
+  ],
+  "fx": 16,
+  "bhl": [
+   -105.4612,
+   43.4903
+  ],
+  "note": "Data fix: header bottom hole was 33.4 km from the state's bottom-hole point and outside the stated section; bottom hole taken from the state map layer, straight line shown"
+ },
+ "49-009-50512": {
+  "ln": [
+   [
+    -105.03051,
+    43.08555
+   ],
+   [
+    -105.0364,
+    43.0464
+   ]
+  ],
+  "fx": 16,
+  "bhl": [
+   -105.0364,
+   43.0464
+  ],
+  "note": "Data fix: header bottom hole was 4.7 km from the state's bottom-hole point and outside the stated section; bottom hole taken from the state map layer, straight line shown"
  }
 }

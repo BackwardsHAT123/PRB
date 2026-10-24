@@ -234,7 +234,7 @@ def build_wells(log):
         api = d["API Number"]
         if api in overrides:
             line, fx = overrides[api]["ln"], overrides[api].get("fx", 2)
-            multi = len(line) > 2
+            multi = len(line) > 2 or fx in (8, 9)      # a surveyed path stays marked as surveyed even when it is straight
             shl = overrides[api].get("shl") or shl        # corrected surface / bottom hole points
             bhl = overrides[api].get("bhl") or bhl
         rec = {"a": api, "n": d.get("Well Name and Number"), "o": d.get("Operator"), "s": d.get("Well Status") or w["properties"].get("WellStatus"),
