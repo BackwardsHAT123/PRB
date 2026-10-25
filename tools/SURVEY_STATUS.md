@@ -20,7 +20,10 @@ the bottom hole, held back), **depth gap** (>1,200 ft gap in the survey inside t
 | Campbell, first round (earlier session) | n/a (counts not kept in this session) | — | **51 paths** (fx 8) | `fbb94a9` |
 | Campbell, second batch (`targets_chunk1.json`, 100 wells: 31 EOG, 24 Ballard, 24 Peak Powder River, 21 Devon) | 100 | 57 ok, 24 rejected, 12 none, 7 unreadable | **40 paths** (fx 8) | `a496d5f` |
 | Campbell, third batch (`targets_chunk2.json`, 100 wells) | 100 | 64 ok, 21 rejected, 12 none, 3 unreadable | **46 paths** (fx 8) | `c69e54b` |
+| Campbell, fourth batch (`targets_chunk3.json`, 100 wells; 4 first hit site errors and were retried) | 100 | 62 ok, 25 rejected, 5 none, 4 unreadable | **51 paths** (fx 8) | see git log |
 | Converse T36N R71W (`targets_3671.json`, 156 wells) | 6 of 156 | 4 ok, 1 unreadable, 1 none | none yet | — |
+
+Of the 62 ok in the fourth batch (`targets_chunk3.json`): 51 applied, 11 held as "adjusted", 4 held for depth gaps (`49-005-62364`, `62222`, `62667`, `78355`); lists in `survey_held_chunk3.json`.
 
 Of the 64 ok in the third batch: 46 applied, 12 held as "adjusted" (72-238 m shifts), 6 held for depth gaps (`49-005-62391`, `64315`, `63494`, `62479`, `62402`, `64952`); lists in `survey_held_chunk2.json`. `49-005-62153` (held for a depth gap in the second batch) no longer trips the gap check but was left unapplied. The reader writes `survey_stations.jsonl` next to the scripts (not in `data/`).
 
@@ -28,16 +31,16 @@ Of the 57 ok in the second Campbell batch: 40 applied, 14 held as "adjusted", 3 
 (`49-005-62153`, `49-005-62714`, `49-005-77639`). Full lists are in `tools/survey_work/survey_held.json`.
 Applied paths were checked: each starts exactly at the header SHL, ends within 58 m of the header BHL, and is 0.98–1.34x its straight-line length.
 
-Paths on the map now by source (Campbell): 441 from filed certification forms (fx 7), 137 from filed directional surveys (fx 8), 12 from operator design surveys (fx 6). Of 1,406 Campbell wells, about 684 still show a straight line.
+Paths on the map now by source (Campbell): 441 from filed certification forms (fx 7), 188 from filed directional surveys (fx 8), 12 from operator design surveys (fx 6). Of 1,406 Campbell wells, about 633 still show a straight line.
 
 ## LEFT TO DO
 
-1. **Campbell batches not run yet: 264 wells** (`targets_chunk3.json` was started Oct 24 and is in progress, see its output in `survey_out.jsonl`; chunk2 is done) — `tools/survey_work/targets_chunk2.json` … `targets_chunk5.json` (chunks 3-5 were 100, 100, 64 wells; operators Ballard, EOG, Devon, Peak Powder River; only wells that still had a straight line and a header bottom hole when the lists were made).
+1. **Campbell batches not run yet: 164 wells**: `targets_chunk4.json` and `targets_chunk5.json` (100 and 64). `targets_chunk1.json`, `2` and `3` are done — `tools/survey_work/targets_chunk2.json` … `targets_chunk5.json` (chunks 4-5 are 100 and 64 wells; operators Ballard, EOG, Devon, Peak Powder River; only wells that still had a straight line and a header bottom hole when the lists were made).
    The second batch (100 wells) took about 70 minutes, so each further 100 is roughly an hour to an hour and a half.
 2. **Converse T36N R71W: 150 wells left** in `tools/survey_work/targets_3671.json` (153 of the 156 are Anschutz). Four of these (`49-009-31444` Dolly Fed, `34261` Rags Fed, `34300` Bucky Fed, `49038` Toughy Fed) have a bottom hole I estimated earlier (fx 12), so the reader will likely "reject" them; check by hand whether the survey's own end point falls in the stated bottom-hole section — it may give the true bottom hole.
    The run was stopped when a session ended; it resumes where it left off (finished wells are skipped).
-3. **Decide on the held results from the second and third Campbell batches**: 26 "adjusted" paths (shifted to end on the header BHL) and 9 depth-gap paths. The first round also held its adjusted ones back. They can be applied with the "include adjusted" option (fx 9) if you want them.
-4. **45 rejected + 10 unreadable wells from the second and third Campbell batches** have not been investigated (misread OCR, or the survey really does not match the header bottom hole). IDs are in `tools/survey_work/survey_out.jsonl` (status `rejected` / `unreadable`).
+3. **Decide on the held results from the second, third and fourth Campbell batches**: 37 "adjusted" paths (shifted to end on the header BHL) and 13 depth-gap paths. The first round also held its adjusted ones back. They can be applied with the "include adjusted" option (fx 9) if you want them.
+4. **70 rejected + 14 unreadable wells from the second to fourth Campbell batches** have not been investigated (misread OCR, or the survey really does not match the header bottom hole). IDs are in `tools/survey_work/survey_out.jsonl` (status `rejected` / `unreadable`).
 5. **Converse and Johnson wells outside T36N R71W**: no survey reading has been done anywhere else. Wells with a multi-point state track already use it; wells with a straight state track show a straight line.
 6. Optional: apply script `tools/apply_surveys.py` was written for the earlier session's folder layout (`prb/index.html`, `prb/data/overrides.json`) and for Campbell only. For the second batch I applied results with an inline script on a fresh clone of the repo (same rules: status ok, not adjusted, not depth-gap, well still a straight line, then write `ln`, `fx` 8 and `surv` into the page data and `data/overrides.json`). It would be worth tidying that into the tools folder, and making it work for Converse.
 
