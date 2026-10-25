@@ -26,6 +26,7 @@ the bottom hole, held back), **depth gap** (>1,200 ft gap in the survey inside t
 | Johnson, first batch (`targets_johnson1.json`, 100 wells of 106 straight-line targets; 4 first hit site errors and were retried) | 100 | 73 ok, 9 rejected, 12 none, 2 unreadable (62 exact, 13 adjusted, 2 depth-gap) | **62 paths** (fx 8) | see git log |
 | Johnson, second batch (`targets_johnson2.json`, last 6 Johnson targets) | 6 | 5 ok (2 exact, 3 adjusted), 1 rejected | **2 paths** (fx 8) | see git log |
 | Converse, batch 1 (`targets_converse1.json`, 100 wells: Continental 100) | 100 | 63 ok (52 exact, 7 adjusted, 4 depth-gap), 18 rejected, 7 none, 12 unreadable | **52 paths** (fx 8) | see git log |
+| Converse, batch 2 (`targets_converse2.json`, 100 wells: Continental 100) | 100 | 68 ok (52 exact, 8 adjusted, 8 depth-gap), 18 rejected, 7 none, 7 unreadable | **52 paths** (fx 8) | see git log |
 | Converse T36N R71W (`targets_3671.json`, 156 wells) | 6 of 156 | 4 ok, 1 unreadable, 1 none | none yet | — |
 
 Of the ok wells in the sixth batch (`targets_chunk5.json`): 36 applied, 4 held as "adjusted", 2 held for depth gaps (`49-005-61785`, `77703`); lists in `survey_held_chunk5.json`.
