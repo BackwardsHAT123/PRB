@@ -181,9 +181,11 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       <p class="px-note" id="note-drivers" hidden>These tests always cover every operator and every formation together, so they do not change with the settings above.</p>
       <div class="px-tablewrap" id="host-drivers" data-source="drivers"></div>
     </article>
-    <div class="px-grid2 tight" style="margin-top: var(--cds-gap-md)">
-      <article class="px-card"><h3>Oil per foot, by year first produced</h3><p class="px-note">Wells first produced in 2015 or later, each year against the median well in the same formation across all operators. 1.00× is typical. A year shows only with at least three wells (two when a formation is picked).</p><div class="px-legend" id="leg-vint"></div><div class="px-chart dash-skeleton" id="ch-vint-oil" data-source="wells"></div></article>
-      <article class="px-card"><h3>Water per foot, by year first produced</h3><p class="px-note">Same comparison. Below 1.00× is less water than typical.</p><div class="px-chart dash-skeleton" id="ch-vint-water" data-source="wells"></div></article>
+    <p class="px-note" style="margin: var(--cds-gap-md) 0 6px; max-width: 74ch">Wells first produced in 2015 or later, each year's median well against the median well in the same formation across all operators. 1.00× is typical; for water, below 1.00× is less water than typical. A year shows only with at least three wells (two when a formation is picked).</p>
+    <div class="px-legend" id="leg-vint"></div>
+    <div class="px-grid2 tight">
+      <article class="px-card"><h3>Oil per foot, by year first produced</h3><div class="px-chart dash-skeleton" id="ch-vint-oil" data-source="wells"></div></article>
+      <article class="px-card"><h3>Water per foot, by year first produced</h3><div class="px-chart dash-skeleton" id="ch-vint-water" data-source="wells"></div></article>
     </div>
     <div class="px-grid2" style="margin-top: var(--cds-gap-md)">
       <article class="px-card"><h3>Where the good wells are</h3><p class="px-note" id="note-geo"></p><div class="px-legend" id="leg-geo"></div><div class="px-chart dash-skeleton" id="ch-geo" data-source="wells"></div></article>
