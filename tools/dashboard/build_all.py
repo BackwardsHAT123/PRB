@@ -1,6 +1,6 @@
 """Rebuild the dashboard tables for every operator on the PRB map.
 Reads index.html (the map page, for well records) and production.json in the current folder.
-Writes wells.json, bench.json and curves.json."""
+Writes wells.json, bench.json, curves.json, grid.json and sections.json."""
 import json, math, collections
 import numpy as np
 
@@ -82,3 +82,10 @@ for (o, f), rs in byof.items():
     if len(rs) >= 4: add(series(f"{o} / {f}", o, f, rs, 4))
 json.dump(curves, open("curves.json", "w"), separators=(",", ":"))
 print("curves series", len(curves))
+
+# township boxes and section outlines for the dashboard map (static; read from the map page's GRID and SEC arrays)
+j = S.index("const GRID="); GRID = json.loads(S[j + len("const GRID="):S.index(";\n", j)])
+k = S.index("const SEC="); SEC = json.loads(S[k + len("const SEC="):S.index(";\n", k)])
+json.dump([{"b": [g[0], g[1], g[2], g[3]], "t": g[4]} for g in GRID], open("grid.json", "w"), separators=(",", ":"))
+json.dump([{"s": r[0], "c": [r[1], r[2]], "b": [r[3], r[4], r[5], r[6]], "p": [[round(x, 5), round(y, 5)] for x, y in r[7]]} for r in SEC], open("sections.json", "w"), separators=(",", ":"))
+print("grid", len(GRID), "sections", len(SEC))

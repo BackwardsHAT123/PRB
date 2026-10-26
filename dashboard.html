@@ -30,7 +30,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 <script>
 /* Small stand-in for the data layer the page was written against: loads the JSON tables from dashboard/data and re-runs the page's draw function when data arrives, the window resizes or the color scheme changes. */
 (function () {
-  const IDS = ['wells', 'bench', 'curves'];
+  const IDS = ['wells', 'bench', 'curves', 'grid', 'sections'];
   const store = {}, errs = {}, cbs = [];
   const dark = matchMedia('(prefers-color-scheme: dark)');
   const light = ['#1b6ca8', '#d4731a', '#2f9e6e', '#8e5bb5', '#b8962e', '#3aa3b8', '#c2506b', '#6b7b8c'];
@@ -125,6 +125,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 .px-failed, .px-empty { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 120px; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); text-align: center; padding: 8px; }
 .px-failed i { width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
 @media (max-width: 640px) { .px-hide-s, col.px-hide-s { display: none; } .px-ctl { position: static; } }
+.px-lay { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .px-zoomctl { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
 .px-zoomctl button { appearance: none; border: 1px solid var(--color-border-line); background: var(--color-panel); color: var(--color-fg); border-radius: 6px; font: inherit; font-size: var(--cds-font-size-caption); padding: 3px 8px; cursor: pointer; }
 .px-zoomctl button:hover { border-color: var(--cds-chart-axis); }
@@ -199,7 +200,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     </div>
     <div class="px-grid2 even" style="margin-top: var(--cds-gap-md)">
       <article class="px-card"><h3>Well paths and where the good wells are</h3><p class="px-note" id="note-geo"></p><div class="px-seg wrap" id="seg-geo" hidden style="margin-bottom: 8px"></div>
-      <div class="px-legend" id="leg-geo"></div><div class="px-chart dash-skeleton" id="ch-geo" data-source="wells"></div></article>
+      <div class="px-legend" id="leg-geo"></div>
+      <div class="px-legend" id="lay-geo"></div><div class="px-chart dash-skeleton" id="ch-geo" data-source="wells"></div></article>
       <article class="px-card"><h3>Townships ranked by oil per foot</h3><p class="px-note" id="note-area"></p><div class="px-tablewrap tall" id="host-area"></div></article>
     </div>
   </section>
@@ -257,7 +259,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   function mapLink(api) { return MAP + '#' + api; }
   function ready() {
     const d = {};
-    for (const id of ['wells', 'bench', 'curves']) {
+    for (const id of ['wells', 'bench', 'curves', 'grid', 'sections']) {
       const x = dash.data(id);
       if (x.status === 'error') return 'error';
       if (x.status !== 'ok') return null;
@@ -705,6 +707,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 
   /* ---------- geographic scatter and township table ---------- */
   let geoCty = null;
+  const layers = { street: true, twp: true, sec: true };
   function geo(d) {
     const k = K(), host = $('ch-geo');
     const scoped = d.wells.filter((w) => w.lon != null && w.lat != null && inScope(w));
@@ -723,42 +726,88 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const pts = scoped.filter((w) => w.cty === geoCty);
     host.classList.remove('dash-skeleton'); host.replaceChildren();
     const pathOf = (w) => { const out = []; if (w.ln) for (let i = 0; i + 1 < w.ln.length; i += 2) out.push([w.ln[i], w.ln[i + 1]]); return out.length > 1 ? out : null; };
-    const all = [];
-    for (const w of pts) { const p = pathOf(w); if (p) for (const c of p) all.push(c); else all.push([w.lon, w.lat]); }
-    const lat0 = d3.mean(all, (c) => c[1]), cx = Math.cos((lat0 * Math.PI) / 180);
-    const lonE = d3.extent(all, (c) => c[0]), latE = d3.extent(all, (c) => c[1]);
-    const W = Math.max(280, host.clientWidth);
-    const m = 14;
-    const spanX = (lonE[1] - lonE[0]) * cx || 1, spanY = latE[1] - latE[0] || 1;
-    const sc = (W - 2 * m) / spanX;
-    const H = Math.round(Math.min(560, Math.max(280, spanY * sc + 2 * m)));
-    const s2 = Math.min(sc, (H - 2 * m) / spanY);
-    const ox = m + ((W - 2 * m) - spanX * s2) / 2, oy = m;
-    const px = (lon) => ox + (lon - lonE[0]) * cx * s2, py = (lat) => oy + (latE[1] - lat) * s2;
+    const coords = [];
+    for (const w of pts) { const p = pathOf(w); if (p) for (const c of p) coords.push(c); else coords.push([w.lon, w.lat]); }
+    const feat = { type: 'MultiPoint', coordinates: coords };
+    const W = Math.max(280, host.clientWidth), m = 18;
+    const p0 = d3.geoMercator().fitWidth(W - 2 * m, feat);
+    const bb = d3.geoPath(p0).bounds(feat);
+    const H = Math.round(Math.min(560, Math.max(300, bb[1][1] - bb[0][1] + 2 * m)));
+    const proj = d3.geoMercator().fitExtent([[m, m], [W - m, H - m]], feat);
     const band = (v) => (v == null ? 'var(--cds-chart-grid)' : v >= 1.1 ? 'var(--color-ok)' : v < 0.9 ? 'var(--cds-chart-status-critical)' : 'var(--cds-chart-muted)');
     legend($('leg-geo'), [{ color: 'var(--color-ok)', label: 'Oil 1.10× basin or more' }, { color: 'var(--cds-chart-muted)', label: 'In line' }, { color: 'var(--cds-chart-status-critical)', label: 'Below 0.90×' }]);
     $('note-geo').textContent = 'Each line is a well’s lateral path in ' + geoCty + ' County' + fmTag() + ' (from its filed directional survey where there is one, otherwise straight from surface hole to bottom hole), colored by oil in the ' + win() + (st.b === 'ft' ? ' per foot' : '') + ' against the median well in the same formation across all operators.' + (st.mode === 'pick' ? ' The dot at the surface hole shows the operator.' : '') + ' Drag to pan, use the buttons or Ctrl-scroll to zoom, click a well to open it on the map.';
     const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Map of well paths colored by oil performance').style('touch-action', 'pan-y');
+    svg.append('rect').attr('width', W).attr('height', H).attr('fill', 'var(--color-panel)');
     const T = tip(host);
     const g = svg.append('g');
-    const line = d3.line().x((c) => px(c[0])).y((c) => py(c[1]));
-    const dots = [];
-    const a = g.selectAll('a').data(pts).join('a').attr('href', (w) => mapLink(w.api)).attr('target', '_blank').attr('rel', 'noopener');
+    const tileG = g.append('g').attr('class', 'px-tiles').attr('opacity', 0.9);
+    const twpG = g.append('g'), secG = g.append('g'), secTxt = g.append('g');
+    const wellG = g.append('g');
+    const geoPath = d3.geoPath(proj);
+    // township and range boxes (no labels)
+    const tb = d3.geoBounds(feat);
+    const twps = d.grid.filter((t) => t.b[2] >= tb[0][0] - 0.05 && t.b[0] <= tb[1][0] + 0.05 && t.b[3] >= tb[0][1] - 0.05 && t.b[1] <= tb[1][1] + 0.05);
+    twpG.selectAll('path').data(twps).join('path').attr('d', (t) => geoPath({ type: 'Polygon', coordinates: [[[t.b[0], t.b[1]], [t.b[2], t.b[1]], [t.b[2], t.b[3]], [t.b[0], t.b[3]], [t.b[0], t.b[1]]]] }))
+      .attr('fill', 'none').attr('stroke', 'var(--cds-chart-axis)').attr('stroke-width', 1.1).attr('vector-effect', 'non-scaling-stroke').attr('pointer-events', 'none');
+    // wells
+    const line = d3.line().x((c) => proj(c)[0]).y((c) => proj(c)[1]);
+    const a = wellG.selectAll('a').data(pts).join('a').attr('href', (w) => mapLink(w.api)).attr('target', '_blank').attr('rel', 'noopener');
     a.append('path').attr('d', (w) => { const p = pathOf(w); return p ? line(p) : null; }).attr('fill', 'none')
-      .attr('stroke', (w) => band(ratio(w, k.o))).attr('stroke-width', (w) => { const p = pathOf(w); return p && p.length > 2 ? 2.4 : 1.8; })
-      .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('vector-effect', 'non-scaling-stroke').attr('stroke-opacity', 0.9);
-    const dot = a.append('circle').attr('cx', (w) => px(w.lon)).attr('cy', (w) => py(w.lat)).attr('r', (w) => (pathOf(w) ? (st.mode === 'pick' ? 3 : 0) : 3.5))
+      .attr('stroke', (w) => band(ratio(w, k.o))).attr('stroke-width', (w) => { const p = pathOf(w); return p && p.length > 2 ? 2.6 : 2; })
+      .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('vector-effect', 'non-scaling-stroke');
+    const dot = a.append('circle').attr('cx', (w) => proj([w.lon, w.lat])[0]).attr('cy', (w) => proj([w.lon, w.lat])[1]).attr('r', (w) => (pathOf(w) ? (st.mode === 'pick' ? 3 : 0) : 3.5))
       .attr('fill', (w) => (pathOf(w) ? (st.mode === 'pick' ? color(w.op) : 'none') : band(ratio(w, k.o)))).attr('stroke', 'var(--color-panel)').attr('stroke-width', 0.8);
-    a.on('pointermove', (e, w) => T.show(e, w.name, [w.op + ' · ' + w.fm + ' · ' + w.cty + ' County · ' + w.twp, 'Oil vs basin ' + idx(ratio(w, k.o)), 'Water vs basin ' + idx(ratio(w, k.w)), 'Lateral ' + num(w.len) + ' ft'])).on('pointerleave', () => T.hide());
-    const zoom = d3.zoom().scaleExtent([1, 60]).filter((e) => e.type !== 'wheel' || e.ctrlKey || e.metaKey)
-      .on('zoom', (e) => { g.attr('transform', e.transform); dot.attr('r', function () { const r0 = +this.getAttribute('data-r'); return r0 / e.transform.k; }); });
     dot.attr('data-r', function () { return this.getAttribute('r'); });
+    a.on('pointermove', (e, w) => T.show(e, w.name, [w.op + ' · ' + w.fm + ' · ' + w.cty + ' County · ' + w.twp, 'Oil vs basin ' + idx(ratio(w, k.o)), 'Water vs basin ' + idx(ratio(w, k.w)), 'Lateral ' + num(w.len) + ' ft'])).on('pointerleave', () => T.hide());
+    // street-map tiles and section lines for the current view
+    let tf = d3.zoomIdentity, pending = 0;
+    const refresh = () => {
+      pending = 0;
+      const z = Math.log2((2 * Math.PI * proj.scale() * tf.k) / 256);
+      const tz = Math.max(3, Math.min(17, Math.round(z)));
+      const tl = proj.invert(tf.invert([0, 0])), br = proj.invert(tf.invert([W, H]));
+      const n = Math.pow(2, tz);
+      const tx = (lon) => Math.floor(((lon + 180) / 360) * n);
+      const ty = (lat) => { const r = (lat * Math.PI) / 180; return Math.floor(((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n); };
+      const x0 = tx(tl[0]), x1 = tx(br[0]), y0 = ty(tl[1]), y1 = ty(br[1]);
+      const tiles = [];
+      if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 48) for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) tiles.push({ x, y, z: tz });
+      const lonOf = (x) => (x / n) * 360 - 180, latOf = (y) => (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI;
+      tileG.selectAll('image').data(layers.street ? tiles : [], (t) => t.z + '/' + t.x + '/' + t.y).join('image')
+        .attr('href', (t) => 'https://tile.openstreetmap.org/' + t.z + '/' + t.x + '/' + t.y + '.png')
+        .attr('x', (t) => proj([lonOf(t.x), latOf(t.y)])[0] - 0.4).attr('y', (t) => proj([lonOf(t.x), latOf(t.y)])[1] - 0.4)
+        .attr('width', (t) => proj([lonOf(t.x + 1), latOf(t.y)])[0] - proj([lonOf(t.x), latOf(t.y)])[0] + 0.8)
+        .attr('height', (t) => proj([lonOf(t.x), latOf(t.y + 1)])[1] - proj([lonOf(t.x), latOf(t.y)])[1] + 0.8);
+      const secs = layers.sec && tz >= 11 ? d.sections.filter((r) => r.b[2] >= tl[0] && r.b[0] <= br[0] && r.b[3] >= br[1] && r.b[1] <= tl[1]) : [];
+      secG.selectAll('path').data(secs.slice(0, 900)).join('path').attr('d', (r) => geoPath({ type: 'Polygon', coordinates: [r.p] }))
+        .attr('fill', 'none').attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 0.7).attr('stroke-dasharray', '3 3').attr('vector-effect', 'non-scaling-stroke').attr('pointer-events', 'none');
+      secTxt.selectAll('text').data(layers.sec && tz >= 12 ? secs.slice(0, 900) : [], (r) => r.s + r.c[0]).join('text').text((r) => r.s)
+        .attr('x', (r) => proj(r.c)[0]).attr('y', (r) => proj(r.c)[1]).attr('text-anchor', 'middle').attr('font-size', 11 / tf.k).attr('pointer-events', 'none')
+        .attr('fill', 'var(--color-fg-muted)').attr('stroke', 'var(--color-panel)').attr('stroke-width', 3 / tf.k).attr('paint-order', 'stroke');
+    };
+    const zoom = d3.zoom().scaleExtent([1, 220]).filter((e) => e.type !== 'wheel' || e.ctrlKey || e.metaKey)
+      .on('zoom', (e) => {
+        tf = e.transform; g.attr('transform', tf);
+        dot.attr('r', function () { return +this.getAttribute('data-r') / tf.k; });
+        if (!pending) pending = requestAnimationFrame(refresh);
+      });
     svg.call(zoom);
+    refresh();
+    svg.append('text').attr('x', W - 6).attr('y', H - 6).attr('text-anchor', 'end').attr('font-size', 10).attr('pointer-events', 'none').attr('fill', 'var(--color-fg-muted)').text(layers.street ? '© OpenStreetMap contributors' : '');
     const ctl = el('div', 'px-zoomctl');
     for (const [label, fn, aria] of [['+', () => svg.transition().duration(200).call(zoom.scaleBy, 2), 'Zoom in'], ['−', () => svg.transition().duration(200).call(zoom.scaleBy, 0.5), 'Zoom out'], ['Reset', () => svg.transition().duration(200).call(zoom.transform, d3.zoomIdentity), 'Reset zoom']]) {
       const b = el('button', null, label); b.type = 'button'; b.setAttribute('aria-label', aria); b.addEventListener('click', fn); ctl.appendChild(b);
     }
     host.appendChild(ctl);
+    // layer switches
+    const lay = $('lay-geo'); lay.replaceChildren();
+    for (const [key, label] of [['street', 'Street map'], ['twp', 'Township lines'], ['sec', 'Section lines']]) {
+      const lab = el('label', 'px-lay'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = layers[key];
+      cb.addEventListener('change', () => { layers[key] = cb.checked; twpG.attr('display', layers.twp ? null : 'none'); refresh(); });
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(' ' + label)); lay.appendChild(lab);
+    }
+    twpG.attr('display', layers.twp ? null : 'none');
   }
   function areaTable(d) {
     const scope = d.wells.filter(inScope).filter((w) => w.twp);
