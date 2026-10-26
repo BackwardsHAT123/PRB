@@ -182,7 +182,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       <div class="px-tablewrap" id="host-drivers" data-source="drivers"></div>
     </article>
     <div class="px-grid2 tight" style="margin-top: var(--cds-gap-md)">
-      <article class="px-card"><h3>Oil per foot, by year first produced</h3><p class="px-note">Median well against the median well in the same formation across all operators. 1.00× is typical.</p><div class="px-legend" id="leg-vint"></div><div class="px-chart dash-skeleton" id="ch-vint-oil" data-source="wells"></div></article>
+      <article class="px-card"><h3>Oil per foot, by year first produced</h3><p class="px-note">Wells first produced in 2015 or later, each year against the median well in the same formation across all operators. 1.00× is typical. A year shows only with at least three wells (two when a formation is picked).</p><div class="px-legend" id="leg-vint"></div><div class="px-chart dash-skeleton" id="ch-vint-oil" data-source="wells"></div></article>
       <article class="px-card"><h3>Water per foot, by year first produced</h3><p class="px-note">Same comparison. Below 1.00× is less water than typical.</p><div class="px-chart dash-skeleton" id="ch-vint-water" data-source="wells"></div></article>
     </div>
     <div class="px-grid2" style="margin-top: var(--cds-gap-md)">
@@ -541,52 +541,52 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     lineChart($('ch-curve-water'), have.map((o) => mk(o, ft ? 'water_ft' : 'water')), 'Cumulative water by month');
   }
 
-  /* ---------- grouped bars by year bucket ---------- */
-  function vintageChart(host, rows, ops, field, label) {
+  /* ---------- by year first produced, 2015 onward ---------- */
+  const YEAR0 = 2015;
+  function yearChart(host, rows, ops, field, label) {
     host.classList.remove('dash-skeleton');
     host.replaceChildren();
-    const buckets = ['2013 and earlier', '2014-2015', '2016-2019', '2020 and later'].filter((b) => rows.some((r) => r.bucket === b));
-    const W = Math.max(260, host.clientWidth), H = Math.round(Math.min(320, Math.max(240, W * 0.66)));
-    const m = { t: 20, r: 10, b: 54, l: 40 };
-    const x0 = d3.scaleBand(buckets, [m.l, W - m.r]).paddingInner(0.2);
-    const x1 = d3.scaleBand(ops, [0, x0.bandwidth()]).padding(0.12);
-    const maxY = Math.max(1.2, d3.max(rows, (r) => r[field]) * 1.12);
+    const maxYr = d3.max(rows, (r) => r.yr);
+    const W = Math.max(260, host.clientWidth), H = Math.round(Math.min(320, Math.max(240, W * 0.62)));
+    const m = { t: 14, r: 14, b: 40, l: 40 };
+    const x = d3.scaleLinear([YEAR0, Math.max(YEAR0 + 1, maxYr)], [m.l + 6, W - m.r - 6]);
+    const maxY = Math.max(1.2, d3.max(rows, (r) => r[field]) * 1.1);
     const y = d3.scaleLinear([0, maxY], [H - m.b, m.t]);
+    const years = d3.range(YEAR0, maxYr + 1).filter((v) => W >= 520 || (v - YEAR0) % 2 === 0);
     const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', label);
     svg.append('g').attr('class', 'px-grid').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(-(W - m.l - m.r)).tickFormat(''));
+    svg.append('g').attr('class', 'px-ax').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickValues(years).tickFormat(d3.format('d'))).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
     svg.append('g').attr('class', 'px-ax').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(d3.format('.1f'))).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
-    const T = tip(host);
-    for (const b of buckets) {
-      for (const o of ops) {
-        const r = rows.find((q) => q.bucket === b && q.op === o);
-        if (!r || r[field] == null) continue;
-        const bx = x0(b) + x1(o), bw = x1.bandwidth(), by = y(r[field]);
-        svg.append('rect').attr('x', bx).attr('y', by).attr('width', bw).attr('height', Math.max(0, y(0) - by)).attr('rx', 4).attr('fill', color(o))
-          .on('pointermove', (e) => T.show(e, o + ', ' + b, [idx(r[field]) + ' vs basin', r.n + ' wells · lateral ' + num(r.len) + ' ft']))
-          .on('pointerleave', () => T.hide());
-        if (bw >= 30) svg.append('text').attr('class', 'px-val').attr('x', bx + bw / 2).attr('y', by - 5).attr('text-anchor', 'middle').text(f2(r[field]));
-      }
-      svg.append('text').attr('x', x0(b) + x0.bandwidth() / 2).attr('y', H - m.b + 16).attr('text-anchor', 'middle').text(BL[b] || b);
-      svg.append('text').attr('x', x0(b) + x0.bandwidth() / 2).attr('y', H - m.b + 31).attr('text-anchor', 'middle').text('n = ' + ops.map((o) => { const r = rows.find((q) => q.bucket === b && q.op === o); return r ? r.n : 0; }).join(' / '));
-    }
+    svg.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 6).attr('text-anchor', 'middle').text('Year first produced');
     svg.append('line').attr('class', 'px-ref').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(1)).attr('y2', y(1));
+    const T = tip(host);
+    const line = d3.line().defined((p) => p.v != null).x((p) => x(p.yr)).y((p) => y(p.v));
+    for (const o of ops) {
+      const byYr = new Map(rows.filter((r) => r.op === o).map((r) => [r.yr, r]));
+      const series = d3.range(YEAR0, maxYr + 1).map((yr) => ({ yr, v: byYr.has(yr) ? byYr.get(yr)[field] : null, r: byYr.get(yr) }));
+      svg.append('path').attr('d', line(series)).attr('fill', 'none').attr('stroke', color(o)).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+      svg.append('g').selectAll('circle').data(series.filter((p) => p.v != null)).join('circle').attr('cx', (p) => x(p.yr)).attr('cy', (p) => y(p.v)).attr('r', 3.5).attr('fill', color(o)).attr('stroke', 'var(--color-panel)').attr('stroke-width', 1)
+        .on('pointermove', (e, p) => T.show(e, o + ', ' + p.yr, [idx(p.v) + ' vs basin', p.r.n + ' wells · lateral ' + num(p.r.len) + ' ft']))
+        .on('pointerleave', () => T.hide());
+    }
   }
   function vintage(d) {
-    const scope = d.wells.filter(inScope);
+    const scope = d.wells.filter(inScope).filter((w) => w.yr >= YEAR0);
     const ops = st.mode === 'all' ? [ALL] : st.sel;
     legend($('leg-vint'), legItems());
     const minN = st.fm === 'all' ? 3 : 2;
     const rows = [];
     for (const o of ops) {
       const ws = st.mode === 'all' ? scope : scope.filter((w) => w.op === o);
-      for (const [b, g] of d3.group(ws, (w) => bucket(w.yr))) {
-        if (g.length >= minN) rows.push({ op: o, bucket: b, n: g.length, len: med(g, (w) => w.len), iof12: med(g, (w) => ratio(w, 'of12')), iwf12: med(g, (w) => ratio(w, 'wf12')) });
+      for (const [yr, g0] of d3.group(ws, (w) => w.yr)) {
+        const g = g0.filter((w) => w.of12 != null);
+        if (g.length >= minN) rows.push({ op: o, yr, n: g.length, len: med(g, (w) => w.len), iof12: med(g, (w) => ratio(w, 'of12')), iwf12: med(g, (w) => ratio(w, 'wf12')) });
       }
     }
     if (!rows.length) { empty($('ch-vint-oil'), 'Too few wells to split by year.'); empty($('ch-vint-water'), 'Too few wells to split by year.'); return; }
     const present = ops.filter((o) => rows.some((r) => r.op === o));
-    vintageChart($('ch-vint-oil'), rows, present, 'iof12', 'Oil per foot against basin, by year first produced');
-    vintageChart($('ch-vint-water'), rows, present, 'iwf12', 'Water per foot against basin, by year first produced');
+    yearChart($('ch-vint-oil'), rows, present, 'iof12', 'Oil per foot against basin, by year first produced');
+    yearChart($('ch-vint-water'), rows, present, 'iwf12', 'Water per foot against basin, by year first produced');
   }
 
   /* ---------- drivers table ---------- */
