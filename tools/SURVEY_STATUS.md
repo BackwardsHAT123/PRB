@@ -1,6 +1,6 @@
 # PRB map: directional-survey reconciliation — status and to-do
 
-Last updated: Oct 24, 2026 (after the third Campbell batch). Repo: https://github.com/BackwardsHAT123/PRB (map = `index.html`, path fixes = `data/overrides.json`).
+Last updated: Oct 26, 2026 (Converse survey reading stopped after batch 6). Repo: https://github.com/BackwardsHAT123/PRB (map = `index.html`, path fixes = `data/overrides.json`).
 
 ## What this is
 Wells on the map that only show a straight line from surface hole (SHL) to bottom hole (BHL) get a real lateral path
@@ -53,11 +53,10 @@ Paths on the map now by source (Campbell): 441 from filed certification forms (f
 
 1. **Campbell survey batches: all five target lists (`targets_chunk1.json` to `5`) are done.** The target lists only held wells with a straight line and a header bottom hole when they were made, so a new list could be built for any wells added or still unresolved — `tools/survey_work/targets_chunk2.json` … `targets_chunk5.json` ( operators Ballard, EOG, Devon, Peak Powder River; only wells that still had a straight line and a header bottom hole when the lists were made).
    The second batch (100 wells) took about 70 minutes, so each further 100 is roughly an hour to an hour and a half.
-2. **Converse T36N R71W: 150 wells left** in `tools/survey_work/targets_3671.json` (153 of the 156 are Anschutz). Four of these (`49-009-31444` Dolly Fed, `34261` Rags Fed, `34300` Bucky Fed, `49038` Toughy Fed) have a bottom hole I estimated earlier (fx 12), so the reader will likely "reject" them; check by hand whether the survey's own end point falls in the stated bottom-hole section — it may give the true bottom hole.
-   The run was stopped when a session ended; it resumes where it left off (finished wells are skipped).
+2. **Converse: survey reading stopped (decision Oct 26, 2026).** Batches 1 to 6 (600 Continental wells, `tools/survey_work/targets_converse1.json` to `6`) were read and 312 exact paths applied. The remaining Converse lists (`targets_converse7.json` to `18`, about 1,100 wells, plus T36N R71W `targets_3671.json`, 150 wells left) were not run and are not planned. The monthly update no longer reads Converse surveys; Converse wells still get new-well, state-track and production updates. The state site (pipeline.wyo.gov) blocked the reader after roughly 200 to 300 wells in a few hours, even at one request per 10 seconds; resting overnight cleared it. If this is revisited, run one chunk at a time with long rests.
 3. **Decide on the held results from the second to sixth Campbell batches** (counts as of the last apply run): 68 "adjusted" paths (Campbell and Johnson) (shifted to end on the header BHL) and 26 depth-gap paths. The first round also held its adjusted ones back. They can be applied with the "include adjusted" option (fx 9) if you want them.
 4. **94 rejected + 18 unreadable wells from the second to sixth Campbell batches** have not been investigated (misread OCR, or the survey really does not match the header bottom hole). IDs are in `tools/survey_work/survey_out.jsonl` (status `rejected` / `unreadable`).
-5. **Converse and Johnson wells outside T36N R71W**: no survey reading has been done anywhere else. Wells with a multi-point state track already use it; wells with a straight state track show a straight line.
+5. **Johnson wells outside the two target lists and Converse wells**: Johnson's 106 straight-line targets were read (64 paths applied). Wells with a multi-point state track already use it; wells with a straight state track show a straight line.
 6. Optional: apply script `tools/apply_surveys.py` was written for the earlier session's folder layout (`prb/index.html`, `prb/data/overrides.json`) and for Campbell only. For the second batch I applied results with an inline script on a fresh clone of the repo (same rules: status ok, not adjusted, not depth-gap, well still a straight line, then write `ln`, `fx` 8 and `surv` into the page data and `data/overrides.json`). It would be worth tidying that into the tools folder, and making it work for Converse.
 
 ## How to run it again
