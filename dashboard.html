@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRB operator and formation performance</title>
+<meta name="description" content="Oil and water performance of Ballard Petroleum and Sage Butte wells in the Powder River Basin, by operator and formation.">
+<style>
+:root{--color-bg:#f7f8f6;--color-panel:#ffffff;--color-fg:#1c2421;--color-fg-muted:#5d6a63;--color-border-line:#d9dfda;--color-ok:#1d7a4a;--color-warn:#a8741a;--color-bad:#b3382c;
+--cds-radius:8px;--cds-pad-xs:4px;--cds-pad-sm:8px;--cds-pad-md:12px;--cds-pad-lg:16px;--cds-pad-xl:24px;--cds-gap-xs:4px;--cds-gap-sm:8px;--cds-gap-md:16px;--cds-gap-lg:24px;
+--cds-font-size-caption:12px;--cds-font-size-body:14px;--cds-font-size-heading:16px;--cds-font-size-title:22px;--cds-font-weight-medium:500;
+--cds-chart-muted:#9aa59e;--cds-chart-status-critical:#c0392b;--cds-chart-grid:#e3e8e4;--cds-chart-axis:#8b968f;--cds-chart-reference:#7d8982;
+--cds-surface-popover:#ffffff;--cds-border:#c9d1cb;--cds-shadow-popover:0 4px 14px rgba(0,0,0,.14);--cds-text-secondary:#5d6a63;--cds-dur-slow:.3s;
+--font-anthropic-sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-anthropic-serif:"Iowan Old Style","Palatino Linotype",Georgia,serif}
+@media (prefers-color-scheme:dark){:root{--color-bg:#141a17;--color-panel:#1d2521;--color-fg:#e7ece8;--color-fg-muted:#9aa89f;--color-border-line:#33403a;--color-ok:#5fc08c;--color-warn:#d9a441;--color-bad:#ee7a6d;
+--cds-chart-muted:#6d7a73;--cds-chart-status-critical:#e5675a;--cds-chart-grid:#2b3630;--cds-chart-axis:#6f7d75;--cds-chart-reference:#8c9a92;--cds-surface-popover:#222c27;--cds-border:#3a4841;--cds-shadow-popover:0 4px 14px rgba(0,0,0,.5);--cds-text-secondary:#9aa89f;color-scheme:dark}}
+html{background:var(--color-bg)}
+body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var(--font-anthropic-sans)}
+#dash-root{padding:20px clamp(14px,3vw,32px) 0}
+.dash-skeleton{background:linear-gradient(90deg,var(--cds-chart-grid),transparent,var(--cds-chart-grid));background-size:200% 100%;border-radius:6px;color:transparent;animation:sk 1.4s linear infinite}
+@keyframes sk{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.dash-skeleton{animation:none}}
+.site-foot{max-width:1180px;margin:0 auto;padding:8px 0 40px;color:var(--color-fg-muted);font-size:12px;line-height:1.5}
+.site-foot a{color:inherit}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+</head>
+<body>
+<div id="dash-root">
+<script>
+/* Small stand-in for the data layer the page was written against: loads the JSON tables from dashboard/data and re-runs the page's draw function when data arrives, the window resizes or the color scheme changes. */
+(function () {
+  const IDS = ['wells', 'groups', 'curves', 'drivers', 'vintage', 'area'];
+  const store = {}, errs = {}, cbs = [];
+  const dark = matchMedia('(prefers-color-scheme: dark)');
+  const light = ['#1b6ca8', '#d4731a', '#2f9e6e', '#8e5bb5', '#b8962e', '#3aa3b8', '#c2506b', '#6b7b8c'];
+  const night = ['#6fb1e6', '#f0a257', '#6fcf9f', '#b99be0', '#e0c25c', '#6ccbe0', '#ec8ba3', '#a8b6c4'];
+  const run = () => cbs.forEach((f) => f());
+  window.dash = {
+    get colors() { return dark.matches ? night : light; },
+    data(id) { return store[id] ? { status: 'ok', data: store[id] } : { status: errs[id] ? 'error' : 'loading', data: [] }; },
+    onData(fn) { cbs.push(fn); fn(); },
+  };
+  let t = 0;
+  addEventListener('resize', () => { clearTimeout(t); t = setTimeout(run, 150); });
+  dark.addEventListener('change', run);
+  Promise.all(IDS.map((id) => fetch('dashboard/data/' + id + '.json').then((r) => { if (!r.ok) throw new Error(id); return r.json(); }).then((j) => { store[id] = j; }).catch(() => { errs[id] = 1; }))).then(run);
+})();
+</script>
+<style>
+.px { max-width: 1180px; margin-inline: auto; font-family: var(--font-anthropic-sans); color: var(--color-fg); display: flex; flex-direction: column; gap: 28px; padding-block: 8px 40px; }
+.px * { min-width: 0; }
+.px a { color: inherit; }
+.px-eyebrow { margin: 0 0 6px; font-size: var(--cds-font-size-caption); letter-spacing: .06em; text-transform: uppercase; color: var(--color-fg-muted); }
+.px-title { margin: 0 0 10px; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: clamp(28px, 4.4vw, 40px); line-height: 1.1; text-wrap: balance; }
+.px-take { margin: 0 0 8px; max-width: 70ch; font-size: var(--cds-font-size-heading); line-height: 1.5; color: var(--color-fg); }
+.px-take.sub { color: var(--color-fg-muted); font-size: var(--cds-font-size-body); }
+.px-links { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; }
+.px-btn { display: inline-block; padding: 7px 12px; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); text-decoration: none; font-size: var(--cds-font-size-body); }
+.px-btn:hover { border-color: var(--cds-chart-axis); }
+.px-ctl { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; padding: 10px 12px; background: var(--color-bg); border-bottom: 1px solid var(--color-border-line); }
+.px-ctlgroup { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.px-ctllab { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); text-transform: uppercase; letter-spacing: .05em; }
+.px-seg { display: inline-flex; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); overflow: hidden; }
+.px-segbtn { appearance: none; border: 0; background: var(--color-panel); color: var(--color-fg-muted); font: inherit; font-size: var(--cds-font-size-body); padding: 6px 12px; cursor: pointer; border-right: 1px solid var(--color-border-line); }
+.px-segbtn:last-child { border-right: 0; }
+.px-segbtn[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); }
+.px-segbtn:focus-visible { outline: 2px solid var(--cds-chart-axis); outline-offset: -2px; }
+.px-sec h2 { margin: 0 0 4px; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); }
+.px-sec > .px-lede { margin: 0 0 14px; color: var(--color-fg-muted); max-width: 72ch; line-height: 1.5; }
+.px-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: var(--cds-gap-md); align-items: start; }
+.px-grid2.tight { grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+.px-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); }
+.px-card h3 { margin: 0 0 2px; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
+.px-note { margin: 0 0 10px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.45; }
+.px-tablewrap { overflow-x: auto; }
+.px table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.px th { text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+.px td { padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); vertical-align: middle; }
+.px th.n, .px td.n { text-align: right; }
+.px tbody tr:last-child td { border-bottom: 0; }
+.px td.name a { text-decoration: none; border-bottom: 1px dotted var(--color-fg-muted); }
+.px td.name a:hover { border-bottom-style: solid; }
+.px-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.px-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--color-border-line); font-size: var(--cds-font-size-caption); white-space: nowrap; }
+.px-pill.good { color: var(--color-ok); border-color: var(--color-ok); }
+.px-pill.bad { color: var(--color-bad); border-color: var(--color-bad); }
+.px-bar { position: relative; min-width: 90px; height: 18px; display: flex; align-items: center; }
+.px-bar i { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 3px; background: var(--cds-chart-muted); opacity: .55; }
+.px-bar b { position: relative; font-weight: 400; padding-left: 6px; }
+.px-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 8px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.px-chart { position: relative; width: 100%; min-height: 240px; }
+.px-chart svg { display: block; width: 100%; }
+.px-chart text { fill: var(--color-fg-muted); font-size: var(--cds-font-size-caption); font-family: var(--font-anthropic-sans); }
+.px-chart .px-ax path, .px-chart .px-ax line { stroke: var(--cds-chart-axis); }
+.px-chart .px-grid line { stroke: var(--cds-chart-grid); }
+.px-chart .px-grid path { display: none; }
+.px-chart .px-ref { stroke: var(--cds-chart-reference); stroke-dasharray: 4 4; fill: none; }
+.px-chart .px-val { fill: var(--color-fg); }
+.px-tip { position: absolute; z-index: 3; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); line-height: 1.45; max-width: 260px; }
+.px-tip b { font-weight: var(--cds-font-weight-medium); }
+.px-tip span { display: block; color: var(--cds-text-secondary); }
+.px-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--cds-gap-md); }
+.px-opname { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.px-opname h3 { margin: 0; }
+.px-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 12px 14px; margin: 0; }
+.px-stats dt { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.px-stats dd { margin: 2px 0 0; font-family: var(--font-anthropic-serif); font-size: var(--cds-font-size-title); line-height: 1.15; font-variant-numeric: tabular-nums; }
+.px-stats dd small { font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.px-method { color: var(--color-fg-muted); font-size: var(--cds-font-size-body); line-height: 1.55; max-width: 78ch; }
+.px-method p { margin: 0 0 8px; }
+.px-failed { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 120px; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.px-failed i { width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+.px-hide-s { }
+@media (max-width: 640px) { .px-hide-s { display: none; } .px-ctl { position: static; } }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+</style>
+
+<div class="px" id="px">
+  <header>
+    <p class="px-eyebrow">Ballard Petroleum and Sage Butte · Powder River Basin, Wyoming</p>
+    <h1 class="px-title" id="px-title">PRB operator and formation performance</h1>
+    <p class="px-take dash-skeleton" id="px-take1">&nbsp;</p>
+    <p class="px-take sub dash-skeleton" id="px-take2">&nbsp;</p>
+    <div class="px-links"><a class="px-btn" id="px-maplink" href="https://backwardshat123.github.io/PRB/" target="_blank" rel="noopener">Open the well map</a></div>
+  </header>
+
+  <nav class="px-ctl" aria-label="Chart settings">
+    <div class="px-ctlgroup"><span class="px-ctllab">Window</span><div class="px-seg" id="seg-h" role="group" aria-label="Production window"></div></div>
+    <div class="px-ctlgroup"><span class="px-ctllab">Basis</span><div class="px-seg" id="seg-b" role="group" aria-label="Basis"></div></div>
+    <div class="px-ctlgroup"><span class="px-ctllab">Operator</span><div class="px-seg" id="seg-op" role="group" aria-label="Operator"></div></div>
+  </nav>
+
+  <section class="px-sec" id="standouts">
+    <h2>Which wells stand out</h2>
+    <p class="px-lede">Cumulative production over the first months a well produced oil. Click a well name to find it on the map.</p>
+    <div class="px-grid2">
+      <article class="px-card"><h3>Most oil</h3><p class="px-note" id="note-top"></p><div class="px-tablewrap" id="host-top"></div></article>
+      <article class="px-card"><h3>Least water, among wells with good oil</h3><p class="px-note" id="note-low"></p><div class="px-tablewrap" id="host-low"></div></article>
+    </div>
+    <article class="px-card" style="margin-top: var(--cds-gap-md)">
+      <h3>Oil against water</h3>
+      <p class="px-note" id="note-scatter"></p>
+      <div class="px-legend" id="leg-scatter"></div>
+      <div class="px-chart dash-skeleton" id="ch-scatter" data-source="wells"></div>
+    </article>
+  </section>
+
+  <section class="px-sec" id="operators">
+    <h2>Which operator is doing it well</h2>
+    <p class="px-lede" id="lede-ops"></p>
+    <div class="px-cards" id="op-cards"></div>
+    <article class="px-card" style="margin-top: var(--cds-gap-md)">
+      <h3>Operator by formation</h3>
+      <p class="px-note" id="note-opfm"></p>
+      <div class="px-tablewrap" id="host-opfm"></div>
+    </article>
+    <div class="px-grid2 tight" style="margin-top: var(--cds-gap-md)">
+      <article class="px-card"><h3 id="h-curve-oil">Cumulative oil</h3><p class="px-note">Median well, by months since first oil.</p><div class="px-legend" id="leg-curves"></div><div class="px-chart dash-skeleton" id="ch-curve-oil" data-source="curves"></div></article>
+      <article class="px-card"><h3 id="h-curve-water">Cumulative water</h3><p class="px-note">Median well, by months since first oil.</p><div class="px-chart dash-skeleton" id="ch-curve-water" data-source="curves"></div></article>
+    </div>
+  </section>
+
+  <section class="px-sec" id="why">
+    <h2>Is it the ground or the operator</h2>
+    <p class="px-lede" id="lede-why"></p>
+    <article class="px-card">
+      <h3>What explains the differences between wells</h3>
+      <p class="px-note">Share of the well-to-well spread in each outcome (first 12 months, per 1,000 ft of lateral) that one factor accounts for, adjusted for how many groups it has. Each factor is tested alone; the last two rows combine them.</p>
+      <div class="px-tablewrap" id="host-drivers" data-source="drivers"></div>
+    </article>
+    <div class="px-grid2 tight" style="margin-top: var(--cds-gap-md)">
+      <article class="px-card"><h3>Oil per foot, by year first produced</h3><p class="px-note">Median well against the median well from other operators in the same formation. 1.00× is typical.</p><div class="px-legend" id="leg-vint"></div><div class="px-chart dash-skeleton" id="ch-vint-oil" data-source="vintage"></div></article>
+      <article class="px-card"><h3>Water per foot, by year first produced</h3><p class="px-note">Same comparison. Below 1.00× is less water than typical.</p><div class="px-chart dash-skeleton" id="ch-vint-water" data-source="vintage"></div></article>
+    </div>
+    <div class="px-grid2" style="margin-top: var(--cds-gap-md)">
+      <article class="px-card"><h3>Where the good wells are</h3><p class="px-note" id="note-geo"></p><div class="px-legend" id="leg-geo"></div><div class="px-chart dash-skeleton" id="ch-geo" data-source="wells"></div></article>
+      <article class="px-card"><h3>Townships ranked by oil per foot</h3><p class="px-note">Townships with at least four wells. First 12 months, per 1,000 ft of lateral.</p><div class="px-tablewrap" id="host-area"></div></article>
+    </div>
+  </section>
+
+  <section class="px-sec" id="method">
+    <h2>How these numbers are made</h2>
+    <div class="px-method" id="method-text"></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const MAP = 'https://backwardshat123.github.io/PRB/';
+  const OPS = ['Ballard Petroleum', 'Sage Butte'];
+  const SHORT = { 'Ballard Petroleum': 'Ballard', 'Sage Butte': 'Sage Butte' };
+  const BL = { '2013 and earlier': '≤ 2013', '2014-2015': '2014–15', '2016-2019': '2016–19', '2020 and later': '2020 +' };
+  const $ = (id) => document.getElementById(id);
+  const st = { h: 12, b: 'ft', op: 'all' };
+  let ctx = null;
+
+  const f0 = d3.format(',');
+  const f2 = d3.format('.2f');
+  const num = (v) => (v == null ? '—' : f0(Math.round(v)));
+  const idx = (v) => (v == null ? '—' : f2(v) + '×');
+  const pct = (v) => Math.round(v * 100) + '%';
+  const tickf = d3.format('.2~s');
+  const color = (op) => (op === OPS[0] ? dash.colors[0] : dash.colors[1]);
+
+  const K = () => {
+    const ft = st.b === 'ft';
+    return { o: (ft ? 'of' : 'o') + st.h, w: (ft ? 'wf' : 'w') + st.h, io: (ft ? 'iof' : 'io') + st.h, iw: (ft ? 'iwf' : 'iw') + st.h, wor: 'wor' + st.h };
+  };
+  const unit = () => (st.b === 'ft' ? 'bbl per 1,000 ft of lateral' : 'bbl');
+  const win = () => 'first ' + st.h + ' months';
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function mapLink(api) { return MAP + '#' + api; }
+  function ready() {
+    const d = {};
+    for (const id of ['wells', 'groups', 'curves', 'drivers', 'vintage', 'area']) {
+      const x = dash.data(id);
+      if (x.status === 'error') return 'error';
+      if (x.status !== 'ok') return null;
+      d[id] = x.data;
+    }
+    return d;
+  }
+  function failed(host) {
+    host.classList.remove('dash-skeleton');
+    host.replaceChildren();
+    const p = el('div', 'px-failed');
+    p.appendChild(el('i'));
+    p.appendChild(el('span', null, 'Failed to load'));
+    host.appendChild(p);
+  }
+
+  function seg(host, opts, key) {
+    host.replaceChildren();
+    for (const o of opts) {
+      const b = el('button', 'px-segbtn', o.label);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(st[key] === o.v));
+      b.addEventListener('click', () => { st[key] = o.v; if (ctx) render(ctx); });
+      host.appendChild(b);
+    }
+  }
+
+  function tip(host) {
+    let t = host.querySelector('.px-tip');
+    if (!t) { t = el('div', 'px-tip'); t.hidden = true; host.appendChild(t); }
+    return {
+      show(evt, title, lines) {
+        t.replaceChildren(el('b', null, title));
+        for (const l of lines) t.appendChild(el('span', null, l));
+        t.hidden = false;
+        const r = host.getBoundingClientRect();
+        let x = evt.clientX - r.left + 14, y = evt.clientY - r.top + 14;
+        if (x + t.offsetWidth > r.width) x = Math.max(0, evt.clientX - r.left - t.offsetWidth - 14);
+        if (y + t.offsetHeight > r.height) y = Math.max(0, evt.clientY - r.top - t.offsetHeight - 14);
+        t.style.left = x + 'px'; t.style.top = y + 'px';
+      },
+      hide() { t.hidden = true; },
+    };
+  }
+  function legend(host, items) {
+    host.replaceChildren();
+    for (const it of items) {
+      const s = el('span');
+      const dot = el('span', 'px-dot');
+      dot.style.background = it.color;
+      s.appendChild(dot);
+      s.appendChild(document.createTextNode(it.label));
+      host.appendChild(s);
+    }
+  }
+
+  /* ---------- tables ---------- */
+  function table(host, source, rowKey, cols, rows, className) {
+    host.replaceChildren();
+    const t = el('table', className);
+    t.setAttribute('data-source', source);
+    t.setAttribute('data-row-key', rowKey);
+    const thead = el('thead'), hr = el('tr');
+    for (const c of cols) {
+      const th = el('th', (c.n ? 'n ' : '') + (c.cls || ''), c.label);
+      if (c.field) th.setAttribute('data-field', c.field);
+      hr.appendChild(th);
+    }
+    thead.appendChild(hr); t.appendChild(thead);
+    const tb = el('tbody');
+    for (const r of rows) {
+      const tr = el('tr');
+      tr.setAttribute('data-key', r[rowKey]);
+      for (const c of cols) {
+        const td = el('td', (c.n ? 'n ' : '') + (c.cls || ''));
+        c.cell(r, td);
+        tr.appendChild(td);
+      }
+      tb.appendChild(tr);
+    }
+    t.appendChild(tb); host.appendChild(t);
+  }
+  const opCell = (r, td) => { const dot = el('span', 'px-dot'); dot.style.background = color(r.op); td.appendChild(dot); td.appendChild(document.createTextNode(SHORT[r.op])); };
+
+  function wellColumns(k) {
+    return [
+      { label: '#', n: true, cell: (r, td) => { td.textContent = r._rank; } },
+      { label: 'Well', field: 'name', cls: 'name', cell: (r, td) => { const a = el('a', null, r.name); a.href = mapLink(r.api); a.target = '_blank'; a.rel = 'noopener'; td.appendChild(a); } },
+      { label: 'Operator', field: 'op', cell: opCell },
+      { label: 'Formation', field: 'fm', cell: (r, td) => { td.textContent = r.fm; } },
+      { label: 'First oil', field: 'yr', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = r.yr; } },
+      { label: 'Lateral, ft', field: 'len', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = num(r.len); } },
+      { label: 'Oil, bbl' + (st.b === 'ft' ? '/1,000 ft' : ''), field: k.o, n: true, cell: (r, td) => { td.textContent = num(r[k.o]); } },
+      { label: 'Water, bbl' + (st.b === 'ft' ? '/1,000 ft' : ''), field: k.w, n: true, cell: (r, td) => { td.textContent = num(r[k.w]); } },
+      { label: 'Water:oil', field: k.wor, n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = r[k.wor] == null ? '—' : f2(r[k.wor]); } },
+    ];
+  }
+
+  function standouts(d) {
+    const k = K();
+    const have = d.wells.filter((w) => w[k.o] != null && w[k.w] != null);
+    const scoped = have.filter((w) => st.op === 'all' || w.op === st.op);
+    const medOil = d3.median(have, (w) => w[k.o]);
+
+    const top = scoped.slice().sort((a, b) => b[k.o] - a[k.o]).slice(0, 10).map((w, i) => Object.assign({}, w, { _rank: i + 1 }));
+    $('note-top').textContent = 'Top 10 by oil in the ' + win() + ', ' + unit() + '. ' + scoped.length + ' wells have that much history.';
+    table($('host-top'), 'wells', 'api', wellColumns(k), top);
+
+    const low = scoped.filter((w) => w[k.o] >= medOil).sort((a, b) => a[k.w] - b[k.w]).slice(0, 10).map((w, i) => Object.assign({}, w, { _rank: i + 1 }));
+    $('note-low').textContent = 'Lowest water in the ' + win() + ' among wells that made at least the median oil of both operators (' + num(medOil) + ' ' + (st.b === 'ft' ? 'bbl per 1,000 ft' : 'bbl') + '). Low water on a weak oil well is not a win.';
+    table($('host-low'), 'wells', 'api', wellColumns(k), low);
+  }
+
+  /* ---------- scatter ---------- */
+  function scatter(d) {
+    const k = K(), host = $('ch-scatter');
+    const all = d.wells.filter((w) => w[k.o] != null && w[k.w] != null);
+    const pts = all.filter((w) => st.op === 'all' || w.op === st.op);
+    host.classList.remove('dash-skeleton');
+    host.replaceChildren();
+    legend($('leg-scatter'), OPS.filter((o) => st.op === 'all' || st.op === o).map((o) => ({ color: color(o), label: o })));
+    $('note-scatter').textContent = 'Each dot is a well, ' + win() + ', ' + unit() + '. Dashed lines are the medians of both operators. Wells toward the lower right made more oil and less water. Click a dot to open it on the map.';
+    const W = Math.max(280, host.clientWidth), H = Math.round(Math.min(460, Math.max(300, W * 0.58)));
+    const m = { t: 12, r: 16, b: 48, l: 62 };
+    const x = d3.scaleLinear([0, d3.max(all, (w) => w[k.o]) * 1.05], [m.l, W - m.r]);
+    const y = d3.scaleLinear([0, d3.max(all, (w) => w[k.w]) * 1.05], [H - m.b, m.t]);
+    const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Scatter of oil against water for each well');
+    svg.append('g').attr('class', 'px-grid').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(''));
+    svg.append('g').attr('class', 'px-ax').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(W < 520 ? 4 : 7).tickFormat(tickf)).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
+    svg.append('g').attr('class', 'px-ax').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(tickf)).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
+    const mx = d3.median(all, (w) => w[k.o]), my = d3.median(all, (w) => w[k.w]);
+    svg.append('line').attr('class', 'px-ref').attr('x1', x(mx)).attr('x2', x(mx)).attr('y1', m.t).attr('y2', H - m.b);
+    svg.append('line').attr('class', 'px-ref').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(my)).attr('y2', y(my));
+    svg.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 8).attr('text-anchor', 'middle').text('Oil (' + (st.b === 'ft' ? 'bbl/1,000 ft' : 'bbl') + ')');
+    svg.append('text').attr('transform', `translate(14,${(m.t + H - m.b) / 2}) rotate(-90)`).attr('text-anchor', 'middle').text('Water (' + (st.b === 'ft' ? 'bbl/1,000 ft' : 'bbl') + ')');
+    const T = tip(host);
+    svg.append('g').selectAll('a').data(pts).join('a')
+      .attr('href', (w) => mapLink(w.api)).attr('target', '_blank').attr('rel', 'noopener')
+      .append('circle').attr('cx', (w) => x(w[k.o])).attr('cy', (w) => y(w[k.w])).attr('r', 4)
+      .attr('fill', (w) => color(w.op)).attr('fill-opacity', 0.75).attr('stroke', 'var(--color-panel)').attr('stroke-width', 1)
+      .on('pointermove', (e, w) => T.show(e, w.name, [SHORT[w.op] + ' · ' + w.fm + ' · ' + w.yr, 'Oil ' + num(w[k.o]) + ' · Water ' + num(w[k.w]), 'Lateral ' + num(w.len) + ' ft']))
+      .on('pointerleave', () => T.hide());
+  }
+
+  /* ---------- operator cards and table ---------- */
+  function groupRow(d, key) { return d.groups.find((g) => g.key === key); }
+  function statCell(dl, label, source, field, key, text, small) {
+    const wrap = el('div');
+    wrap.appendChild(el('dt', null, label));
+    const dd = el('dd');
+    const v = el('span', null, text);
+    v.setAttribute('data-source', source);
+    v.setAttribute('data-field', field);
+    v.setAttribute('data-where', 'key=' + encodeURIComponent(key));
+    dd.appendChild(v);
+    if (small) dd.appendChild(el('small', null, ' ' + small));
+    wrap.appendChild(dd);
+    dl.appendChild(wrap);
+  }
+  function opCards(d) {
+    const k = K(), host = $('op-cards');
+    host.replaceChildren();
+    for (const op of OPS) {
+      if (st.op !== 'all' && st.op !== op) continue;
+      const key = 'operator|' + op + '|', g = groupRow(d, key);
+      const card = el('article', 'px-card');
+      const head = el('div', 'px-opname');
+      const h = el('h3');
+      const dot = el('span', 'px-dot'); dot.style.background = color(op);
+      h.appendChild(dot); h.appendChild(document.createTextNode(op));
+      head.appendChild(h);
+      const pill = el('span', 'px-pill ' + (g.tone === 'good' ? 'good' : g.tone === 'bad' ? 'bad' : ''), g.read);
+      pill.title = 'Based on 12-month oil and water per foot against other operators in the same formations';
+      head.appendChild(pill);
+      card.appendChild(head);
+      const dl = el('dl', 'px-stats');
+      statCell(dl, 'Wells with data', 'groups', 'n12', key, num(g.n12), '');
+      statCell(dl, 'Median lateral', 'groups', 'len', key, num(g.len), 'ft');
+      statCell(dl, 'Median oil', 'groups', k.o, key, num(g[k.o]), st.b === 'ft' ? 'bbl/1,000 ft' : 'bbl');
+      statCell(dl, 'Median water', 'groups', k.w, key, num(g[k.w]), st.b === 'ft' ? 'bbl/1,000 ft' : 'bbl');
+      statCell(dl, 'Oil vs same-formation basin', 'groups', k.io, key, idx(g[k.io]), '');
+      statCell(dl, 'Water vs same-formation basin', 'groups', k.iw, key, idx(g[k.iw]), '');
+      card.appendChild(dl);
+      host.appendChild(card);
+    }
+  }
+  function opfmTable(d) {
+    const k = K();
+    const rows = d.groups.filter((g) => g.level === 'opfm' && (st.op === 'all' || g.op === st.op))
+      .sort((a, b) => (a.op === b.op ? (b[k.io] || 0) - (a[k.io] || 0) : a.op < b.op ? -1 : 1));
+    $('note-opfm').textContent = 'Medians of the ' + win() + (st.b === 'ft' ? ', per 1,000 ft of lateral' : ', total barrels') + '. “Vs basin” divides each well by the median well from other operators in the same formation, then takes the median: above 1.00× is more oil than typical, below 1.00× is less water than typical. The verdict uses 12-month per-foot values: strong oil is 1.10× or more, low water is 0.90× or less, high water is above 1.20×.';
+    const cols = [
+      { label: 'Operator', field: 'op', cell: opCell },
+      { label: 'Formation', field: 'fm', cell: (r, td) => { td.textContent = r.fm; } },
+      { label: 'Wells', field: 'n12', n: true, cell: (r, td) => { td.textContent = r.n12; } },
+      { label: 'Lateral, ft', field: 'len', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = num(r.len); } },
+      { label: 'Oil', field: k.o, n: true, cell: (r, td) => { td.textContent = num(r[k.o]); } },
+      { label: 'Water', field: k.w, n: true, cell: (r, td) => { td.textContent = num(r[k.w]); } },
+      { label: 'Oil vs basin', field: k.io, n: true, cell: (r, td) => { td.textContent = idx(r[k.io]); } },
+      { label: 'Water vs basin', field: k.iw, n: true, cell: (r, td) => { td.textContent = idx(r[k.iw]); } },
+      { label: 'Read', field: 'read', cell: (r, td) => { td.appendChild(el('span', 'px-pill ' + (r.tone === 'good' ? 'good' : r.tone === 'bad' ? 'bad' : ''), r.read)); } },
+    ];
+    table($('host-opfm'), 'groups', 'key', cols, rows);
+  }
+
+  /* ---------- line charts ---------- */
+  function lineChart(host, series, yTitle) {
+    host.classList.remove('dash-skeleton');
+    host.replaceChildren();
+    const W = Math.max(260, host.clientWidth), H = Math.round(Math.min(320, Math.max(220, W * 0.62)));
+    const m = { t: 10, r: 14, b: 40, l: 56 };
+    const maxM = d3.max(series, (s) => d3.max(s.pts, (p) => p.m));
+    const maxY = d3.max(series, (s) => d3.max(s.pts, (p) => p.v));
+    const x = d3.scaleLinear([1, maxM], [m.l, W - m.r]);
+    const y = d3.scaleLinear([0, maxY * 1.08], [H - m.b, m.t]);
+    const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', yTitle);
+    svg.append('g').attr('class', 'px-grid').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(''));
+    svg.append('g').attr('class', 'px-ax').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(Math.min(maxM, W < 420 ? 5 : 8)).tickFormat(d3.format('d'))).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
+    svg.append('g').attr('class', 'px-ax').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(tickf)).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
+    svg.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 6).attr('text-anchor', 'middle').text('Months since first oil');
+    const line = d3.line().x((p) => x(p.m)).y((p) => y(p.v));
+    for (const s of series) svg.append('path').attr('d', line(s.pts)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    const T = tip(host);
+    const rule = svg.append('line').attr('class', 'px-ref').attr('y1', m.t).attr('y2', H - m.b).attr('visibility', 'hidden');
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (e) => {
+        const r = host.getBoundingClientRect();
+        const mm = Math.max(1, Math.min(maxM, Math.round(x.invert((e.clientX - r.left) * (W / r.width)))));
+        rule.attr('x1', x(mm)).attr('x2', x(mm)).attr('visibility', 'visible');
+        T.show(e, 'Month ' + mm, series.map((s) => { const p = s.pts.find((q) => q.m === mm); return s.name + ': ' + (p ? num(p.v) : '—'); }));
+      })
+      .on('pointerleave', () => { rule.attr('visibility', 'hidden'); T.hide(); });
+  }
+  function curves(d) {
+    const ft = st.b === 'ft';
+    const series = OPS.filter((o) => st.op === 'all' || st.op === o).map((o) => ({
+      name: o, color: color(o),
+      pts: d.curves.filter((c) => c.series === o).sort((a, b) => a.month - b.month).map((c) => ({ m: c.month, v: ft ? c.oil_ft : c.oil })),
+    }));
+    const wser = OPS.filter((o) => st.op === 'all' || st.op === o).map((o) => ({
+      name: o, color: color(o),
+      pts: d.curves.filter((c) => c.series === o).sort((a, b) => a.month - b.month).map((c) => ({ m: c.month, v: ft ? c.water_ft : c.water })),
+    }));
+    $('h-curve-oil').textContent = 'Cumulative oil (' + (ft ? 'bbl per 1,000 ft' : 'bbl') + ')';
+    $('h-curve-water').textContent = 'Cumulative water (' + (ft ? 'bbl per 1,000 ft' : 'bbl') + ')';
+    legend($('leg-curves'), series.map((s) => ({ color: s.color, label: s.name })));
+    lineChart($('ch-curve-oil'), series, 'Cumulative oil by month');
+    lineChart($('ch-curve-water'), wser, 'Cumulative water by month');
+  }
+
+  /* ---------- grouped bars by year bucket ---------- */
+  function vintageChart(host, rows, field, label) {
+    host.classList.remove('dash-skeleton');
+    host.replaceChildren();
+    const buckets = [...new Set(rows.map((r) => r.bucket))];
+    const ops = OPS.filter((o) => st.op === 'all' || st.op === o);
+    const W = Math.max(260, host.clientWidth), H = Math.round(Math.min(320, Math.max(240, W * 0.66)));
+    const m = { t: 20, r: 10, b: 54, l: 40 };
+    const x0 = d3.scaleBand(buckets, [m.l, W - m.r]).paddingInner(0.2);
+    const x1 = d3.scaleBand(ops, [0, x0.bandwidth()]).padding(0.12);
+    const maxY = Math.max(1.2, d3.max(rows, (r) => r[field]) * 1.12);
+    const y = d3.scaleLinear([0, maxY], [H - m.b, m.t]);
+    const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', label);
+    svg.append('g').attr('class', 'px-grid').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(-(W - m.l - m.r)).tickFormat(''));
+    svg.append('g').attr('class', 'px-ax').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(d3.format('.1f'))).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
+    const T = tip(host);
+    for (const b of buckets) {
+      for (const o of ops) {
+        const r = rows.find((q) => q.bucket === b && q.op === o);
+        if (!r || r[field] == null) continue;
+        const bx = x0(b) + x1(o), bw = x1.bandwidth(), by = y(r[field]);
+        svg.append('rect').attr('x', bx).attr('y', by).attr('width', bw).attr('height', Math.max(0, y(0) - by)).attr('rx', 4).attr('fill', color(o))
+          .on('pointermove', (e) => T.show(e, o + ', ' + b, [idx(r[field]) + ' vs basin', r.n + ' wells · lateral ' + num(r.len) + ' ft']))
+          .on('pointerleave', () => T.hide());
+        if (bw >= 30) svg.append('text').attr('class', 'px-val').attr('x', bx + bw / 2).attr('y', by - 5).attr('text-anchor', 'middle').text(f2(r[field]));
+      }
+      const t = svg.append('text').attr('x', x0(b) + x0.bandwidth() / 2).attr('y', H - m.b + 16).attr('text-anchor', 'middle');
+      t.text(BL[b] || b);
+      const ns = ops.map((o) => { const r = rows.find((q) => q.bucket === b && q.op === o); return r ? r.n : 0; });
+      svg.append('text').attr('x', x0(b) + x0.bandwidth() / 2).attr('y', H - m.b + 31).attr('text-anchor', 'middle').text('n = ' + ns.join(' / '));
+    }
+    svg.append('line').attr('class', 'px-ref').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(1)).attr('y2', y(1));
+  }
+  function vintage(d) {
+    legend($('leg-vint'), OPS.filter((o) => st.op === 'all' || st.op === o).map((o) => ({ color: color(o), label: o })));
+    vintageChart($('ch-vint-oil'), d.vintage, 'iof12', 'Oil per foot against basin, by year first produced');
+    vintageChart($('ch-vint-water'), d.vintage, 'iwf12', 'Water per foot against basin, by year first produced');
+  }
+
+  /* ---------- drivers table ---------- */
+  function drivers(d) {
+    const host = $('host-drivers');
+    host.replaceChildren();
+    const outs = ['Oil per 1,000 ft, 12 months', 'Water per 1,000 ft, 12 months', 'Water-oil ratio, 12 months'];
+    const rowsDef = [
+      ['Formation', 'Formation'], ['Area (township and range)', 'Area (township and range)'], ['Operator', 'Operator'],
+      ['Year first produced', 'Year first produced'], ['Lateral length', 'Lateral length'],
+      ['Operator, added after formation, area, year and length', 'Operator, added on top of the other four'], ['All five together', 'All five together'],
+    ];
+    const t = el('table');
+    const hr = el('tr'); hr.appendChild(el('th', null, 'Factor'));
+    for (const o of outs) hr.appendChild(el('th', null, o));
+    const thead = el('thead'); thead.appendChild(hr); t.appendChild(thead);
+    const tb = el('tbody');
+    for (const [key, label] of rowsDef) {
+      const tr = el('tr'); tr.appendChild(el('td', null, label));
+      for (const o of outs) {
+        const r = d.drivers.find((q) => q.outcome === o && q.factor === key);
+        const td = el('td');
+        const bar = el('div', 'px-bar');
+        if (r) { const i = el('i'); i.style.width = Math.min(100, (r.adj_r2 / 0.6) * 100) + '%'; bar.appendChild(i); bar.appendChild(el('b', null, pct(r.adj_r2))); }
+        td.appendChild(bar); tr.appendChild(td);
+      }
+      tb.appendChild(tr);
+    }
+    t.appendChild(tb); host.appendChild(t);
+  }
+
+  /* ---------- geographic scatter and area table ---------- */
+  function geo(d) {
+    const k = K(), host = $('ch-geo');
+    host.classList.remove('dash-skeleton'); host.replaceChildren();
+    const pts = d.wells.filter((w) => w.lon != null && w.lat != null && (st.op === 'all' || w.op === st.op));
+    const lat0 = d3.mean(pts, (w) => w.lat), cx = Math.cos((lat0 * Math.PI) / 180);
+    const lonE = d3.extent(pts, (w) => w.lon), latE = d3.extent(pts, (w) => w.lat);
+    const W = Math.max(280, host.clientWidth);
+    const m = 14;
+    const spanX = (lonE[1] - lonE[0]) * cx || 1, spanY = latE[1] - latE[0] || 1;
+    const sc = (W - 2 * m) / spanX;
+    const H = Math.round(Math.min(560, Math.max(260, spanY * sc + 2 * m)));
+    const s2 = Math.min(sc, (H - 2 * m) / spanY);
+    const ox = m + ((W - 2 * m) - spanX * s2) / 2, oy = m;
+    const px = (lon) => ox + (lon - lonE[0]) * cx * s2, py = (lat) => oy + (latE[1] - lat) * s2;
+    const band = (v) => (v == null ? 'var(--cds-chart-grid)' : v >= 1.1 ? 'var(--color-ok)' : v < 0.9 ? 'var(--cds-chart-status-critical)' : 'var(--cds-chart-muted)');
+    legend($('leg-geo'), [{ color: 'var(--color-ok)', label: 'Oil 1.10× basin or more' }, { color: 'var(--cds-chart-muted)', label: 'In line' }, { color: 'var(--cds-chart-status-critical)', label: 'Below 0.90×' }]);
+    $('note-geo').textContent = 'Surface locations, colored by oil in the ' + win() + (st.b === 'ft' ? ' per foot' : '') + ' against the median well from other operators in the same formation. Outline shows the operator. Click a dot to open it on the map.';
+    const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Map of well locations colored by oil performance');
+    const T = tip(host);
+    svg.append('g').selectAll('a').data(pts).join('a')
+      .attr('href', (w) => mapLink(w.api)).attr('target', '_blank').attr('rel', 'noopener')
+      .append('circle').attr('cx', (w) => px(w.lon)).attr('cy', (w) => py(w.lat)).attr('r', 4.5)
+      .attr('fill', (w) => band(w[k.io])).attr('stroke', (w) => color(w.op)).attr('stroke-width', 1.6)
+      .on('pointermove', (e, w) => T.show(e, w.name, [w.fm + ' · ' + w.cty + ' County · ' + w.twp, 'Oil vs basin ' + idx(w[k.io]), 'Water vs basin ' + idx(w[k.iw])]))
+      .on('pointerleave', () => T.hide());
+    for (const c of d3.group(pts, (w) => w.cty)) {
+      const lon = d3.mean(c[1], (w) => w.lon), lat = d3.max(c[1], (w) => w.lat);
+      svg.append('text').attr('x', Math.min(W - 60, Math.max(60, px(lon)))).attr('y', Math.max(14, py(lat) - 10)).attr('text-anchor', 'middle').text(c[0] + ' County');
+    }
+  }
+  function areaTable(d) {
+    const cols = [
+      { label: 'Township', field: 'twp', cell: (r, td) => { td.textContent = r.twp; } },
+      { label: 'County', field: 'cty', cls: 'px-hide-s', cell: (r, td) => { td.textContent = r.cty; } },
+      { label: 'Wells', field: 'n', n: true, cell: (r, td) => { td.textContent = r.n; } },
+      { label: 'Main formation', field: 'top_fm', cell: (r, td) => { td.textContent = r.top_fm; } },
+      { label: 'Operator', cell: (r, td) => { td.textContent = r.ballard && r.sage ? 'Both' : r.ballard ? 'Ballard' : 'Sage Butte'; } },
+      { label: 'Oil/1,000 ft', field: 'of12', n: true, cell: (r, td) => { td.textContent = num(r.of12); } },
+      { label: 'Water/1,000 ft', field: 'wf12', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = num(r.wf12); } },
+      { label: 'Oil vs basin', field: 'iof12', n: true, cell: (r, td) => { td.textContent = idx(r.iof12); } },
+    ];
+    table($('host-area'), 'area', 'twp', cols, d.area);
+  }
+
+  /* ---------- text ---------- */
+  function words(d) {
+    const g = (key) => groupRow(d, key);
+    const b = g('operator|' + OPS[0] + '|'), s = g('operator|' + OPS[1] + '|');
+    const dir = (v, more, less) => (v >= 1 ? pct(v - 1) + ' ' + more : pct(1 - v) + ' ' + less);
+    const sent = (name, r) => name + ' wells make ' + dir(r.iof12, 'more', 'less') + ' oil and ' + dir(r.iwf12, 'more', 'less') + ' water';
+    $('px-take1').classList.remove('dash-skeleton');
+    $('px-take1').textContent = sent('Ballard Petroleum', b) + ' per foot of lateral than other operators’ wells in the same formations. ' + sent('Sage Butte', s) + '.';
+    const r2 = (o, f) => d.drivers.find((q) => q.outcome === o && q.factor === f).adj_r2;
+    const WO = 'Water per 1,000 ft, 12 months', OO = 'Oil per 1,000 ft, 12 months';
+    $('px-take2').classList.remove('dash-skeleton');
+    $('px-take2').textContent = 'Water is mostly a formation story: formation alone accounts for ' + pct(r2(WO, 'Formation')) + ' of the difference between wells, operator for ' + pct(r2(WO, 'Operator')) + '. Oil per foot is shared between formation (' + pct(r2(OO, 'Formation')) + ') and area (' + pct(r2(OO, 'Area (township and range)')) + '), with operator at ' + pct(r2(OO, 'Operator')) + '. All five factors together explain only ' + pct(r2(OO, 'All five together')) + ' of it.';
+    $('lede-ops').textContent = 'Wells are compared with the median well from other operators in the same formation, per 1,000 ft of lateral, so Ballard’s shorter laterals and Sage Butte’s longer ones can be read side by side.';
+    $('lede-why').textContent = 'These two operators work mostly different ground: Ballard in Campbell County, Sage Butte in Converse. That makes it hard to separate place from operator, so the tests below hold formation, township, year and lateral length constant.';
+  }
+  function method(d) {
+    const host = $('method-text');
+    if (host.childNodes.length) return;
+    const nb = d.groups.filter((g) => g.level === 'benchmark').reduce((a, g) => a + g.n, 0);
+    const lines = [
+      'Production comes from WOGCC monthly reports. A well’s first month is its first month with oil. The 3-, 6- and 12-month figures add up the first 3, 6 or 12 months from there, and a well appears only when it has that much history. The first month is often a partial month.',
+      'Per-foot values divide by lateral length, measured along the filed survey path where there is one and along the straight line from surface hole to bottom hole where there is not. A bottom hole that is wrong makes a lateral look too short or long.',
+      'The basin comparison uses all other operators’ wells on the map (' + f0(nb) + ' wells with 12 months of history) in the same formation. Formations with fewer than eight such wells have no comparison. The map covers Campbell, Converse and Johnson counties, so the benchmark is not the whole basin.',
+      'The “what explains” table fits each factor to the logarithm of the outcome and reports adjusted R². It shows association, not cause. Completion design, spacing, parent wells and landing zone are not in this data, which is why most of the spread stays unexplained.',
+    ];
+    for (const l of lines) host.appendChild(el('p', null, l));
+  }
+
+  function render(d) {
+    seg($('seg-h'), [{ v: 3, label: '3 months' }, { v: 6, label: '6 months' }, { v: 12, label: '12 months' }], 'h');
+    seg($('seg-b'), [{ v: 'ft', label: 'Per 1,000 ft' }, { v: 'total', label: 'Total barrels' }], 'b');
+    seg($('seg-op'), [{ v: 'all', label: 'Both' }, { v: OPS[0], label: 'Ballard' }, { v: OPS[1], label: 'Sage Butte' }], 'op');
+    words(d);
+    standouts(d);
+    scatter(d);
+    opCards(d);
+    opfmTable(d);
+    curves(d);
+    drivers(d);
+    vintage(d);
+    geo(d);
+    areaTable(d);
+    method(d);
+  }
+
+  dash.onData(() => {
+    const d = ready();
+    if (d === 'error') { for (const id of ['host-top', 'host-low', 'ch-scatter']) failed($(id)); return; }
+    if (!d) return;
+    ctx = d;
+    render(d);
+  });
+})();
+</script>
+
+</div>
+<footer class="site-foot">
+  Production from Wyoming Oil and Gas Conservation Commission (WOGCC) monthly reports, through August 2026. Built from the <a href="https://backwardshat123.github.io/PRB/">PRB wells map</a> data; the tables are rebuilt on request. Source and build scripts: <a href="https://github.com/BackwardsHAT123/PRB">github.com/BackwardsHAT123/PRB</a>.
+</footer>
+</body>
+</html>
