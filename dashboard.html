@@ -79,20 +79,23 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 .px-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); }
 .px-card h3 { margin: 0 0 2px; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
 .px-note { margin: 0 0 10px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.45; }
-.px-tablewrap { overflow-x: auto; }
-.px-tablewrap.tall { max-height: 560px; overflow: auto; }
-.px table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
-.px th { text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; position: sticky; top: 0; background: var(--color-panel); }
-.px td { padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); vertical-align: middle; }
+.px-tablewrap { overflow-x: hidden; }
+.px-tablewrap.tall { max-height: 560px; overflow-y: auto; overflow-x: hidden; }
+.px table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.px th { text-align: left; vertical-align: bottom; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: 10px 6px 8px; line-height: 1.25; border-bottom: 1px solid var(--color-border-line); position: sticky; top: 0; background: var(--color-panel); }
+.px td { padding: 6px; border-bottom: 1px solid var(--color-border-line); vertical-align: middle; line-height: 1.3; overflow-wrap: break-word; }
+.px td.n { white-space: nowrap; }
+.px td small { display: block; color: var(--color-fg-muted); }
+.px col.px-hide-s { }
 .px th.n, .px td.n { text-align: right; }
 .px tbody tr:last-child td { border-bottom: 0; }
-.px td.name a { text-decoration: none; border-bottom: 1px dotted var(--color-fg-muted); }
-.px td.name a:hover { border-bottom-style: solid; }
+.px td.name a { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; text-decoration: underline dotted var(--color-fg-muted); text-underline-offset: 3px; }
+.px td.name a:hover { text-decoration-style: solid; }
 .px-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
-.px-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--color-border-line); font-size: var(--cds-font-size-caption); white-space: nowrap; }
+.px-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; border: 1px solid var(--color-border-line); font-size: var(--cds-font-size-caption); line-height: 1.3; }
 .px-pill.good { color: var(--color-ok); border-color: var(--color-ok); }
 .px-pill.bad { color: var(--color-bad); border-color: var(--color-bad); }
-.px-bar { position: relative; min-width: 90px; height: 18px; display: flex; align-items: center; }
+.px-bar { position: relative; height: 18px; display: flex; align-items: center; }
 .px-bar i { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 3px; background: var(--cds-chart-muted); opacity: .55; }
 .px-bar b { position: relative; font-weight: 400; padding-left: 6px; }
 .px-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 8px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
@@ -118,7 +121,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 .px-method p { margin: 0 0 8px; }
 .px-failed, .px-empty { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 120px; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); text-align: center; padding: 8px; }
 .px-failed i { width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
-@media (max-width: 640px) { .px-hide-s { display: none; } .px-ctl { position: static; } }
+@media (max-width: 640px) { .px-hide-s, col.px-hide-s { display: none; } .px-ctl { position: static; } }
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 </style>
 
@@ -345,6 +348,9 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     host.replaceChildren();
     const t = el('table');
     if (source) { t.setAttribute('data-source', source); t.setAttribute('data-row-key', rowKey); }
+    const cg = el('colgroup');
+    for (const c of cols) { const col = el('col', c.cls && c.cls.includes('px-hide-s') ? 'px-hide-s' : ''); if (c.w) col.style.width = c.w + '%'; cg.appendChild(col); }
+    t.appendChild(cg);
     const thead = el('thead'), hr = el('tr');
     for (const c of cols) {
       const th = el('th', (c.n ? 'n ' : '') + (c.cls || ''), c.label);
@@ -369,15 +375,14 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 
   function wellColumns(k) {
     return [
-      { label: '#', n: true, cell: (r, td) => { td.textContent = r._rank; } },
-      { label: 'Well', field: 'name', cls: 'name', cell: (r, td) => { const a = el('a', null, r.name); a.href = mapLink(r.api); a.target = '_blank'; a.rel = 'noopener'; td.appendChild(a); } },
-      { label: 'Operator', field: 'op', cell: opCell },
-      { label: 'Formation', field: 'fm', cell: (r, td) => { td.textContent = r.fm; } },
-      { label: 'First oil', field: 'yr', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = r.yr; } },
-      { label: 'Lateral, ft', field: 'len', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = num(r.len); } },
-      { label: 'Oil, ' + unitS(), field: k.o, n: true, cell: (r, td) => { td.textContent = num(r[k.o]); } },
-      { label: 'Water, ' + unitS(), field: k.w, n: true, cell: (r, td) => { td.textContent = num(r[k.w]); } },
-      { label: 'Water:oil', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = r[k.o] ? f2(r[k.w] / r[k.o]) : '—'; } },
+      { label: '#', w: 5, n: true, cell: (r, td) => { td.textContent = r._rank; } },
+      { label: 'Well', w: 27, field: 'name', cls: 'name', cell: (r, td) => { const a = el('a', null, r.name); a.href = mapLink(r.api); a.target = '_blank'; a.rel = 'noopener'; a.title = r.name; td.appendChild(a); } },
+      { label: 'Operator', w: 18, field: 'op', cell: opCell },
+      { label: 'Formation', w: 12, field: 'fm', cell: (r, td) => { td.textContent = r.fm; td.appendChild(el('small', null, String(r.yr))); } },
+      { label: 'Lateral, ft', w: 9, field: 'len', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = num(r.len); } },
+      { label: 'Oil', w: 11, field: k.o, n: true, cell: (r, td) => { td.textContent = num(r[k.o]); } },
+      { label: 'Water', w: 11, field: k.w, n: true, cell: (r, td) => { td.textContent = num(r[k.w]); } },
+      { label: 'WOR', w: 7, n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = r[k.o] ? f2(r[k.w] / r[k.o]) : '—'; } },
     ];
   }
   const pickHint = 'Pick at least one operator above, or choose All operators.';
@@ -390,7 +395,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const who = st.mode === 'all' ? 'all operators' : st.sel.length + ' selected operator' + (st.sel.length === 1 ? '' : 's');
     if (!scoped.length) { empty($('host-top'), st.mode === 'pick' && !st.sel.length ? pickHint : 'No wells with that much history.'); empty($('host-low'), st.mode === 'pick' && !st.sel.length ? pickHint : 'No wells with that much history.'); $('note-top').textContent = ''; $('note-low').textContent = ''; return; }
     const top = scoped.slice().sort((a, b) => b[k.o] - a[k.o]).slice(0, 10).map((w, i) => Object.assign({}, w, { _rank: i + 1 }));
-    $('note-top').textContent = 'Top 10 by oil in the ' + win() + ', ' + unit() + fmTag() + ', among ' + who + '. ' + f0(scoped.length) + ' wells have that much history.';
+    $('note-top').textContent = 'Top 10 by oil in the ' + win() + ', ' + unit() + fmTag() + ', among ' + who + '. ' + f0(scoped.length) + ' wells have that much history. The year under each formation is when the well first made oil. WOR is barrels of water per barrel of oil.';
     table($('host-top'), 'wells', 'api', wellColumns(k), top);
     const low = scoped.filter((w) => w[k.o] >= medOil).sort((a, b) => a[k.w] - b[k.w]).slice(0, 10).map((w, i) => Object.assign({}, w, { _rank: i + 1 }));
     $('note-low').textContent = 'Lowest water in the ' + win() + ' among ' + who + ' that made at least the median oil of every operator' + fmTag() + ' (' + num(medOil) + ' ' + unitS() + '). Low water on a weak oil well is not a win.';
@@ -479,15 +484,15 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     if (!rows.length) return empty($('host-opfm'), st.mode === 'pick' && !st.sel.length ? pickHint : 'No operator has enough wells here.');
     const k = K();
     const cols = [
-      { label: 'Operator', cell: opCell },
-      split ? { label: 'Formation', cell: (r, td) => { td.textContent = r.fm; } } : null,
-      { label: 'Wells', n: true, cell: (r, td) => { td.textContent = r.nw; } },
-      { label: 'Lateral, ft', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = num(r.len); } },
-      { label: 'Oil', n: true, cell: (r, td) => { td.textContent = num(r.o); } },
-      { label: 'Water', n: true, cell: (r, td) => { td.textContent = num(r.w); } },
-      { label: 'Oil vs basin', n: true, cell: (r, td) => { td.textContent = idx(r.io); } },
-      { label: 'Water vs basin', n: true, cell: (r, td) => { td.textContent = idx(r.iw); } },
-      { label: 'Read', cell: (r, td) => { td.appendChild(el('span', pillCls(r.tone), r.read)); } },
+      { label: 'Operator', w: split ? 20 : 25, cell: opCell },
+      split ? { label: 'Formation', w: 11, cell: (r, td) => { td.textContent = r.fm; } } : null,
+      { label: 'Wells', w: 7, n: true, cell: (r, td) => { td.textContent = r.nw; } },
+      { label: 'Lateral, ft', w: 10, n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = num(r.len); } },
+      { label: 'Oil', w: 11, n: true, cell: (r, td) => { td.textContent = num(r.o); } },
+      { label: 'Water', w: 11, n: true, cell: (r, td) => { td.textContent = num(r.w); } },
+      { label: 'Oil vs basin', w: 9, n: true, cell: (r, td) => { td.textContent = idx(r.io); } },
+      { label: 'Water vs basin', w: 9, n: true, cell: (r, td) => { td.textContent = idx(r.iw); } },
+      { label: 'Read', w: 17, cell: (r, td) => { td.appendChild(el('span', pillCls(r.tone), r.read)); } },
     ].filter(Boolean);
     table($('host-opfm'), null, 'key', cols, rows);
   }
@@ -596,6 +601,9 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       ['Operator, added after formation, area, year and length', 'Operator, added on top of the other four'], ['All five together', 'All five together'],
     ];
     const t = el('table');
+    const cg = el('colgroup');
+    [34, 22, 22, 22].forEach((p) => { const c = el('col'); c.style.width = p + '%'; cg.appendChild(c); });
+    t.appendChild(cg);
     const hr = el('tr'); hr.appendChild(el('th', null, 'Factor'));
     for (const o of outs) hr.appendChild(el('th', null, o));
     const thead = el('thead'); thead.appendChild(hr); t.appendChild(thead);
@@ -657,14 +665,13 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     $('note-area').textContent = 'Townships with at least ' + minN + ' wells' + fmTag() + ', among ' + (st.mode === 'all' ? 'all operators' : 'the selected operators') + '. First 12 months, per 1,000 ft of lateral.';
     if (!rows.length) return empty($('host-area'), 'No township has enough wells.');
     const cols = [
-      { label: 'Township', cell: (r, td) => { td.textContent = r.twp; } },
-      { label: 'County', cls: 'px-hide-s', cell: (r, td) => { td.textContent = r.cty; } },
-      { label: 'Wells', n: true, cell: (r, td) => { td.textContent = r.n; } },
-      { label: 'Main formation', cell: (r, td) => { td.textContent = r.fm; } },
-      { label: 'Operators', cls: 'px-hide-s', cell: (r, td) => { td.textContent = r.ops; } },
-      { label: 'Oil/1,000 ft', n: true, cell: (r, td) => { td.textContent = num(r.of12); } },
-      { label: 'Water/1,000 ft', n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = num(r.wf12); } },
-      { label: 'Oil vs basin', n: true, cell: (r, td) => { td.textContent = idx(r.iof12); } },
+      { label: 'Township', w: 17, cell: (r, td) => { td.textContent = r.twp; td.appendChild(el('small', null, r.cty)); } },
+      { label: 'Wells', w: 8, n: true, cell: (r, td) => { td.textContent = r.n; } },
+      { label: 'Main formation', w: 15, cell: (r, td) => { td.textContent = r.fm; } },
+      { label: 'Operators', w: 22, cls: 'px-hide-s', cell: (r, td) => { td.textContent = r.ops; } },
+      { label: 'Oil per 1,000 ft', w: 13, n: true, cell: (r, td) => { td.textContent = num(r.of12); } },
+      { label: 'Water per 1,000 ft', w: 13, n: true, cls: 'px-hide-s', cell: (r, td) => { td.textContent = num(r.wf12); } },
+      { label: 'Oil vs basin', w: 12, n: true, cell: (r, td) => { td.textContent = idx(r.iof12); } },
     ];
     table($('host-area'), null, 'twp', cols, rows);
   }
