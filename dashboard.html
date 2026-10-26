@@ -30,7 +30,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 <script>
 /* Small stand-in for the data layer the page was written against: loads the JSON tables from dashboard/data and re-runs the page's draw function when data arrives, the window resizes or the color scheme changes. */
 (function () {
-  const IDS = ['wells', 'bench', 'curves', 'drivers'];
+  const IDS = ['wells', 'bench', 'curves'];
   const store = {}, errs = {}, cbs = [];
   const dark = matchMedia('(prefers-color-scheme: dark)');
   const light = ['#1b6ca8', '#d4731a', '#2f9e6e', '#8e5bb5', '#b8962e', '#3aa3b8', '#c2506b', '#6b7b8c'];
@@ -96,6 +96,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 .px-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; border: 1px solid var(--color-border-line); font-size: var(--cds-font-size-caption); line-height: 1.3; }
 .px-pill.good { color: var(--color-ok); border-color: var(--color-ok); }
 .px-pill.bad { color: var(--color-bad); border-color: var(--color-bad); }
+.px-fixed { color: var(--color-fg-muted); font-style: italic; }
+.px th small { display: block; font-weight: 400; margin-top: 2px; }
 .px-bar { position: relative; height: 18px; display: flex; align-items: center; }
 .px-bar i { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 3px; background: var(--cds-chart-muted); opacity: .55; }
 .px-bar b { position: relative; font-weight: 400; padding-left: 6px; }
@@ -182,9 +184,9 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     <p class="px-lede" id="lede-why"></p>
     <article class="px-card">
       <h3>What explains the differences between wells</h3>
-      <p class="px-note">Share of the well-to-well spread in each outcome (first 12 months, per 1,000 ft of lateral) that one factor accounts for, adjusted for how many groups it has. Each factor is tested alone; the last two rows combine them.</p>
-      <p class="px-note" id="note-drivers" hidden>These tests always cover every operator and every formation together, so they do not change with the settings above.</p>
-      <div class="px-tablewrap" id="host-drivers" data-source="drivers"></div>
+      <p class="px-note" id="note-drv">Share of the well-to-well spread in each outcome that one factor accounts for, adjusted for how many groups it has. Each factor is tested alone; the last two rows combine them.</p>
+      <p class="px-note" id="note-drivers"></p>
+      <div class="px-tablewrap" id="host-drivers" data-source="wells"></div>
     </article>
     <p class="px-note" style="margin: var(--cds-gap-md) 0 6px; max-width: 74ch">Wells first produced in 2015 or later, each year's median well against the median well in the same formation across all operators. 1.00× is typical; for water, below 1.00× is less water than typical. A year shows only with at least three wells (two when a formation is picked).</p>
     <div class="px-legend" id="leg-vint"></div>
@@ -251,7 +253,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   function mapLink(api) { return MAP + '#' + api; }
   function ready() {
     const d = {};
-    for (const id of ['wells', 'bench', 'curves', 'drivers']) {
+    for (const id of ['wells', 'bench', 'curves']) {
       const x = dash.data(id);
       if (x.status === 'error') return 'error';
       if (x.status !== 'ok') return null;
@@ -596,33 +598,101 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     yearChart($('ch-vint-water'), rows, present, 'iwf12', 'Water per foot against basin, by year first produced');
   }
 
-  /* ---------- drivers table ---------- */
+  /* ---------- what explains the differences (computed from the wells in scope) ---------- */
+  function ols(n, cols, y) {
+    const p = cols.length + 1;
+    if (n - p < 8) return null;
+    const X = [new Float64Array(n).fill(1)].concat(cols);
+    const A = Array.from({ length: p }, () => new Float64Array(p)), b = new Float64Array(p);
+    for (let i = 0; i < p; i++) {
+      const xi = X[i];
+      for (let j = i; j < p; j++) { const xj = X[j]; let t = 0; for (let r = 0; r < n; r++) t += xi[r] * xj[r]; A[i][j] = t; A[j][i] = t; }
+      let t = 0; for (let r = 0; r < n; r++) t += xi[r] * y[r]; b[i] = t;
+    }
+    for (let i = 0; i < p; i++) A[i][i] += 1e-9 * (A[i][i] || 1);
+    const M = A.map((row, i) => { const m = new Float64Array(p + 1); m.set(row); m[p] = b[i]; return m; });
+    for (let c = 0; c < p; c++) {
+      let piv = c; for (let r = c + 1; r < p; r++) if (Math.abs(M[r][c]) > Math.abs(M[piv][c])) piv = r;
+      if (Math.abs(M[piv][c]) < 1e-12) return null;
+      if (piv !== c) { const t = M[c]; M[c] = M[piv]; M[piv] = t; }
+      for (let r = c + 1; r < p; r++) { const f = M[r][c] / M[c][c]; if (f) for (let k = c; k <= p; k++) M[r][k] -= f * M[c][k]; }
+    }
+    const beta = new Float64Array(p);
+    for (let i = p - 1; i >= 0; i--) { let t = M[i][p]; for (let k = i + 1; k < p; k++) t -= M[i][k] * beta[k]; beta[i] = t / M[i][i]; }
+    let yy = 0, sy = 0; for (let r = 0; r < n; r++) { yy += y[r] * y[r]; sy += y[r]; }
+    let bb = 0; for (let i = 0; i < p; i++) bb += beta[i] * b[i];
+    const sse = Math.max(0, yy - bb), tot = yy - (sy * sy) / n;
+    if (tot <= 0) return null;
+    return Math.max(0, 1 - (sse / (n - p)) / (tot / (n - 1)));
+  }
+  const dummies = (labels) => {
+    const cats = [...new Set(labels)].sort();
+    return cats.slice(1).map((c) => Float64Array.from(labels, (l) => (l === c ? 1 : 0)));
+  };
+  const grouped = (vals, minG) => { const c = d3.rollup(vals, (v) => v.length, (x) => x); return vals.map((v) => (c.get(v) >= minG ? v : 'other')); };
+  let drvKey = '', drvVal = null;
+  function driverStats(d) {
+    const key = JSON.stringify([st.h, st.b, st.fm, st.mode, st.mode === 'pick' ? st.sel.slice().sort() : 0]);
+    if (key === drvKey) return drvVal;
+    const k = K(), ft = st.b === 'ft';
+    const scope = d.wells.filter(inScope).filter((w) => w.len && w[k.o] != null && w[k.w] != null);
+    const defs = [
+      { label: (ft ? 'Oil per 1,000 ft, ' : 'Oil, ') + st.h + ' months', ok: (w) => w[k.o] > 0, y: (w) => Math.log10(w[k.o]) },
+      { label: (ft ? 'Water per 1,000 ft, ' : 'Water, ') + st.h + ' months', ok: (w) => w[k.w] > 0, y: (w) => Math.log10(w[k.w]) },
+      { label: 'Water-oil ratio, ' + st.h + ' months', ok: (w) => w[k.o] > 0 && w[k.w] > 0, y: (w) => Math.log10(w[k.w] / w[k.o]) },
+    ];
+    const outs = defs.map((df) => {
+      const ws = scope.filter(df.ok), n = ws.length;
+      const out = { label: df.label, n, rows: null };
+      if (n < 40) return out;
+      const minG = n >= 500 ? 8 : 5, y = Float64Array.from(ws, df.y);
+      const F = {
+        'Formation': dummies(grouped(ws.map((w) => w.fm), minG)),
+        'Area (township and range)': dummies(grouped(ws.map((w) => w.twp || 'none'), minG)),
+        'Operator': dummies(grouped(ws.map((w) => w.op), minG)),
+        'Year first produced': dummies(ws.map((w) => bucket(w.yr))),
+        'Lateral length': [Float64Array.from(ws, (w) => Math.log10(w.len))],
+      };
+      const rows = {};
+      for (const f of Object.keys(F)) rows[f] = F[f].length ? ols(n, F[f], y) : null;
+      const base = F['Formation'].concat(F['Area (township and range)'], F['Year first produced'], F['Lateral length']);
+      const r4 = ols(n, base, y), all = ols(n, base.concat(F['Operator']), y);
+      rows.added = F['Operator'].length && r4 != null && all != null ? Math.max(0, all - r4) : null;
+      rows.all = all;
+      out.rows = rows;
+      return out;
+    });
+    drvKey = key; drvVal = outs;
+    return outs;
+  }
   function drivers(d) {
-    $('note-drivers').hidden = st.fm === 'all' && st.mode === 'all';
+    const outs = driverStats(d);
+    const names = st.mode === 'all' ? 'every operator' : st.sel.length ? st.sel.join(', ') : 'no operators';
+    $('note-drivers').textContent = 'Wells tested: ' + names + (st.fm === 'all' ? ' in all formations' : ' in ' + st.fm + ' wells') + ', ' + win() + (st.b === 'ft' ? ', per 1,000 ft of lateral' : ', total barrels') + '. A factor with only one group here (one formation, one operator) is held fixed and cannot explain anything.';
     const host = $('host-drivers');
     host.replaceChildren();
-    const outs = ['Oil per 1,000 ft, 12 months', 'Water per 1,000 ft, 12 months', 'Water-oil ratio, 12 months'];
+    if (outs.every((o) => !o.rows)) return empty(host, st.mode === 'pick' && !st.sel.length ? pickHint : 'Too few wells here for this test (it needs at least 40 with a ' + st.h + '-month history).');
     const rowsDef = [
       ['Formation', 'Formation'], ['Area (township and range)', 'Area (township and range)'], ['Operator', 'Operator'],
       ['Year first produced', 'Year first produced'], ['Lateral length', 'Lateral length'],
-      ['Operator, added after formation, area, year and length', 'Operator, added on top of the other four'], ['All five together', 'All five together'],
+      ['added', 'Operator, added on top of the other four'], ['all', 'All five together'],
     ];
     const t = el('table');
     const cg = el('colgroup');
     [34, 22, 22, 22].forEach((p) => { const c = el('col'); c.style.width = p + '%'; cg.appendChild(c); });
     t.appendChild(cg);
     const hr = el('tr'); hr.appendChild(el('th', null, 'Factor'));
-    for (const o of outs) hr.appendChild(el('th', null, o));
+    for (const o of outs) { const th = el('th', null, o.label); th.appendChild(el('small', null, 'n = ' + f0(o.n))); hr.appendChild(th); }
     const thead = el('thead'); thead.appendChild(hr); t.appendChild(thead);
     const tb = el('tbody');
     for (const [key, label] of rowsDef) {
       const tr = el('tr'); tr.appendChild(el('td', null, label));
       for (const o of outs) {
-        const r = d.drivers.find((q) => q.outcome === o && q.factor === key);
+        const v = o.rows ? o.rows[key] : null;
         const td = el('td');
-        const bar = el('div', 'px-bar');
-        if (r) { const i = el('i'); i.style.width = Math.min(100, (r.adj_r2 / 0.6) * 100) + '%'; bar.appendChild(i); bar.appendChild(el('b', null, pct(r.adj_r2))); }
-        td.appendChild(bar); tr.appendChild(td);
+        if (v == null) td.appendChild(el('span', 'px-fixed', o.rows ? (key === 'all' ? '—' : 'held fixed') : 'too few wells'));
+        else { const bar = el('div', 'px-bar'); const i = el('i'); i.style.width = Math.min(100, (v / 0.6) * 100) + '%'; bar.appendChild(i); bar.appendChild(el('b', null, pct(v))); td.appendChild(bar); }
+        tr.appendChild(td);
       }
       tb.appendChild(tr);
     }
@@ -706,17 +776,17 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     $('px-take1').classList.remove('dash-skeleton');
     $('px-take1').textContent = t1;
     let t2;
-    if (st.fm !== 'all') t2 = 'Formation is held fixed to ' + st.fm + ', so rock type no longer favors one operator. Area, completion and timing still can.';
-    else {
-      const rank = (o) => d.drivers.filter((q) => q.outcome === o && q.kind === 'alone').sort((a, b) => b.adj_r2 - a.adj_r2).slice(0, 3).map((q) => FNAME[q.factor] + ' (' + pct(q.adj_r2) + ')').join(', ');
-      const OO = 'Oil per 1,000 ft, 12 months', WO = 'Water per 1,000 ft, 12 months';
-      const all = d.drivers.find((q) => q.outcome === OO && q.kind === 'all');
-      t2 = 'Across the ' + f0(all.n) + ' wells on the map, oil per foot is explained most by ' + rank(OO) + ', and water per foot by ' + rank(WO) + '. All five factors together account for ' + pct(all.adj_r2) + ' of the oil spread, so most of the difference between wells is not in this data.';
+    {
+      const outs = driverStats(d);
+      const top = (o) => Object.entries(o.rows || {}).filter(([f, v]) => v != null && FNAME[f]).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([f, v]) => FNAME[f] + ' (' + pct(v) + ')').join(', ');
+      const lead = (o) => o.label.replace(/, \d+ months$/, '').toLowerCase();
+      if (!outs[0].rows || !outs[1].rows) t2 = 'Too few wells here to test what explains the differences between them.';
+      else t2 = (st.fm === 'all' ? '' : 'With ' + st.fm + ' held fixed: ') + 'across the ' + f0(outs[0].n) + ' wells tested, ' + lead(outs[0]) + ' is explained most by ' + top(outs[0]) + ', and ' + lead(outs[1]) + ' by ' + top(outs[1]) + '. All five factors together account for ' + pct(outs[0].rows.all || 0) + ' of the ' + lead(outs[0]).split(' ')[0] + ' spread, so most of the difference between wells is not in this data.';
     }
     $('px-take2').classList.remove('dash-skeleton');
     $('px-take2').textContent = t2;
     $('lede-ops').textContent = 'Each well is compared with the median well in its formation across all operators on the map, per 1,000 ft of lateral, so short and long laterals can be read side by side. Operators work different formations, so with All formations selected rely on the “vs basin” columns, or pick a formation above to compare operators on the same rock.';
-    $('lede-why').textContent = st.fm === 'all' ? 'The tests below use every well on the map, whichever operators are picked. Formation, place, vintage and operator overlap, so read them as association, not cause.' : 'With ' + st.fm + ' fixed, what is left is place, completion and timing. The charts below show the ' + st.fm + ' wells only; the table of factors still covers the whole map.';
+    $('lede-why').textContent = st.fm === 'all' ? 'The tests below use the wells selected above. Formation, place, vintage and operator overlap, so read them as association, not cause.' : 'With ' + st.fm + ' fixed, what is left is place, completion and timing. The charts below show the ' + st.fm + ' wells only; the table of factors still covers the whole map.';
   }
   function method(d) {
     const host = $('method-text');

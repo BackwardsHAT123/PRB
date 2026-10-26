@@ -1,6 +1,6 @@
 """Rebuild the dashboard tables for every operator on the PRB map.
 Reads index.html (the map page, for well records) and production.json in the current folder.
-Writes wells.json, bench.json, curves.json and drivers.json."""
+Writes wells.json, bench.json and curves.json."""
 import json, math, collections
 import numpy as np
 
@@ -81,29 +81,3 @@ for (o, f), rs in byof.items():
     if len(rs) >= 4: add(series(f"{o} / {f}", o, f, rs, 4))
 json.dump(curves, open("curves.json", "w"), separators=(",", ":"))
 print("curves series", len(curves))
-
-# drivers: adjusted R-squared of each factor against the log of the outcome, all operators
-def bucket(y): return "2013 and earlier" if y <= 2013 else "2014-2015" if y <= 2015 else "2016-2019" if y <= 2019 else "2020 and later"
-def dummies(vals):
-    cats = sorted(set(vals)); return np.array([[1.0 if v == c else 0.0 for c in cats[1:]] for v in vals])
-def adjr2(y, X):
-    X = np.column_stack([np.ones(len(y)), X]); b = np.linalg.lstsq(X, y, rcond=None)[0]
-    ss = ((y - X @ b) ** 2).sum(); tot = ((y - y.mean()) ** 2).sum(); n, p = X.shape
-    return max(0.0, 1 - (ss / (n - p)) / (tot / (n - 1)))
-def grp(vals, minn):
-    c = collections.Counter(vals); return [v if c[v] >= minn else "other" for v in vals]
-drivers = []
-for outcome, key in (("Oil per 1,000 ft, 12 months", "of12"), ("Water per 1,000 ft, 12 months", "wf12"), ("Water-oil ratio, 12 months", "wor")):
-    rs = [r for r in wells if r["len"] and r["of12"] and r["of12"] > 0 and r["wf12"] is not None]
-    if key in ("wf12", "wor"): rs = [r for r in rs if r["wf12"] > 0]   # water can't be logged at zero
-    y = np.log10([r["of12"] if key == "of12" else r["wf12"] if key == "wf12" else r["wf12"] / r["of12"] for r in rs])
-    F = {"Formation": dummies(grp([r["fm"] for r in rs], 8)), "Area (township and range)": dummies(grp([r["twp"] for r in rs], 8)),
-         "Operator": dummies(grp([r["op"] for r in rs], 8)), "Year first produced": dummies([bucket(r["yr"]) for r in rs]),
-         "Lateral length": np.log10([r["len"] for r in rs]).reshape(-1, 1)}
-    for fac, X in F.items(): drivers.append({"outcome": outcome, "factor": fac, "adj_r2": round(adjr2(y, X), 3), "n": len(rs), "kind": "alone"})
-    base = np.column_stack([F["Formation"], F["Area (township and range)"], F["Year first produced"], F["Lateral length"]])
-    a0 = adjr2(y, base); a1 = adjr2(y, np.column_stack([base, F["Operator"]]))
-    drivers.append({"outcome": outcome, "factor": "Operator, added after formation, area, year and length", "adj_r2": round(max(0, a1 - a0), 3), "n": len(rs), "kind": "added"})
-    drivers.append({"outcome": outcome, "factor": "All five together", "adj_r2": round(a1, 3), "n": len(rs), "kind": "all"})
-json.dump(drivers, open("drivers.json", "w"), separators=(",", ":"))
-for d in drivers: print(d["outcome"][:16], d["factor"][:44], d["adj_r2"], d["n"])
