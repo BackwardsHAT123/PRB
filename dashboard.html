@@ -166,9 +166,11 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       <p class="px-note" id="note-opfm"></p>
       <div class="px-tablewrap tall" id="host-opfm"></div>
     </article>
-    <div class="px-grid2 tight" style="margin-top: var(--cds-gap-md)">
-      <article class="px-card"><h3 id="h-curve-oil">Cumulative oil</h3><p class="px-note" id="note-curves">Median well, by months since first oil.</p><div class="px-legend" id="leg-curves"></div><div class="px-chart dash-skeleton" id="ch-curve-oil" data-source="curves"></div></article>
-      <article class="px-card"><h3 id="h-curve-water">Cumulative water</h3><p class="px-note">Median well, by months since first oil.</p><div class="px-chart dash-skeleton" id="ch-curve-water" data-source="curves"></div></article>
+    <p class="px-note" id="note-curves" style="margin: var(--cds-gap-md) 0 6px; max-width: 74ch">Median well, by months since first oil.</p>
+    <div class="px-legend" id="leg-curves"></div>
+    <div class="px-grid2 tight">
+      <article class="px-card"><h3 id="h-curve-oil">Cumulative oil</h3><div class="px-chart dash-skeleton" id="ch-curve-oil" data-source="curves"></div></article>
+      <article class="px-card"><h3 id="h-curve-water">Cumulative water</h3><div class="px-chart dash-skeleton" id="ch-curve-water" data-source="curves"></div></article>
     </div>
   </section>
 
