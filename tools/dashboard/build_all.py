@@ -25,7 +25,8 @@ for d in D:
     n = len(o) - k; fy = (y * 12 + m - 1 + k) // 12
     L = plen(d["ln"]); L = round(L) if L else None
     r = {"api": d["a"], "name": d["n"], "op": d["oc"], "fm": d["r"], "cty": d["cty"], "twp": d["sec"].split("-", 1)[1] if d.get("sec") else None,
-         "yr": fy, "len": L, "lon": d["shl"][0] if d.get("shl") else None, "lat": d["shl"][1] if d.get("shl") else None}
+         "yr": fy, "len": L, "lon": d["shl"][0] if d.get("shl") else None, "lat": d["shl"][1] if d.get("shl") else None,
+         "ln": [round(c, 4) for pt in d["ln"] for c in pt] if d.get("ln") and len(d["ln"]) > 1 else None}   # simplified lateral path, lon,lat pairs
     for h in H:
         if n >= h:
             oo = sum(o[k:k + h]); ww = sum(w[k:k + h])

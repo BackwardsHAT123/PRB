@@ -125,6 +125,9 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 .px-failed, .px-empty { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 120px; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); text-align: center; padding: 8px; }
 .px-failed i { width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
 @media (max-width: 640px) { .px-hide-s, col.px-hide-s { display: none; } .px-ctl { position: static; } }
+.px-zoomctl { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+.px-zoomctl button { appearance: none; border: 1px solid var(--color-border-line); background: var(--color-panel); color: var(--color-fg); border-radius: 6px; font: inherit; font-size: var(--cds-font-size-caption); padding: 3px 8px; cursor: pointer; }
+.px-zoomctl button:hover { border-color: var(--cds-chart-axis); }
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 </style>
 
@@ -194,8 +197,9 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       <article class="px-card"><h3>Oil per foot, by year first produced</h3><div class="px-chart dash-skeleton" id="ch-vint-oil" data-source="wells"></div></article>
       <article class="px-card"><h3>Water per foot, by year first produced</h3><div class="px-chart dash-skeleton" id="ch-vint-water" data-source="wells"></div></article>
     </div>
-    <div class="px-grid2" style="margin-top: var(--cds-gap-md)">
-      <article class="px-card"><h3>Where the good wells are</h3><p class="px-note" id="note-geo"></p><div class="px-legend" id="leg-geo"></div><div class="px-chart dash-skeleton" id="ch-geo" data-source="wells"></div></article>
+    <div class="px-grid2 even" style="margin-top: var(--cds-gap-md)">
+      <article class="px-card"><h3>Well paths and where the good wells are</h3><p class="px-note" id="note-geo"></p><div class="px-seg wrap" id="seg-geo" hidden style="margin-bottom: 8px"></div>
+      <div class="px-legend" id="leg-geo"></div><div class="px-chart dash-skeleton" id="ch-geo" data-source="wells"></div></article>
       <article class="px-card"><h3>Townships ranked by oil per foot</h3><p class="px-note" id="note-area"></p><div class="px-tablewrap tall" id="host-area"></div></article>
     </div>
   </section>
@@ -700,36 +704,61 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   }
 
   /* ---------- geographic scatter and township table ---------- */
+  let geoCty = null;
   function geo(d) {
     const k = K(), host = $('ch-geo');
-    const pts = d.wells.filter((w) => w.lon != null && w.lat != null && inScope(w));
-    if (!pts.length) return empty(host, 'No wells to show.');
+    const scoped = d.wells.filter((w) => w.lon != null && w.lat != null && inScope(w));
+    if (!scoped.length) { $('seg-geo').hidden = true; return empty(host, 'No wells to show.'); }
+    const ctys = [...d3.rollup(scoped, (v) => v.length, (w) => w.cty)].sort((a, b) => b[1] - a[1]);
+    if (!ctys.some((c) => c[0] === geoCty)) geoCty = ctys[0][0];
+    const segHost = $('seg-geo');
+    segHost.hidden = ctys.length < 2;
+    segHost.replaceChildren();
+    for (const [cty, n] of ctys) {
+      const b = el('button', 'px-segbtn', cty + ' (' + n + ')');
+      b.type = 'button'; b.setAttribute('aria-pressed', String(cty === geoCty));
+      b.addEventListener('click', () => { geoCty = cty; geo(d); });
+      segHost.appendChild(b);
+    }
+    const pts = scoped.filter((w) => w.cty === geoCty);
     host.classList.remove('dash-skeleton'); host.replaceChildren();
-    const lat0 = d3.mean(pts, (w) => w.lat), cx = Math.cos((lat0 * Math.PI) / 180);
-    const lonE = d3.extent(pts, (w) => w.lon), latE = d3.extent(pts, (w) => w.lat);
+    const pathOf = (w) => { const out = []; if (w.ln) for (let i = 0; i + 1 < w.ln.length; i += 2) out.push([w.ln[i], w.ln[i + 1]]); return out.length > 1 ? out : null; };
+    const all = [];
+    for (const w of pts) { const p = pathOf(w); if (p) for (const c of p) all.push(c); else all.push([w.lon, w.lat]); }
+    const lat0 = d3.mean(all, (c) => c[1]), cx = Math.cos((lat0 * Math.PI) / 180);
+    const lonE = d3.extent(all, (c) => c[0]), latE = d3.extent(all, (c) => c[1]);
     const W = Math.max(280, host.clientWidth);
     const m = 14;
     const spanX = (lonE[1] - lonE[0]) * cx || 1, spanY = latE[1] - latE[0] || 1;
     const sc = (W - 2 * m) / spanX;
-    const H = Math.round(Math.min(560, Math.max(260, spanY * sc + 2 * m)));
+    const H = Math.round(Math.min(560, Math.max(280, spanY * sc + 2 * m)));
     const s2 = Math.min(sc, (H - 2 * m) / spanY);
     const ox = m + ((W - 2 * m) - spanX * s2) / 2, oy = m;
     const px = (lon) => ox + (lon - lonE[0]) * cx * s2, py = (lat) => oy + (latE[1] - lat) * s2;
     const band = (v) => (v == null ? 'var(--cds-chart-grid)' : v >= 1.1 ? 'var(--color-ok)' : v < 0.9 ? 'var(--cds-chart-status-critical)' : 'var(--cds-chart-muted)');
     legend($('leg-geo'), [{ color: 'var(--color-ok)', label: 'Oil 1.10× basin or more' }, { color: 'var(--cds-chart-muted)', label: 'In line' }, { color: 'var(--cds-chart-status-critical)', label: 'Below 0.90×' }]);
-    $('note-geo').textContent = 'Surface locations' + fmTag() + ', colored by oil in the ' + win() + (st.b === 'ft' ? ' per foot' : '') + ' against the median well in the same formation across all operators.' + (st.mode === 'pick' ? ' Outline shows the operator.' : '') + ' Click a dot to open it on the map.';
-    const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Map of well locations colored by oil performance');
+    $('note-geo').textContent = 'Each line is a well’s lateral path in ' + geoCty + ' County' + fmTag() + ' (from its filed directional survey where there is one, otherwise straight from surface hole to bottom hole), colored by oil in the ' + win() + (st.b === 'ft' ? ' per foot' : '') + ' against the median well in the same formation across all operators.' + (st.mode === 'pick' ? ' The dot at the surface hole shows the operator.' : '') + ' Drag to pan, use the buttons or Ctrl-scroll to zoom, click a well to open it on the map.';
+    const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Map of well paths colored by oil performance').style('touch-action', 'pan-y');
     const T = tip(host);
-    svg.append('g').selectAll('a').data(pts).join('a')
-      .attr('href', (w) => mapLink(w.api)).attr('target', '_blank').attr('rel', 'noopener')
-      .append('circle').attr('cx', (w) => px(w.lon)).attr('cy', (w) => py(w.lat)).attr('r', pts.length > 600 ? 3 : 4.5)
-      .attr('fill', (w) => band(ratio(w, k.o))).attr('stroke', (w) => (st.mode === 'pick' ? color(w.op) : 'none')).attr('stroke-width', 1.6)
-      .on('pointermove', (e, w) => T.show(e, w.name, [w.op + ' · ' + w.fm + ' · ' + w.cty + ' County · ' + w.twp, 'Oil vs basin ' + idx(ratio(w, k.o)), 'Water vs basin ' + idx(ratio(w, k.w))]))
-      .on('pointerleave', () => T.hide());
-    for (const c of d3.group(pts, (w) => w.cty)) {
-      const lon = d3.mean(c[1], (w) => w.lon), lat = d3.max(c[1], (w) => w.lat);
-      svg.append('text').attr('x', Math.min(W - 60, Math.max(60, px(lon)))).attr('y', Math.max(14, py(lat) - 10)).attr('text-anchor', 'middle').text(c[0] + ' County');
+    const g = svg.append('g');
+    const line = d3.line().x((c) => px(c[0])).y((c) => py(c[1]));
+    const dots = [];
+    const a = g.selectAll('a').data(pts).join('a').attr('href', (w) => mapLink(w.api)).attr('target', '_blank').attr('rel', 'noopener');
+    a.append('path').attr('d', (w) => { const p = pathOf(w); return p ? line(p) : null; }).attr('fill', 'none')
+      .attr('stroke', (w) => band(ratio(w, k.o))).attr('stroke-width', (w) => { const p = pathOf(w); return p && p.length > 2 ? 2.4 : 1.8; })
+      .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('vector-effect', 'non-scaling-stroke').attr('stroke-opacity', 0.9);
+    const dot = a.append('circle').attr('cx', (w) => px(w.lon)).attr('cy', (w) => py(w.lat)).attr('r', (w) => (pathOf(w) ? (st.mode === 'pick' ? 3 : 0) : 3.5))
+      .attr('fill', (w) => (pathOf(w) ? (st.mode === 'pick' ? color(w.op) : 'none') : band(ratio(w, k.o)))).attr('stroke', 'var(--color-panel)').attr('stroke-width', 0.8);
+    a.on('pointermove', (e, w) => T.show(e, w.name, [w.op + ' · ' + w.fm + ' · ' + w.cty + ' County · ' + w.twp, 'Oil vs basin ' + idx(ratio(w, k.o)), 'Water vs basin ' + idx(ratio(w, k.w)), 'Lateral ' + num(w.len) + ' ft'])).on('pointerleave', () => T.hide());
+    const zoom = d3.zoom().scaleExtent([1, 60]).filter((e) => e.type !== 'wheel' || e.ctrlKey || e.metaKey)
+      .on('zoom', (e) => { g.attr('transform', e.transform); dot.attr('r', function () { const r0 = +this.getAttribute('data-r'); return r0 / e.transform.k; }); });
+    dot.attr('data-r', function () { return this.getAttribute('r'); });
+    svg.call(zoom);
+    const ctl = el('div', 'px-zoomctl');
+    for (const [label, fn, aria] of [['+', () => svg.transition().duration(200).call(zoom.scaleBy, 2), 'Zoom in'], ['−', () => svg.transition().duration(200).call(zoom.scaleBy, 0.5), 'Zoom out'], ['Reset', () => svg.transition().duration(200).call(zoom.transform, d3.zoomIdentity), 'Reset zoom']]) {
+      const b = el('button', null, label); b.type = 'button'; b.setAttribute('aria-label', aria); b.addEventListener('click', fn); ctl.appendChild(b);
     }
+    host.appendChild(ctl);
   }
   function areaTable(d) {
     const scope = d.wells.filter(inScope).filter((w) => w.twp);
