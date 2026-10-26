@@ -75,6 +75,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 .px-sec h2 { margin: 0 0 4px; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); }
 .px-sec > .px-lede { margin: 0 0 14px; color: var(--color-fg-muted); max-width: 74ch; line-height: 1.5; }
 .px-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: var(--cds-gap-md); align-items: start; }
+.px-grid2.even { align-items: stretch; }
 .px-grid2.tight { grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
 .px-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); }
 .px-card h3 { margin: 0 0 2px; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
@@ -145,9 +146,11 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   <section class="px-sec" id="standouts">
     <h2>Which wells stand out</h2>
     <p class="px-lede">Cumulative production over the first months a well produced oil. Click a well name to find it on the map.</p>
-    <div class="px-grid2">
-      <article class="px-card"><h3>Most oil</h3><p class="px-note" id="note-top"></p><div class="px-tablewrap" id="host-top"></div></article>
-      <article class="px-card"><h3>Least water, among wells with good oil</h3><p class="px-note" id="note-low"></p><div class="px-tablewrap" id="host-low"></div></article>
+    <p class="px-note" id="note-top" style="margin: 0 0 4px; max-width: 80ch"></p>
+    <p class="px-note" id="note-low" style="margin: 0 0 10px; max-width: 80ch"></p>
+    <div class="px-grid2 even">
+      <article class="px-card"><h3>Most oil</h3><div class="px-tablewrap" id="host-top"></div></article>
+      <article class="px-card"><h3>Least water, among wells with good oil</h3><div class="px-tablewrap" id="host-low"></div></article>
     </div>
     <article class="px-card" style="margin-top: var(--cds-gap-md)">
       <h3>Oil against water</h3>
