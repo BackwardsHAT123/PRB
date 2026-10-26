@@ -3830,19 +3830,31 @@
     43.64771
    ],
    [
-    -105.6781,
-    43.64937
+    -105.67749,
+    43.64766
    ],
    [
-    -105.67953,
-    43.67687
+    -105.67775,
+    43.64789
    ],
    [
-    -105.6795,
-    43.67718
+    -105.67851,
+    43.65111
+   ],
+   [
+    -105.68102,
+    43.66587
+   ],
+   [
+    -105.68102,
+    43.66768
+   ],
+   [
+    -105.67952,
+    43.67715
    ]
   ],
-  "fx": 7
+  "fx": 8
  },
  "49-005-78148": {
   "ln": [
@@ -3935,19 +3947,31 @@
     43.64795
    ],
    [
-    -105.66043,
-    43.6498
+    -105.66095,
+    43.64873
    ],
    [
-    -105.66167,
-    43.67702
+    -105.66042,
+    43.64977
    ],
    [
-    -105.66167,
-    43.6773
+    -105.66171,
+    43.65518
+   ],
+   [
+    -105.663,
+    43.66203
+   ],
+   [
+    -105.66196,
+    43.6718
+   ],
+   [
+    -105.66166,
+    43.67728
    ]
   ],
-  "fx": 7
+  "fx": 8
  },
  "49-005-61805": {
   "ln": [
@@ -38122,5 +38146,167 @@
    ]
   ],
   "fx": 8
+ },
+ "49-005-64209": {
+  "ln": [
+   [
+    -105.69921,
+    43.66427
+   ],
+   [
+    -105.7021,
+    43.66247
+   ],
+   [
+    -105.70226,
+    43.66265
+   ],
+   [
+    -105.70285,
+    43.68119
+   ],
+   [
+    -105.70288,
+    43.69099
+   ],
+   [
+    -105.70288,
+    43.69099
+   ],
+   [
+    -105.70298,
+    43.69158
+   ]
+  ],
+  "fx": 17,
+  "note": "Path: filed directional survey, carried straight on to the header bottom hole (the survey's last station is the last MWD reading; the bottom hole is the projection to the bit)"
+ },
+ "49-005-64213": {
+  "ln": [
+   [
+    -105.69876,
+    43.66427
+   ],
+   [
+    -105.69378,
+    43.66253
+   ],
+   [
+    -105.69339,
+    43.66357
+   ],
+   [
+    -105.69303,
+    43.69022
+   ],
+   [
+    -105.69303,
+    43.69022
+   ],
+   [
+    -105.69303,
+    43.69119
+   ]
+  ],
+  "fx": 17,
+  "note": "Path: filed directional survey, carried straight on to the header bottom hole (the survey's last station is the last MWD reading; the bottom hole is the projection to the bit)"
+ },
+ "49-005-64217": {
+  "ln": [
+   [
+    -105.6989,
+    43.66427
+   ],
+   [
+    -105.69783,
+    43.66251
+   ],
+   [
+    -105.6977,
+    43.66268
+   ],
+   [
+    -105.6981,
+    43.69056
+   ],
+   [
+    -105.6981,
+    43.69056
+   ],
+   [
+    -105.69798,
+    43.69156
+   ]
+  ],
+  "fx": 17,
+  "note": "Path: filed directional survey, carried straight on to the header bottom hole (the survey's last station is the last MWD reading; the bottom hole is the projection to the bit)"
+ },
+ "49-005-64239": {
+  "ln": [
+   [
+    -105.69864,
+    43.66427
+   ],
+   [
+    -105.69875,
+    43.66441
+   ],
+   [
+    -105.69996,
+    43.66393
+   ],
+   [
+    -105.70009,
+    43.66099
+   ],
+   [
+    -105.69965,
+    43.63502
+   ],
+   [
+    -105.69965,
+    43.63502
+   ]
+  ],
+  "fx": 17,
+  "note": "Path: filed directional survey to the projection to the bit. The header bottom hole (2,006 ft FWL) is about 600 ft east of the certified location (1,403 ft FWL), so the bottom hole is taken from the survey.",
+  "bhl": [
+   -105.69965,
+   43.63502
+  ]
+ },
+ "49-005-64240": {
+  "ln": [
+   [
+    -105.69845,
+    43.66427
+   ],
+   [
+    -105.69444,
+    43.66397
+   ],
+   [
+    -105.69425,
+    43.66368
+   ],
+   [
+    -105.69407,
+    43.65828
+   ],
+   [
+    -105.69405,
+    43.63585
+   ],
+   [
+    -105.69405,
+    43.63585
+   ],
+   [
+    -105.69403,
+    43.63503
+   ]
+  ],
+  "fx": 17,
+  "note": "Path: filed directional survey, carried straight on to the header bottom hole (the survey's last station is the last MWD reading; the bottom hole is the projection to the bit)"
  }
 }
