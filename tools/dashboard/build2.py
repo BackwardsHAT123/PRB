@@ -60,11 +60,11 @@ for f,b in bench.items():
 json.dump(groups,open("groups.json","w"),separators=(",",":"))
 print("groups",len(groups))
 # ---------- curves: median cumulative per month by operator and by op x fm (n>=8 wells with >=12 months)
-def curve(label,rs,op,fm):
+def curve(label,rs,op,fm,minw=5):
     out=[]
     for m in range(1,25):
         sel=[r for r in rs if len(r["_oc"])>=m and r["len"]]
-        if len(sel)<5: break
+        if len(sel)<minw: break
         out.append({"series":label,"op":op,"fm":fm,"month":m,"n":len(sel),
           "oil":rnd(med(r["_oc"][m-1] for r in sel)),"water":rnd(med(r["_wc"][m-1] for r in sel)),
           "oil_ft":rnd(med(r["_oc"][m-1]/r["len"]*1000 for r in sel),1),"water_ft":rnd(med(r["_wc"][m-1]/r["len"]*1000 for r in sel),1)})
@@ -73,33 +73,36 @@ curves=[]
 for op in ("Ballard Petroleum","Sage Butte"):
     curves+=curve(op,[r for r in focus if r["op"]==op],op,None)
 for (op,f),n in ofm.items():
-    if n>=8: curves+=curve(f"{op} / {f}",[r for r in focus if r["op"]==op and r["fm"]==f],op,f)
+    if n>=5: curves+=curve(f"{op} / {f}",[r for r in focus if r["op"]==op and r["fm"]==f],op,f,4)
 json.dump(curves,open("curves.json","w"),separators=(",",":"))
 print("curves rows",len(curves),sorted(set(c['series'] for c in curves)))
 # ---------- vintage buckets
 def bucket(y): return "2013 and earlier" if y<=2013 else "2014-2015" if y<=2015 else "2016-2019" if y<=2019 else "2020 and later"
 vint=[]
-for op in ("Ballard Petroleum","Sage Butte"):
-    for b in ("2013 and earlier","2014-2015","2016-2019","2020 and later"):
-        rs=[r for r in focus if r["op"]==op and bucket(r["yr"])==b]
-        if len(rs)>=3:
-            vint.append({"op":op,"bucket":b,"n":len(rs),"len":rnd(med(r["len"] for r in rs)),"o12":rnd(med(r["o12"] for r in rs)),"w12":rnd(med(r["w12"] for r in rs)),
-                         "of12":rnd(med(r["of12"] for r in rs),1),"wf12":rnd(med(r["wf12"] for r in rs),1),"iof12":rnd(med(r["iof12"] for r in rs),2),"iwf12":rnd(med(r["iwf12"] for r in rs),2)})
+FMS=[None]+[f for f,n in fms.items() if n>=3]
+for fm in FMS:
+    for op in ("Ballard Petroleum","Sage Butte"):
+        for b in ("2013 and earlier","2014-2015","2016-2019","2020 and later"):
+            rs=[r for r in focus if r["op"]==op and bucket(r["yr"])==b and (fm is None or r["fm"]==fm)]
+            if len(rs)>=(3 if fm is None else 2):
+                vint.append({"fm":fm,"op":op,"bucket":b,"n":len(rs),"len":rnd(med(r["len"] for r in rs)),"o12":rnd(med(r["o12"] for r in rs)),"w12":rnd(med(r["w12"] for r in rs)),
+                             "of12":rnd(med(r["of12"] for r in rs),1),"wf12":rnd(med(r["wf12"] for r in rs),1),"iof12":rnd(med(r["iof12"] for r in rs),2),"iwf12":rnd(med(r["iwf12"] for r in rs),2)})
 json.dump(vint,open("vintage.json","w"),separators=(",",":")); print("vintage",len(vint))
 # ---------- area (township-range) table n>=4
-tw=collections.defaultdict(list)
-for r in focus:
-    if r["twp"]: tw[r["twp"]].append(r)
 area=[]
-for t,rs in tw.items():
-    if len(rs)>=4:
-        ops=collections.Counter(r["op"] for r in rs)
-        fmc=collections.Counter(r["fm"] for r in rs)
-        area.append({"twp":t,"n":len(rs),"ballard":ops.get("Ballard Petroleum",0),"sage":ops.get("Sage Butte",0),"top_fm":fmc.most_common(1)[0][0],
-          "cty":collections.Counter(r["cty"] for r in rs).most_common(1)[0][0],"len":rnd(med(r["len"] for r in rs)),
-          "o12":rnd(med(r["o12"] for r in rs)),"w12":rnd(med(r["w12"] for r in rs)),"of12":rnd(med(r["of12"] for r in rs),1),"wf12":rnd(med(r["wf12"] for r in rs),1),
-          "iof12":rnd(med(r["iof12"] for r in rs),2),"iwf12":rnd(med(r["iwf12"] for r in rs),2),
-          "lon":rnd(float(np.mean([r["lon"] for r in rs])),4),"lat":rnd(float(np.mean([r["lat"] for r in rs])),4)})
+for fm in FMS:
+    tw=collections.defaultdict(list)
+    for r in focus:
+        if r["twp"] and (fm is None or r["fm"]==fm): tw[r["twp"]].append(r)
+    for t,rs in tw.items():
+        if len(rs)>=(4 if fm is None else 3):
+            ops=collections.Counter(r["op"] for r in rs)
+            fmc=collections.Counter(r["fm"] for r in rs)
+            area.append({"key":(fm or "All")+"|"+t,"fm":fm,"twp":t,"n":len(rs),"ballard":ops.get("Ballard Petroleum",0),"sage":ops.get("Sage Butte",0),"top_fm":fmc.most_common(1)[0][0],
+              "cty":collections.Counter(r["cty"] for r in rs).most_common(1)[0][0],"len":rnd(med(r["len"] for r in rs)),
+              "o12":rnd(med(r["o12"] for r in rs)),"w12":rnd(med(r["w12"] for r in rs)),"of12":rnd(med(r["of12"] for r in rs),1),"wf12":rnd(med(r["wf12"] for r in rs),1),
+              "iof12":rnd(med(r["iof12"] for r in rs),2),"iwf12":rnd(med(r["iwf12"] for r in rs),2),
+              "lon":rnd(float(np.mean([r["lon"] for r in rs])),4),"lat":rnd(float(np.mean([r["lat"] for r in rs])),4)})
 area.sort(key=lambda a:-(a["of12"] or 0))
 json.dump(area,open("area.json","w"),separators=(",",":")); print("area",len(area))
 # ---------- drivers: adjusted R2 by outcome and factor
