@@ -686,7 +686,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <details id="panel" open><summary>PRB WY horizontals<br><small>API ≥ 49-005-35840 (Campbell), 49-009-28220 (Converse), 49-019-29600 (Johnson) · WOGCC data</small></summary>
 <div id="count"></div>
 <label>Color by <select id="cb"><option value="sg">Well status</option><option value="r" selected>Producing formation</option><option value="oc">Operator</option></select></label>
-<label>County <select id="ct"></select></label><label>Operator <select id="op"></select></label><label>Status <select id="st"></select></label>
+<label>County <select id="ct"></select></label><label>Formation <select id="fmf"></select></label><label>Operator <select id="op"></select></label><label>Status <select id="st"></select></label>
 <label>Highlight operator <select id="hl"></select></label><div id="leg"></div>
 <details id="disp"><summary>Display</summary><label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="bub"> Oil production bubbles at bottom hole</label><label id="bubo" hidden>Size by oil in the first <select id="bw"><option value="3">3 months</option><option value="6">6 months</option><option value="12" selected>12 months</option></select></label><div id="bubleg"></div><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="rg" checked> Active drilling rigs (inferred)</label><label><input type="checkbox" id="trl"> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label></details>
 <details id="exp"><summary>Export production</summary><label>Operator <select id="xop"></select></label><label>Formation <select id="xfm"></select></label><div class="xdate"><label>From <input type="month" id="xfrom"></label><label>To <input type="month" id="xto"></label></div><div id="xinfo">loading production…</div><button class="pbtn" id="xdl" disabled>Download CSV</button><div class="plg" style="color:var(--muted);margin-top:4px">Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.</div></details>
@@ -719,11 +719,11 @@ leg.innerHTML=Object.keys(cmap).filter(v=>cnt[v]).map(v=>`<div><i style="backgro
 const col=d=>cmap[d[cb.value]]||'#999';
 const bubL=L.layerGroup().addTo(map);
 const g=L.layerGroup().addTo(map);
-function fill(id,key){const s=document.getElementById(id),c={};D.forEach(d=>c[d[key]]=(c[d[key]]||0)+1);const vs=Object.keys(c).sort(key=='oc'?(a,b)=>c[b]-c[a]||a.localeCompare(b):undefined);s.innerHTML='<option value="">All</option>'+vs.map(v=>`<option value="${v}">${v}${key=='oc'?' ('+c[v]+')':''}</option>`).join('')}
-fill('ct','cty');fill('op','oc');fill('hl','oc');hl.options[0].text='None';fill('st','sg');
+function fill(id,key){const s=document.getElementById(id),c={};D.forEach(d=>c[d[key]]=(c[d[key]]||0)+1);const vs=Object.keys(c).sort(key=='oc'||key=='r'?(a,b)=>c[b]-c[a]||a.localeCompare(b):undefined);s.innerHTML='<option value="">All</option>'+vs.map(v=>`<option value="${v}">${v}${key=='oc'||key=='r'?' ('+c[v]+')':''}</option>`).join('')}
+fill('ct','cty');fill('fmf','r');fill('op','oc');fill('hl','oc');hl.options[0].text='None';fill('st','sg');
 function pop(d){return `<b>${d.n}</b><br>API <a href="https://pipeline.wyo.gov/wellapi.cfm?nAPINO=${(+d.a.split('-')[1])+d.a.split('-')[2]}" target="_blank" rel="noopener">${d.a}</a><br>${d.oc} <small>(${d.o})</small><br>${d.s}<br>Field: ${d.f||'-'} · Formation: ${d.r}<br>${d.cty} Co. · Sec-Twp-Rge: ${d.sec}<br>Spud: ${d.sd||'-'} · Compl: ${d.cd||'-'}<br>TD: ${d.td||'-'} ft · Elev: ${d.el||'-'} ft<br>SHL ${d.shl[1]}, ${d.shl[0]}`+(d.fx==2?'<br><b>Path: corrected (state GIS track was in error)</b>':d.fx==9?'<br><b>Path: from the filed directional survey, adjusted to the header bottom hole</b>':d.fx==8?'<br><b>Path: from the filed directional survey (simplified)</b>':d.fx==7?'<br><b>Path: surface, heel, toe and bottom hole from the filed certification form</b>':d.fx==6?'<br><b>Path: from operator design survey (simplified)</b>':d.fx==5?'<br><b>Path: state track flipped east-west and fitted to the header bottom hole</b>':d.fx==4?'<br><b>Path: state track rescaled (it was 3.28x too short)</b>':d.fx==3?'<br><b>Path: straight line to header bottom hole (state track incomplete)</b>':d.note?'<br><b>'+d.note+'</b>':d.fx?'<br><b>Path: state track with one bad vertex removed</b>':'')+(d.bhl?`<br>BHL ${d.bhl[1]}, ${d.bhl[0]}`:'')+((d.oc=='Ballard Petroleum'||d.oc=='Sage Butte')?'<br><a href="https://backwardshat123.github.io/PRB/dashboard.html" target="_blank" rel="noopener">Operator performance dashboard</a>':'')}
 function draw(){g.clearLayers();const o=op.value,s=st.value,p=pts.checked,h=hl.value;let n=0,b=[];
-const vis=D.filter(d=>!(o&&d.oc!=o||s&&d.sg!=s||ct.value&&d.cty!=ct.value));
+const vis=D.filter(d=>!(o&&d.oc!=o||s&&d.sg!=s||ct.value&&d.cty!=ct.value||fmf.value&&d.r!=fmf.value));
 const ordered=h?vis.filter(d=>d.oc!=h).concat(vis.filter(d=>d.oc==h)):vis;
 ordered.forEach(d=>{n++;const c=col(d),on=!h||d.oc==h,dim=h&&!on;
 if(d.ln)L.polyline(d.ln.map(x=>[x[1],x[0]]),{color:c,weight:on?(h?(d.surv?5:4):(d.surv?3:2)):1,opacity:dim?.18:.9}).bindPopup(()=>pop(d)).addTo(g);
@@ -731,9 +731,9 @@ if(p){const r=on&&h?4:3,fo=dim?.25:1;L.circleMarker([d.shl[1],d.shl[0]],{radius:
 if(d.bhl)L.circleMarker([d.bhl[1],d.bhl[0]],{radius:r,color:c,weight:1,opacity:fo,fillColor:c,fillOpacity:fo}).bindPopup(()=>pop(d)).addTo(g)}
 b.push([d.shl[1],d.shl[0]])});count.textContent=n+' wells'+(h?' · '+vis.filter(d=>d.oc==h).length+' '+h:'');drawBub(vis);return b}
 let first=true;function go(){const b=draw();if(first&&b.length){map.fitBounds(b,{padding:[30,30]});first=false}}
-cb.onchange=()=>{build();go()};op.onchange=st.onchange=ct.onchange=pts.onchange=hl.onchange=go;build();go();
+cb.onchange=()=>{build();go()};op.onchange=st.onchange=ct.onchange=fmf.onchange=pts.onchange=hl.onchange=go;build();go();
 function goWell(){const m=/^#(\d{2}-\d{3}-\d{5})$/.exec(location.hash);if(!m)return;const d=D.find(x=>x.a==m[1]);if(!d)return;
-if(op.value&&d.oc!=op.value||st.value&&d.sg!=st.value||ct.value&&d.cty!=ct.value){op.value='';st.value='';ct.value='';go()}
+if(op.value&&d.oc!=op.value||st.value&&d.sg!=st.value||ct.value&&d.cty!=ct.value||fmf.value&&d.r!=fmf.value){op.value='';st.value='';ct.value='';fmf.value='';go()}
 const ll=(d.ln&&d.ln.length>1?d.ln:[d.shl]).map(x=>[x[1],x[0]]);map.fitBounds(L.latLngBounds(ll),{padding:[70,70],maxZoom:14});
 L.popup({autoPan:true}).setLatLng([d.shl[1],d.shl[0]]).setContent(pop(d)).openOn(map)}
 goWell();addEventListener('hashchange',goWell);
