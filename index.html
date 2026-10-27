@@ -843,7 +843,7 @@ function downloadProd(a){
   p.o.forEach((o,i)=>{const yr=y0+Math.floor((m0+i)/12),mo=(m0+i)%12+1;rows.push(pre+[yr+'-'+String(mo).padStart(2,'0'),o,p.g[i],p.w[i]].join(','))});
   const blob=new Blob([rows.join('\r\n')+'\r\n'],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob),l=document.createElement('a');
-  l.href=url;l.download=a+'_'+(d.n||'well').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'')+'_production.csv';
+  l.href=url;l.download=a.replace(/-/g,'')+'_'+(d.n||'well').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'')+'_production.csv';
   document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
  }catch(e){console.error(e)}
 }
