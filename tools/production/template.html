@@ -33,13 +33,14 @@ const hue={ [D.ops[0]]:[200,285], [D.ops[1]]:[2,48] };
 D.wells.forEach(w=>{w.cum=[];let co=0,cw=0,cg=0,dd=0;const y0=+w.s0.slice(0,4),m0=+w.s0.slice(5)-1;w.o.forEach((o,i)=>{const yy=y0+Math.floor((m0+i)/12),mm=(m0+i)%12,dm=new Date(yy,mm+1,0).getDate();co+=o;cw+=w.w[i];cg+=w.g[i];dd+=dm;w.cum.push({m:i+1,d:dd,dm,co,cw,cg,o,w:w.w[i],g:w.g[i]})})});
 const byOp=d3.group(D.wells,w=>w.op);
 byOp.forEach((ws,op)=>{const [a,b]=hue[op]||[0,300];ws.forEach((w,i)=>{const t=ws.length>1?i/(ws.length-1):.5;w.color='hsl('+(a+(b-a)*t)+','+(78-16*Math.abs(t-.5))+'%,'+(42+10*Math.sin(i*1.7))+'%)'})});
-const st={maxM:36,ops:new Set(D.ops),off:new Set(),hi:null,ph:'water'};
+const st={maxM:36,ops:new Set(D.ops),off:new Set(),hi:null,ph:'water',v22:false};
 const ctl=document.getElementById('ctl');
-ctl.innerHTML='<label>Show <select id="ph"><option value="water">Water analysis</option><option value="oil">Oil / liquid analysis</option></select></label><span>Operators:</span>'+D.ops.map(o=>'<label><input type="checkbox" data-op="'+o+'" checked> '+o+' ('+byOp.get(o).length+')</label>').join('')+'<label>Time shown <select id="mm"><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option><option value="24">24 months</option><option value="36" selected>36 months</option><option value="60">60 months</option><option value="999">all</option></select></label>';
-ctl.querySelectorAll('input').forEach(c=>c.onchange=()=>{c.checked?st.ops.add(c.dataset.op):st.ops.delete(c.dataset.op);draw()});
+ctl.innerHTML='<label>Show <select id="ph"><option value="water">Water analysis</option><option value="oil">Oil / liquid analysis</option></select></label><label><input type="checkbox" id="v22"> 2022 and later wells only</label><span>Operators:</span>'+D.ops.map(o=>'<label><input type="checkbox" data-op="'+o+'" checked> '+o+' ('+byOp.get(o).length+')</label>').join('')+'<label>Time shown <select id="mm"><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option><option value="24">24 months</option><option value="36" selected>36 months</option><option value="60">60 months</option><option value="999">all</option></select></label>';
+ctl.querySelectorAll('input[data-op]').forEach(c=>c.onchange=()=>{c.checked?st.ops.add(c.dataset.op):st.ops.delete(c.dataset.op);draw()});
+document.getElementById('v22').onchange=e=>{st.v22=e.target.checked;draw()};
 document.getElementById('ph').onchange=e=>{st.ph=e.target.value;draw()};
 document.getElementById('mm').onchange=e=>{st.maxM=+e.target.value;draw()};
-const vis=()=>D.wells.filter(w=>st.ops.has(w.op)&&!st.off.has(w.api));
+const inSet=w=>st.ops.has(w.op)&&(!st.v22||w.yr>=2022),vis=()=>D.wells.filter(w=>inSet(w)&&!st.off.has(w.api));
 const tip=document.getElementById('tip');
 function showTip(e,w,lines){tip.style.display='block';tip.innerHTML='<b>'+w.name+'</b><br>'+w.op+', first oil '+w.yr+'<br>'+lines.join('<br>');const x=Math.min(innerWidth-270,e.clientX+14);tip.style.left=x+'px';tip.style.top=(e.clientY+14)+'px'}
 function chart(id,o){
@@ -76,7 +77,7 @@ const sets={
 sets.water[0].id='c1';sets.oil[0]=Object.assign({},base.c1,{id:'c1'});
 
 function legend(){const leg=document.getElementById('leg');leg.innerHTML='';byOp.forEach((ws,op)=>{if(!st.ops.has(op))return;const h=document.createElement('h3');h.textContent=op;leg.appendChild(h);
- ws.forEach(w=>{const b=document.createElement('button');b.className=st.off.has(w.api)?'off':'';b.innerHTML='<i style="background:'+w.color+'"></i>'+w.name+' <span style="color:var(--color-fg-muted)">'+w.yr+'</span>';b.title=w.name+', '+w.o.length+' months of production, '+f0(w.len)+' ft lateral';
+ ws.filter(w=>!st.v22||w.yr>=2022).forEach(w=>{const b=document.createElement('button');b.className=st.off.has(w.api)?'off':'';b.innerHTML='<i style="background:'+w.color+'"></i>'+w.name+' <span style="color:var(--color-fg-muted)">'+w.yr+'</span>';b.title=w.name+', '+w.o.length+' months of production, '+f0(w.len)+' ft lateral';
   b.onclick=()=>{st.off.has(w.api)?st.off.delete(w.api):st.off.add(w.api);draw()};b.onmouseenter=()=>hl(w.api);b.onmouseleave=()=>hl(null);leg.appendChild(b)})})}
 function draw(){sets[st.ph].forEach(d=>{document.getElementById('t'+d.id.slice(1)).textContent=d.t;document.getElementById('s'+d.id.slice(1)).textContent=d.s;chart(d.id,d)});legend()}
 draw();addEventListener('resize',draw);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
