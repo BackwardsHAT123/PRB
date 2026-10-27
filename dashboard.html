@@ -158,6 +158,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       <div class="px-chart dash-skeleton" id="ch-cum" data-source="wellcurves"></div>
       <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:8px 0 0"><input type="checkbox" id="cum-top"> <span id="cum-top-lab"></span></label>
       <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-n2"> <span>Normalize to a 2-mile lateral (10,560 ft) instead of 1,000 ft (every value is multiplied by 10.56)</span></label>
+      <p style="margin:10px 0 0"><button type="button" class="px-btn" id="cum-export">Export chart data (.csv)</button></p>
       <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-top10"> <span>Only each operator’s 10 best wells (ranked by oil in the first 12 months per lateral foot; wells with less than 12 months of history are left out)</span></label>
     </article>
   </section>
@@ -606,8 +607,21 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   }
 
   /* ---------- cumulative production per 1,000 ft: every well in scope plus the median well per operator; own controls (phase, months), follows the Formation and Operators filters only ---------- */
+  let cumExport = null;
+  function exportCum() {
+    if (!cumExport) return;
+    const { rows, meds, topAvg, nm, nl } = cumExport, q = (s) => (/[",\r\n]/.test(s) ? '"' + String(s).replace(/"/g, '""') + '"' : s), out = [['series', 'name', 'operator', 'api', 'first_oil_year', 'month_since_first_oil', 'cumulative_' + nm + '_bbl_per_' + nl.replace(',', '') + '_ft'].join(',')];
+    const put = (kind, name, op, api, yr, pts) => pts.forEach((p) => out.push([kind, q(name), q(op), api, yr, p.m, Math.round(p.v * 10) / 10].join(',')));
+    for (const r of rows) put('well', r.name, r.op, r.api.replace(/-/g, ''), r.yr, r.pts);
+    for (const s of meds) put('median', 'Median, ' + s.name, s.name, '', '', s.pts);
+    if (topAvg) put('top25_average', topAvg.name, '', '', '', topAvg.pts);
+    const blob = new Blob([out.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' }), url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'PRB_cumulative_' + nm + '_per_' + nl.replace(',', '') + 'ft_' + (st.fm === 'all' ? 'all_formations' : st.fm) + '_first_' + st.cmo + '_months.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 3000);
+  }
   function cumChart(d) {
     const host = $('ch-cum');
+    $('cum-export').onclick = exportCum;
     seg($('seg-cumph'), [{ v: 'oil', label: 'Oil' }, { v: 'water', label: 'Water' }], 'cph');
     seg($('seg-cummo'), [{ v: 12, label: 'First 12 months' }, { v: 24, label: 'First 24 months' }, { v: 36, label: 'First 36 months' }], 'cmo');
     const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 10.56 : 1, nl = st.cn2 ? '10,560' : '1,000';
@@ -622,7 +636,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       scope = scope.filter((x) => keep.has(x.w.api));
     }
     if (!scope.length) { $('leg-cum').replaceChildren(); return empty(host, st.mode === 'pick' && !st.sel.length ? pickHint : 'No wells with enough history here.'); }
-    const rows = scope.map((x) => ({ op: x.w.op, name: x.w.name, yr: x.w.yr, pts: x.a[pi].slice(0, st.cmo).map((v, i) => ({ m: i + 1, v: v * nf })) }));
+    const rows = scope.map((x) => ({ api: x.w.api, op: x.w.op, name: x.w.name, yr: x.w.yr, pts: x.a[pi].slice(0, st.cmo).map((v, i) => ({ m: i + 1, v: v * nf })) }));
     const meds = names.map((o) => {
       const rs = st.mode === 'all' ? rows : rows.filter((r) => r.op === o), pts = [];
       for (let m = 1; m <= st.cmo; m++) { const v = rs.filter((r) => r.pts.length >= m).map((r) => r.pts[m - 1].v); if (v.length < 4) break; pts.push({ m, v: d3.median(v) }); }
@@ -639,6 +653,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       if (pts.length > 1) topAvg = { name: 'Top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells, average', n: pool.length, pts };
     }
     legend($('leg-cum'), names.map((o) => { const s = meds.find((q) => q.name === o); return { color: color(o), label: o + ' (' + (st.mode === 'all' ? rows.length : rows.filter((r) => r.op === o).length) + ' wells' + (s ? '' : ', too few for a median') + ')' }; }).concat(topAvg ? [{ color: 'var(--color-fg)', label: topAvg.name + ' (' + topAvg.n + ' wells, dashed)' }] : []));
+    cumExport = { rows, meds, topAvg, nm, nl };
     host.classList.remove('dash-skeleton'); host.replaceChildren();
     const W = Math.max(280, host.clientWidth), H = Math.round(Math.min(420, Math.max(260, W * 0.5))), m = { t: 10, r: 14, b: 40, l: 58 };
     const maxM = d3.max(rows, (r) => r.pts.length), ends = rows.map((r) => r.pts[r.pts.length - 1].v).sort(d3.ascending);
