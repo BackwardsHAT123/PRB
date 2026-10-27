@@ -9,9 +9,10 @@ for w in sorted((w for w in W if w["fm"]=="Niobrara" and w["op"] in OPS and w.ge
     if not p or p.get("none"): continue
     k=next((i for i,v in enumerate(p["o"]) if v>0),None)
     if k is None: continue
-    o=p["o"][k:]; wa=p["w"][k:]
-    while o and o[-1]==0 and wa[-1]==0: o.pop(); wa.pop()      # trailing months with nothing reported
-    wells.append({"api":w["api"],"name":w["name"].strip(),"op":w["op"],"yr":w["yr"],"len":w["len"],"o":o,"w":wa})
+    o=p["o"][k:]; wa=p["w"][k:]; ga=p["g"][k:]
+    while o and o[-1]==0 and wa[-1]==0: o.pop(); wa.pop(); ga.pop()      # trailing months with nothing reported
+    y0,m0=int(p["s"][:4]),int(p["s"][5:])-1+k; s0=f"{y0+m0//12}-{m0%12+1:02d}"                 # calendar month of first oil
+    wells.append({"api":w["api"],"name":w["name"].strip(),"op":w["op"],"yr":w["yr"],"len":w["len"],"s0":s0,"o":o,"w":wa,"g":ga})
 cur=open(R+"completions.html").read()
 styles="".join(re.findall(r"<style>.*?</style>",cur,re.S)[:2])
 tpl=open("template.html").read()
