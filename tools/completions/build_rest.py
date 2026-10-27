@@ -20,8 +20,12 @@ for a,e in ex.items():
     def mean(k):
         v=[r[k] for r in st_rows if r.get(k) is not None]; return v if len(v)>=5 else None
     rate,press,isip,fg=mean('rate'),mean('press'),mean('isip'),mean('fg')
+    cfv=None; cff=f'calfrac_{a}.json'
+    if os.path.exists(cff) and os.path.getsize(cff)>5 and not (rate or press or isip):
+        cfl=[x for x in json.load(open(cff)) if x]
+        if cfl: cfv=cfl[0]; src='Calfrac job summary'
     ven=''
-    if src: ven=("Liberty" if src.startswith("Liberty") else "Halliburton" if src.startswith("Halli") else "Element Technical Services (frac report)" if src.startswith("Element") else "FTS International")
+    if src: ven=("Calfrac" if src.startswith("Calfrac") else "Liberty" if src.startswith("Liberty") else "Halliburton" if src.startswith("Halli") else "Element Technical Services (frac report)" if src.startswith("Element") else "FTS International")
     elif e['vendor_p1']: ven=e['vendor_p1'][0]
     elif e['vendor_any']: ven=e['vendor_any'][0]
     fw=e['fluid_words']; ft=''
@@ -33,10 +37,11 @@ for a,e in ex.items():
         import glob
         txt=" ".join(" ".join(json.load(open(p))[:12]) for p in glob.glob(f'wells/{a}/f3_*.json'))
         m=re.findall(r"(?:Niobrara|Intervals)[^|]{0,6}?(\d{2,3})\s*Intervals",txt,re.I)
+        if not m: m=re.findall(r"Stgs\s*1\s*-\s*(\d{2,3})",txt,re.I)
         if m: stages=int(m[0])
     w=dict(api=a,name=b['name'],op=b['op'],cty=b['cty'],yr=b['yr'],len=b['len'],o12=b['o12'],stages=stages,sand=e['proppant_lb'] or None,fluid_bbl=e['fluid_bbl'] or None,sizes=mesh,vendor=ven,ftype=ft,
-        rate=round(st.mean(rate),1) if rate else None,press=round(st.mean(press)) if press else None,fg=round(st.mean(fg),2) if fg else None,isip=round(st.mean(isip)) if isip else None,
-        basis=f'mean of per-stage values ({src}, OCR-parsed)' if (rate or press or isip) else '',has_stage=a in sf['stages'],eff=eff,
+        rate=cfv.get('rate') if cfv else round(st.mean(rate),1) if rate else None,press=cfv.get('press') if cfv else round(st.mean(press)) if press else None,fg=cfv.get('fg') if cfv else round(st.mean(fg),2) if fg else None,isip=cfv.get('isip') if cfv else round(st.mean(isip)) if isip else None,
+        basis='job summary' if cfv else f'mean of per-stage values ({src}, OCR-parsed)' if (rate or press or isip) else '',has_stage=a in sf['stages'],eff=eff,
         slen=round(eff/stages) if eff and stages else None,slen_src='calc' if eff and stages else '',oil1k=round(b['o12']/b['len']*1000) if b.get('o12') and b.get('len') else None,twp=b['twp'],grp='more')
     wells.append(w)
 json.dump(dict(wells=wells,stages=sf['stages'],src=sf['src']),open(f'rest_{slug}.json','w'),separators=(',',':'))
