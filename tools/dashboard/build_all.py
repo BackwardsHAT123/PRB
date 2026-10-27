@@ -15,7 +15,7 @@ def hav(a, b):
 def plen(ln): return sum(hav(a, b) for a, b in zip(ln, ln[1:])) if ln and len(ln) > 1 else None
 def rnd(x, n=0): return None if x is None else round(x, n)
 
-wells = []; cum = {}
+wells = []; cum = {}; FIRST = {}
 for d in D:
     p = P.get(d["a"])
     if not p or p.get("none"): continue
@@ -40,7 +40,8 @@ for d in D:
         else:
             r[f"o{h}"] = r[f"w{h}"] = r[f"of{h}"] = r[f"wf{h}"] = None
     wells.append(r)
-    cum[d["a"]] = (np.cumsum(o[k:k + 36]), np.cumsum(w[k:k + 36]))     # 36 months kept for the per-well curves; the median curves below use the first 24
+    cum[d["a"]] = (np.cumsum(o[k:k + 36]), np.cumsum(w[k:k + 36]))
+    FIRST[d["a"]] = k     # 36 months kept for the per-well curves; the median curves below use the first 24
 json.dump(wells, open("wells.json", "w"), separators=(",", ":"))
 print("wells", len(wells), "operators", len(set(r["op"] for r in wells)))
 
@@ -100,6 +101,7 @@ wc = {}
 for r in wells:
     if not r["len"]: continue
     oc, wcm = cum[r["api"]]
-    wc[r["api"]] = [[int(round(v / r["len"] * 1000)) for v in oc], [int(round(v / r["len"] * 1000)) for v in wcm]]
+    y0, m0 = int(P[r["api"]]["s"][:4]), int(P[r["api"]]["s"][5:]) - 1 + FIRST[r["api"]]
+    wc[r["api"]] = [[int(round(v / r["len"] * 1000)) for v in oc], [int(round(v / r["len"] * 1000)) for v in wcm], f"{y0 + m0 // 12}-{m0 % 12 + 1:02d}"]     # third item: calendar month of first oil
 json.dump(wc, open("wellcurves.json", "w"), separators=(",", ":"))
 print("wellcurves", len(wc))

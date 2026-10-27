@@ -153,12 +153,23 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     <h2>Cumulative production</h2>
     <p class="px-lede" id="lede-cum"></p>
     <article class="px-card">
-      <div class="px-ctlbar" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:8px"><div class="px-seg" id="seg-cumph" role="group" aria-label="Oil or water"></div><div class="px-seg" id="seg-cummo" role="group" aria-label="Months shown"></div></div>
-      <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between"><div class="px-legend" id="leg-cum" style="flex:1;min-width:0"></div><button type="button" class="px-btn" id="cum-export" style="flex:none;white-space:nowrap">Export chart data (.csv)</button></div>
-      <div class="px-chart dash-skeleton" id="ch-cum" data-source="wellcurves"></div>
-      <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:8px 0 0"><input type="checkbox" id="cum-top"> <span id="cum-top-lab"></span></label>
-      <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-n2"> <span>Normalize to a 2-mile lateral (10,560 ft) instead of 1,000 ft (every value is multiplied by 10.56)</span></label>
-      <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-top10"> <span>Only each operator’s 10 best wells (ranked by oil in the first 12 months per lateral foot; wells with less than 12 months of history are left out)</span></label>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+        <div style="flex:1 1 520px;min-width:0">
+          <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between"><div class="px-legend" id="leg-cum" style="flex:1;min-width:0"></div><button type="button" class="px-btn" id="cum-export" style="flex:none;white-space:nowrap">Export chart data (.csv)</button></div>
+          <div class="px-chart dash-skeleton" id="ch-cum" data-source="wellcurves"></div>
+        </div>
+        <aside id="cum-panel" aria-label="Chart controls" style="flex:0 0 235px;border:1px solid var(--color-border-line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:12px;font-size:12.5px">
+          <div><div class="px-ctllab" style="margin-bottom:4px">Show</div><div class="px-seg" id="seg-cumph" role="group" aria-label="Oil or water"></div></div>
+          <div><div class="px-ctllab" style="margin-bottom:4px">Time</div><div class="px-seg" id="seg-cummo" role="group" aria-label="Months shown"></div></div>
+          <div><div class="px-ctllab" style="margin-bottom:4px">Wells</div>
+            <label style="display:flex;gap:6px;align-items:flex-start;margin:0 0 6px"><input type="checkbox" id="cum-l2y" style="margin-top:2px"> <span>Only wells that came on in the last 2 years</span></label>
+            <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-top10" style="margin-top:2px"> <span>Only each operator’s 10 best wells <span class="px-note" style="display:block;margin:2px 0 0">Ranked by oil in the first 12 months per lateral foot; wells with less history are left out.</span></span></label></div>
+          <div><div class="px-ctllab" style="margin-bottom:4px">Scale</div>
+            <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-n2" style="margin-top:2px"> <span>2-mile lateral (10,560 ft) instead of 1,000 ft <span class="px-note" style="display:block;margin:2px 0 0">Every value is multiplied by 10.56.</span></span></label></div>
+          <div><div class="px-ctllab" style="margin-bottom:4px">Overlay</div>
+            <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-top" style="margin-top:2px"> <span id="cum-top-lab"></span></label></div>
+        </aside>
+      </div>
     </article>
   </section>
 
@@ -232,7 +243,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   const MAXSEL = 6;
   const ALL = 'All operators';
   const $ = (id) => document.getElementById(id);
-  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24, ctop: false, ctop10: false, cn2: false };
+  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24, ctop: false, ctop10: false, cn2: false, cl2y: false };
   let ctx = null, BM = {};
   /* Remember the viewer's filter choices across reloads (this browser only). */
   const SKEY = 'prb-dashboard-filters-v1';
@@ -253,6 +264,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       if (typeof s.ctop === 'boolean') st.ctop = s.ctop;
       if (typeof s.ctop10 === 'boolean') st.ctop10 = s.ctop10;
       if (typeof s.cn2 === 'boolean') st.cn2 = s.cn2;
+      if (typeof s.cl2y === 'boolean') st.cl2y = s.cl2y;
     } catch (e) { /* unreadable saved state: use the defaults */ }
   }
 
@@ -639,12 +651,16 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const host = $('ch-cum');
     $('cum-export').onclick = exportCum;
     seg($('seg-cumph'), [{ v: 'oil', label: 'Oil' }, { v: 'water', label: 'Water' }], 'cph');
-    seg($('seg-cummo'), [{ v: 12, label: 'First 12 months' }, { v: 24, label: 'First 24 months' }, { v: 36, label: 'First 36 months' }], 'cmo');
+    seg($('seg-cummo'), [{ v: 12, label: '12 mo' }, { v: 24, label: '24 mo' }, { v: 36, label: '36 mo' }], 'cmo');
     const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 10.56 : 1, nl = st.cn2 ? '10,560' : '1,000';
     $('cum-n2').checked = st.cn2; $('cum-n2').onchange = (e) => { st.cn2 = e.target.checked; if (ctx) render(ctx); };
     $('lede-cum').textContent = 'Cumulative ' + nm + ' in barrels per ' + nl + ' ft of lateral, from each well’s first month with oil. Thin lines are individual wells, thick lines the median well' + (st.mode === 'pick' ? ' for each selected operator' : '') + '. This chart follows the Formation and Operators choices but not the Window or Basis ones.';
     const names = st.mode === 'all' ? [ALL] : st.sel;
     let scope = d.wells.filter(inScope).map((w) => ({ w, a: d.wellcurves[w.api] })).filter((x) => x.a && x.a[pi].length >= 2);
+    const now = new Date(), cut = now.getFullYear() * 12 + now.getMonth() - 24;     /* first oil within the last 24 months */
+    const recent = (api) => { const t = d.wellcurves[api] && d.wellcurves[api][2]; return !!t && (+t.slice(0, 4)) * 12 + (+t.slice(5)) - 1 >= cut; };
+    $('cum-l2y').checked = st.cl2y; $('cum-l2y').onchange = (e) => { st.cl2y = e.target.checked; if (ctx) render(ctx); };
+    if (st.cl2y) scope = scope.filter((x) => recent(x.w.api));
     $('cum-top10').checked = st.ctop10; $('cum-top10').onchange = (e) => { st.ctop10 = e.target.checked; if (ctx) render(ctx); };
     if (st.ctop10) {
       const keep = new Set();
@@ -659,11 +675,11 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       return { name: o, n: rs.length, color: color(o), pts };
     }).filter((s) => s.pts.length > 1);
     /* average of the 25 best wells in the selected formation (all operators), ranked by oil in their first 12 months per 1,000 ft */
-    const topLab = 'Show the average of the top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells (ranked by oil in the first 12 months per lateral foot) as a dashed line';
+    const topLab = 'Show the average of the top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells (ranked by oil in the first 12 months per lateral foot' + (st.cl2y ? '; recent wells only' : '') + ') as a dashed line';
     $('cum-top-lab').textContent = topLab; $('cum-top').checked = st.ctop; $('cum-top').onchange = (e) => { st.ctop = e.target.checked; if (ctx) render(ctx); };
     let topAvg = null;
     if (st.ctop) {
-      const pool = d.wells.filter((w) => inFm(w) && d.wellcurves[w.api] && d.wellcurves[w.api][0].length >= 12).map((w) => ({ w, o: d.wellcurves[w.api][0][11], a: d.wellcurves[w.api][pi].map((v) => v * nf) })).sort((p, q) => q.o - p.o).slice(0, 25);
+      const pool = d.wells.filter((w) => inFm(w) && d.wellcurves[w.api] && d.wellcurves[w.api][0].length >= 12 && (!st.cl2y || recent(w.api))).map((w) => ({ w, o: d.wellcurves[w.api][0][11], a: d.wellcurves[w.api][pi].map((v) => v * nf) })).sort((p, q) => q.o - p.o).slice(0, 25);
       const pts = [];
       for (let mo = 1; mo <= st.cmo; mo++) { const v = pool.filter((r) => r.a.length >= mo).map((r) => r.a[mo - 1]); if (v.length < 5) break; pts.push({ m: mo, v: d3.mean(v) }); }
       if (pts.length > 1) topAvg = { name: 'Top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells, average', n: pool.length, pts };
