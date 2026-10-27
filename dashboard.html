@@ -156,6 +156,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       <div class="px-ctlbar" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:8px"><div class="px-seg" id="seg-cumph" role="group" aria-label="Oil or water"></div><div class="px-seg" id="seg-cummo" role="group" aria-label="Months shown"></div></div>
       <div class="px-legend" id="leg-cum"></div>
       <div class="px-chart dash-skeleton" id="ch-cum" data-source="wellcurves"></div>
+      <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:8px 0 0"><input type="checkbox" id="cum-top"> <span id="cum-top-lab"></span></label>
     </article>
   </section>
 
@@ -229,7 +230,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   const MAXSEL = 6;
   const ALL = 'All operators';
   const $ = (id) => document.getElementById(id);
-  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24 };
+  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24, ctop: false };
   let ctx = null, BM = {};
 
   const f0 = d3.format(',');
@@ -597,11 +598,21 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       for (let m = 1; m <= st.cmo; m++) { const v = rs.filter((r) => r.pts.length >= m).map((r) => r.pts[m - 1].v); if (v.length < 4) break; pts.push({ m, v: d3.median(v) }); }
       return { name: o, n: rs.length, color: color(o), pts };
     }).filter((s) => s.pts.length > 1);
-    legend($('leg-cum'), names.map((o) => { const s = meds.find((q) => q.name === o); return { color: color(o), label: o + ' (' + (st.mode === 'all' ? rows.length : rows.filter((r) => r.op === o).length) + ' wells' + (s ? '' : ', too few for a median') + ')' }; }));
+    /* average of the 25 best wells in the selected formation (all operators), ranked by oil in their first 12 months per 1,000 ft */
+    const topLab = 'Show the average of the top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells (ranked by oil in the first 12 months per 1,000 ft) as a dashed line';
+    $('cum-top-lab').textContent = topLab; $('cum-top').checked = st.ctop; $('cum-top').onchange = (e) => { st.ctop = e.target.checked; if (ctx) render(ctx); };
+    let topAvg = null;
+    if (st.ctop) {
+      const pool = d.wells.filter((w) => inFm(w) && d.wellcurves[w.api] && d.wellcurves[w.api][0].length >= 12).map((w) => ({ w, o: d.wellcurves[w.api][0][11], a: d.wellcurves[w.api][pi] })).sort((p, q) => q.o - p.o).slice(0, 25);
+      const pts = [];
+      for (let mo = 1; mo <= st.cmo; mo++) { const v = pool.filter((r) => r.a.length >= mo).map((r) => r.a[mo - 1]); if (v.length < 5) break; pts.push({ m: mo, v: d3.mean(v) }); }
+      if (pts.length > 1) topAvg = { name: 'Top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells, average', n: pool.length, pts };
+    }
+    legend($('leg-cum'), names.map((o) => { const s = meds.find((q) => q.name === o); return { color: color(o), label: o + ' (' + (st.mode === 'all' ? rows.length : rows.filter((r) => r.op === o).length) + ' wells' + (s ? '' : ', too few for a median') + ')' }; }).concat(topAvg ? [{ color: 'var(--color-fg)', label: topAvg.name + ' (' + topAvg.n + ' wells, dashed)' }] : []));
     host.classList.remove('dash-skeleton'); host.replaceChildren();
     const W = Math.max(280, host.clientWidth), H = Math.round(Math.min(420, Math.max(260, W * 0.5))), m = { t: 10, r: 14, b: 40, l: 58 };
     const maxM = d3.max(rows, (r) => r.pts.length), ends = rows.map((r) => r.pts[r.pts.length - 1].v).sort(d3.ascending);
-    const yTop = Math.max(d3.quantile(ends, 0.97) * 1.12, (d3.max(meds, (s) => d3.max(s.pts, (p) => p.v)) || 0) * 1.25);
+    const yTop = Math.max(d3.quantile(ends, 0.97) * 1.12, Math.max(d3.max(meds, (s) => d3.max(s.pts, (p) => p.v)) || 0, topAvg ? d3.max(topAvg.pts, (p) => p.v) : 0) * 1.25);
     const x = d3.scaleLinear([1, Math.max(2, maxM)], [m.l, W - m.r]), y = d3.scaleLinear([0, yTop], [H - m.b, m.t]).nice();
     const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Cumulative ' + nm + ' per 1,000 ft by month');
     svg.append('g').attr('class', 'px-grid').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickSize(-(W - m.l - m.r)).tickFormat(''));
@@ -615,6 +626,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const thin = st.mode === 'pick' ? 0.3 : Math.max(0.05, Math.min(0.25, 40 / rows.length));
     g.append('g').selectAll('path').data(rows).join('path').attr('d', (r) => line(r.pts)).attr('fill', 'none').attr('stroke', (r) => color(r.op)).attr('stroke-opacity', thin).attr('stroke-width', 1);
     for (const s of meds) g.append('path').attr('d', line(s.pts)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 3.2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    if (topAvg) g.append('path').attr('d', line(topAvg.pts)).attr('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 2.6).attr('stroke-dasharray', '7 5').attr('stroke-linecap', 'round');
     const T = tip(host), rule = svg.append('line').attr('class', 'px-ref').attr('y1', m.t).attr('y2', H - m.b).attr('visibility', 'hidden');
     svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
       .on('pointermove', (e) => {
@@ -622,6 +634,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
         const mm = Math.max(1, Math.min(maxM, Math.round(x.invert((e.clientX - r.left) * k)))), py = (e.clientY - r.top) * k;
         rule.attr('x1', x(mm)).attr('x2', x(mm)).attr('visibility', 'visible');
         const lines = meds.map((s) => { const p = s.pts.find((q) => q.m === mm); return 'Median, ' + s.name + ': ' + (p ? num(p.v) : '—') + ' bbl'; });
+        if (topAvg) { const p = topAvg.pts.find((q) => q.m === mm); lines.push(topAvg.name + ': ' + (p ? num(p.v) : '—') + ' bbl'); }
         let best = null, bd = 14;
         for (const rr of rows) { const p = rr.pts[mm - 1]; if (!p) continue; const dd = Math.abs(y(p.v) - py); if (dd < bd) { bd = dd; best = [rr, p]; } }
         if (best) lines.push(best[0].name + ' (' + best[0].op + ', ' + best[0].yr + '): ' + num(best[1].v) + ' bbl');
