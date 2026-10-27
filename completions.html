@@ -21,7 +21,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 <style>
 .wrap{max-width:1180px;margin:0 auto}h1{font-size:22px;margin:0 0 4px}.sub{color:var(--color-fg-muted);margin:0 0 14px}a{color:var(--cds-chart-reference)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}.kpi,.card{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:8px;padding:12px}
-.kpi b{display:block;font-size:22px}.kpi span{color:var(--color-fg-muted);font-size:12px}
+.kpi{display:flex;flex-direction:column}.kpi svg{margin-top:auto;padding-top:8px}.kpi b{display:block;font-size:22px}.kpi span{color:var(--color-fg-muted);font-size:12px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin-bottom:12px}h2{font-size:15px;margin:0 0 8px}
 table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{padding:5px 7px;border-bottom:1px solid var(--color-border-line);text-align:right;white-space:nowrap}th:first-child,td:first-child,th.l,td.l{text-align:left}
 th{cursor:pointer;color:var(--color-fg-muted);font-weight:500;position:sticky;top:0;background:var(--color-panel)}.scroll{overflow:auto;max-height:520px}
@@ -60,7 +60,7 @@ const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n);
 let W=ALL,ops,r1,r2;
 function hist(card,vals){vals=vals.filter(x=>x!=null&&!isNaN(x));if(vals.length<5)return;const w=170,h=62,m={l:2,r:2,t:14,b:16};
  const ex=d3.extent(vals),x=d3.scaleLinear(ex,[m.l,w-m.r]),bins=d3.bin().domain(ex).thresholds(18)(vals),y=d3.scaleLinear([0,d3.max(bins,b=>b.length)],[h-m.b,m.t]),md=d3.median(vals);
- const s=d3.select(card).append('svg').attr('viewBox','0 0 '+w+' '+h).style('width','100%').style('height','auto').style('display','block').style('margin-top','6px');
+ const s=d3.select(card).append('svg').attr('viewBox','0 0 '+w+' '+h).style('width','100%').style('height','auto').style('display','block');
  s.selectAll('rect').data(bins).join('rect').attr('x',b=>x(b.x0)+.4).attr('width',b=>Math.max(.6,x(b.x1)-x(b.x0)-.8)).attr('y',b=>y(b.length)).attr('height',b=>y(0)-y(b.length)).attr('fill','#1b6ca8').attr('fill-opacity',.65).append('title').text(b=>b.length+' wells, '+f0(b.x0)+' to '+f0(b.x1));
  s.append('line').attr('x1',m.l).attr('x2',w-m.r).attr('y1',h-m.b).attr('y2',h-m.b).attr('stroke','var(--cds-chart-axis)').attr('stroke-width',.8);
  s.append('line').attr('x1',x(md)).attr('x2',x(md)).attr('y1',m.t-3).attr('y2',h-m.b).attr('stroke','var(--color-fg)').attr('stroke-width',1.2).attr('stroke-dasharray','2 1.5');
