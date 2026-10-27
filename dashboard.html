@@ -157,7 +157,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       <div class="px-legend" id="leg-cum"></div>
       <div class="px-chart dash-skeleton" id="ch-cum" data-source="wellcurves"></div>
       <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:8px 0 0"><input type="checkbox" id="cum-top"> <span id="cum-top-lab"></span></label>
-      <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-n2"> <span>Normalize to 2,000 ft of lateral instead of 1,000 ft (every value is simply doubled)</span></label>
+      <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-n2"> <span>Normalize to a 2-mile lateral (10,560 ft) instead of 1,000 ft (every value is multiplied by 10.56)</span></label>
       <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-top10"> <span>Only each operator’s 10 best wells (ranked by oil in the first 12 months per lateral foot; wells with less than 12 months of history are left out)</span></label>
     </article>
   </section>
@@ -610,7 +610,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const host = $('ch-cum');
     seg($('seg-cumph'), [{ v: 'oil', label: 'Oil' }, { v: 'water', label: 'Water' }], 'cph');
     seg($('seg-cummo'), [{ v: 12, label: 'First 12 months' }, { v: 24, label: 'First 24 months' }, { v: 36, label: 'First 36 months' }], 'cmo');
-    const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 2 : 1, nl = st.cn2 ? '2,000' : '1,000';
+    const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 10.56 : 1, nl = st.cn2 ? '10,560' : '1,000';
     $('cum-n2').checked = st.cn2; $('cum-n2').onchange = (e) => { st.cn2 = e.target.checked; if (ctx) render(ctx); };
     $('lede-cum').textContent = 'Cumulative ' + nm + ' in barrels per ' + nl + ' ft of lateral, from each well’s first month with oil. Thin lines are individual wells, thick lines the median well' + (st.mode === 'pick' ? ' for each selected operator' : '') + '. This chart follows the Formation and Operators choices but not the Window or Basis ones.';
     const names = st.mode === 'all' ? [ALL] : st.sel;
