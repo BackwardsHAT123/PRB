@@ -154,11 +154,10 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     <p class="px-lede" id="lede-cum"></p>
     <article class="px-card">
       <div class="px-ctlbar" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:8px"><div class="px-seg" id="seg-cumph" role="group" aria-label="Oil or water"></div><div class="px-seg" id="seg-cummo" role="group" aria-label="Months shown"></div></div>
-      <div class="px-legend" id="leg-cum"></div>
+      <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between"><div class="px-legend" id="leg-cum" style="flex:1;min-width:0"></div><button type="button" class="px-btn" id="cum-export" style="flex:none;white-space:nowrap">Export chart data (.csv)</button></div>
       <div class="px-chart dash-skeleton" id="ch-cum" data-source="wellcurves"></div>
       <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:8px 0 0"><input type="checkbox" id="cum-top"> <span id="cum-top-lab"></span></label>
       <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-n2"> <span>Normalize to a 2-mile lateral (10,560 ft) instead of 1,000 ft (every value is multiplied by 10.56)</span></label>
-      <p style="margin:10px 0 0"><button type="button" class="px-btn" id="cum-export">Export chart data (.csv)</button></p>
       <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-top10"> <span>Only each operator’s 10 best wells (ranked by oil in the first 12 months per lateral foot; wells with less than 12 months of history are left out)</span></label>
     </article>
   </section>
