@@ -166,7 +166,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
             <label style="display:flex;gap:6px;align-items:flex-start;margin:0 0 6px"><input type="checkbox" id="cum-l2y" style="margin-top:2px"> <span>Only wells that came on in the last 2 years</span></label>
             <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-top10" style="margin-top:2px"> <span>Only each operator’s 10 best wells <span class="px-note" style="display:block;margin:2px 0 0">Ranked by cumulative oil in the first 6 months (total barrels, not per foot); wells with less history are left out.</span></span></label></div>
           <div><div class="px-ctllab" style="margin-bottom:4px">Scale</div>
-            <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-n2" style="margin-top:2px"> <span>2-mile lateral (10,560 ft) instead of 1,000 ft <span class="px-note" style="display:block;margin:2px 0 0">Every value is multiplied by 10.56.</span></span></label></div>
+            <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-n2" style="margin-top:2px"> <span>2-mile lateral (9,500 ft) instead of 1,000 ft <span class="px-note" style="display:block;margin:2px 0 0">9,500 ft allows for setbacks from the boundary lines. Every value is multiplied by 9.5.</span></span></label></div>
           <div><div class="px-ctllab" style="margin-bottom:4px">Overlay</div>
             <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-top" style="margin-top:2px"> <span id="cum-top-lab"></span></label></div>
         </aside>
@@ -681,7 +681,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     seg($('seg-cumph'), [{ v: 'oil', label: 'Oil' }, { v: 'water', label: 'Water' }], 'cph');
     seg($('seg-cumcol'), [{ v: 'op', label: 'Operator' }, { v: 'well', label: 'Well' }], 'cby');
     seg($('seg-cummo'), [{ v: 12, label: '12 mo' }, { v: 24, label: '24 mo' }, { v: 36, label: '36 mo' }], 'cmo');
-    const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 10.56 : 1, nl = st.cn2 ? '10,560' : '1,000';
+    const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 9.5 : 1, nl = st.cn2 ? '9,500' : '1,000';
     $('cum-n2').checked = st.cn2; $('cum-n2').onchange = (e) => { st.cn2 = e.target.checked; if (ctx) render(ctx); };
     $('lede-cum').textContent = 'Cumulative ' + nm + ' in barrels per ' + nl + ' ft of lateral, from each well’s first month with oil. Each line is one well. This chart follows the Formation and Operators choices but not the Window or Basis ones.';
     const names = st.mode === 'all' ? [ALL] : st.sel;

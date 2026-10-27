@@ -33,6 +33,7 @@ the bottom hole, held back), **depth gap** (>1,200 ft gap in the survey inside t
 | Converse, batch 6 (`targets_converse6.json`, 100 wells: Continental 100) | 100 | 71 ok (60 exact, 3 adjusted, 8 depth-gap), 18 rejected, 1 none, 10 unreadable | **60 paths** (fx 8) | see git log |
 | Cadet wells, Johnson (`tools/survey_work/targets_cadet.json`, 7 straight-line producers added to the map Oct 27, 2026) | 7 | 7 ok (6 exact, 1 depth-gap) | **6 paths** (fx 8); `49-019-42247` held for a depth gap (`survey_held_cadet.json`) | see git log |
 | Sister Fed, Tethys and Chaos Fed wells, Johnson (`tools/survey_work/targets_chs.json`, 12 straight-line wells at Tom's request, Oct 27, 2026) | 12 | 6 ok (all exact), 6 none (permits, spudded or abandoned wells with no survey) | **6 paths** (fx 8) | see git log |
+| Anschutz Pokes Fed permits, Johnson (10 wells, T46N R77W sec 16 to 28; `tools/survey_work/pokes_apd.py`, results in `pokes_apd_plats.json`, Oct 27, 2026) | 10 | state GIS permit tracks ended about 9 km from the true bottom hole | **10 paths** (fx 6 with a note): surface hole, landing point and bottom hole from the survey plat on page 11 of each APD; `49-019-42214` surface hole moved 174 m to the plat | see git log |
 | Converse T36N R71W (`targets_3671.json`, 156 wells) | 6 of 156 | 4 ok, 1 unreadable, 1 none | none yet | — |
 
 Of the ok wells in the sixth batch (`targets_chunk5.json`): 36 applied, 4 held as "adjusted", 2 held for depth gaps (`49-005-61785`, `77703`); lists in `survey_held_chunk5.json`.
