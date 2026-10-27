@@ -1,7 +1,7 @@
 """Rebuild the dashboard tables for every operator on the PRB map.
 Reads index.html (the map page, for well records) and production.json in the current folder.
 Writes wells.json, bench.json, curves.json, grid.json and sections.json."""
-import json, math, collections
+import os, json, math, collections
 import numpy as np
 
 S = open("index.html").read(); i = S.index("const D=") + 8; D = json.loads(S[i:S.index(";\nconst GRID", i)])
@@ -27,7 +27,7 @@ for d in D:
     r = {"api": d["a"], "name": d["n"], "op": d["oc"], "fm": d["r"], "cty": d["cty"], "twp": d["sec"].split("-", 1)[1] if d.get("sec") else None,
          "yr": fy, "len": L, "lon": d["shl"][0] if d.get("shl") else None, "lat": d["shl"][1] if d.get("shl") else None,
          "ln": [round(c, 4) for pt in d["ln"] for c in pt] if d.get("ln") and len(d["ln"]) > 1 else None}   # simplified lateral path, lon,lat pairs
-    dd = p.get("d") or []
+    dd = [] if os.environ.get("NO_DAYS") else (p.get("d") or [])      # NO_DAYS=1: ignore the days-on-production data (used while it is only partly filled in)
     d0 = dd[k] if k < len(dd) else None        # days on production in the first month with oil (None when not on file)
     short = d0 is not None and d0 < 10         # a first month under 10 days: the 3-month window takes a 4th month
     if short: r["x3"] = d0

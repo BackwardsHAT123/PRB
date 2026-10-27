@@ -11,7 +11,7 @@ gap = float(sys.argv[3]) if len(sys.argv) > 3 else 5
 P = json.load(open("data/production.json"))
 H = json.load(open("data/headers.json"))
 pk = {v["API Number"]: k for k, v in H.items()}
-todo = [a for a, p in P.items() if not p.get("none") and "d" not in p and a in pk and p.get("s")]
+todo = [a for a, p in P.items() if not p.get("none") and ("d" not in p or (p["d"] == [] and "dw" not in p)) and a in pk and p.get("s") and p["s"] >= "2000-01"]
 todo.sort(key=lambda a: P[a]["s"], reverse=True)       # newest wells first
 log = lambda m: print(time.strftime("%H:%M:%S"), m, flush=True)
 log(f"{len(todo)} wells need days on production")
@@ -19,6 +19,28 @@ fails = done = 0
 for i, a in enumerate(todo):
     if os.path.exists("STOP"):
         log("STOP file present"); break
+    if P[a].get("d") == []:                     # export empty: read the days row from the monthly tables instead
+        dm = prod.fetch_days_wyoprod(pk[a], gap)
+        if dm is None:
+            fails += 1
+            if fails >= 4 or not prod.fetch(prod.CONTROL):
+                log("site not answering, stopping"); break
+            continue
+        fails = 0
+        y, m = int(P[a]["s"][:4]), int(P[a]["s"][5:])
+        ds = []
+        for _ in range(8):
+            ds.append(dm.get(f"{y}-{m:02d}", 0)); m += 1
+            if m > 12: y, m = y + 1, 1
+        P[a]["d"] = ds if any(ds) else []
+        P[a]["dw"] = 1
+        done += 1
+        if done % 25 == 0:
+            json.dump(P, open("data/production.json", "w"), separators=(",", ":")); log(f"{done}/{len(todo)} done")
+        time.sleep(gap)
+        if done % bunch == 0:
+            log(f"bunch done, pausing {pause}s"); time.sleep(pause)
+        continue
     txt = prod.fetch(pk[a])
     if txt is None:
         fails += 1

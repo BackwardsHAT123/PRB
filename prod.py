@@ -110,6 +110,36 @@ def fetch_wyoprod(pkey, gap=3):
     return {"s": nz[0], "o": [mon.get(k, z)[0] for k in ks], "g": [mon.get(k, z)[1] for k in ks], "w": [mon.get(k, z)[2] for k in ks]}, cum
 
 
+def fetch_days_wyoprod(pkey, gap=3):
+    """Days on production by month ('YYYY-MM' -> days) from the per-reservoir 'wyoprod' tables, for wells whose comma-delimited export is empty.
+    The tables use 99 for months before the well produced; those are returned as 0. None when the request fails."""
+    lst = _curl(f"https://pipeline.wyo.gov/reservoir.cfm?nAPINO={pkey}")
+    if lst is None:
+        return None
+    codes = sorted(set(re.findall(r"wyoprod\.cfm\?[^\"']*nApino=(\d+)", lst, flags=re.I)))
+    days = {}
+    for code in codes:
+        time.sleep(gap)
+        pg = _curl(f"https://pipeline.wyo.gov/wyoprod.cfm?UserOk=Y&oops=ID26069&nApino={code}")
+        if pg is None:
+            return None
+        c = _cells(pg)
+        for i, x in enumerate(c):
+            if re.fullmatch(r"(19|20)\d\d", x) and i + 1 < len(c) and c[i + 1] == "Oil BBLS":
+                try:
+                    j = c.index("Days", i + 1, i + 70)
+                except ValueError:
+                    continue
+                for mth in range(12):
+                    v = c[j + 1 + mth] if j + 1 + mth < len(c) else ""
+                    if re.fullmatch(r"\d+", v or ""):
+                        d = int(v)
+                        d = 0 if d >= 99 else d
+                        k = f"{x}-{mth + 1:02d}"
+                        days[k] = max(days.get(k, 0), d)
+    return days
+
+
 def refresh(path, items, log, max_per_run=60, stale_days=25, gap=4):
     """items: [(api, pkey)]. Fetch wells that have no data yet first, then the stalest, up to max_per_run."""
     res = json.load(open(path)) if os.path.exists(path) else {}

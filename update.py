@@ -31,7 +31,7 @@ COUNTIES = [("49-005-", MIN_API, "Campbell"), ("49-009-", "49-009-28220", "Conve
 # generous (south, north, west, east) box per county; a surface location outside it is bad coordinates, so the well is held back
 COUNTY_BOX = {"Campbell": (43.15, 45.05, -106.45, -104.85), "Converse": (42.65, 43.65, -106.15, -104.8), "Johnson": (43.25, 44.75, -107.1, -105.85)}    # Johnson: API 49-019-29600 and up is spud 2010 onward
 RIG_DAYS = 14                   # a rig is "active" if it reported casing work this recently
-DROP_FORMATIONS = {"Big George", "Anderson"}
+DROP_FORMATIONS = {"Big George", "Anderson", "Minnelusa", "Teckla"}
 FORMATION_MERGE = {"Frontier-Turner": "Turner", "Niobrara-Turner": "Niobrara"}
 OUTLIER_M = 1500                # drop track vertices farther than this from the SHL-BHL line
 
