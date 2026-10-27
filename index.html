@@ -718,6 +718,7 @@ const cnt={};D.forEach(d=>cnt[d[k]]=(cnt[d[k]]||0)+1);
 leg.innerHTML=Object.keys(cmap).filter(v=>cnt[v]).map(v=>`<div><i style="background:${cmap[v]}"></i>${v} <small>(${cnt[v]})</small></div>`).join('')+(k!='sg'&&Object.keys(cnt).length>=PAL.length?'<div><i style="background:#999"></i>Other</div>':'')}
 const col=d=>cmap[d[cb.value]]||'#999';
 const bubL=L.layerGroup().addTo(map);
+let lastVis=null;   /* declared before the first draw() call; drawBub (below) fills it */
 const g=L.layerGroup().addTo(map);
 function fill(id,key){const s=document.getElementById(id),c={};D.forEach(d=>c[d[key]]=(c[d[key]]||0)+1);const vs=Object.keys(c).sort(key=='oc'||key=='r'?(a,b)=>c[b]-c[a]||a.localeCompare(b):undefined);s.innerHTML='<option value="">All</option>'+vs.map(v=>`<option value="${v}">${v}${key=='oc'||key=='r'?' ('+c[v]+')':''}</option>`).join('')}
 fill('ct','cty');fill('fmf','r');fill('op','oc');fill('hl','oc');hl.options[0].text='None';fill('st','sg');
@@ -770,7 +771,6 @@ const plotEl=document.getElementById('plot'),psvg=document.getElementById('psvg'
 function loadProd(){if(PROD)return;fetch('data/production.json').then(r=>r.json()).then(j=>{PROD=j;if(typeof initExport==='function')initExport();const p=map._popup;if(p&&p.isOpen())p.update();if(plotApi)drawPlot();drawBub()}).catch(()=>{PROD=false})}
 loadProd();
 /* Oil bubbles at each well's bottom hole, area = oil in its first 3, 6 or 12 months. A well whose first month with oil shows under 10 days on production takes a 4th month in the 3-month view (when days are on file). */
-let lastVis=null;
 function drawBub(vis){
  if(vis)lastVis=vis;
  bubL.clearLayers();bubleg.innerHTML='';bubo.hidden=!bub.checked;
