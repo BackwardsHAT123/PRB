@@ -164,7 +164,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
           <div><div class="px-ctllab" style="margin-bottom:4px">Time</div><div class="px-seg" id="seg-cummo" role="group" aria-label="Months shown"></div></div>
           <div><div class="px-ctllab" style="margin-bottom:4px">Wells</div>
             <label style="display:flex;gap:6px;align-items:flex-start;margin:0 0 6px"><input type="checkbox" id="cum-l2y" style="margin-top:2px"> <span>Only wells that came on in the last 2 years</span></label>
-            <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-top10" style="margin-top:2px"> <span>Only each operator’s 10 best wells <span class="px-note" style="display:block;margin:2px 0 0">Ranked by oil in the first 12 months per lateral foot; wells with less history are left out.</span></span></label></div>
+            <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-top10" style="margin-top:2px"> <span>Only each operator’s 10 best wells <span class="px-note" style="display:block;margin:2px 0 0">Ranked by cumulative oil in the first 6 months (total barrels, not per foot); wells with less history are left out.</span></span></label></div>
           <div><div class="px-ctllab" style="margin-bottom:4px">Scale</div>
             <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-n2" style="margin-top:2px"> <span>2-mile lateral (10,560 ft) instead of 1,000 ft <span class="px-note" style="display:block;margin:2px 0 0">Every value is multiplied by 10.56.</span></span></label></div>
           <div><div class="px-ctllab" style="margin-bottom:4px">Overlay</div>
@@ -639,6 +639,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   }
 
   /* ---------- cumulative production per 1,000 ft: every well in scope plus the median well per operator; own controls (phase, months), follows the Formation and Operators filters only ---------- */
+  /* cumulative-chart rankings use total barrels of oil in a well's first 6 months (not length-normalized); the curve data is per 1,000 ft, so scale back by lateral length */
+  const oil6 = (curve, len) => (curve && curve[0].length >= 6 && len ? curve[0][5] * len / 1000 : null);
   let cumExport = null, cumSort = { k: 'val', dir: -1 };
   function cumList(rows, d, nm, nl) {
     const host = $('cum-list'), wm = new Map(d.wells.map((w) => [w.api, w]));
@@ -691,7 +693,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     $('cum-top10').checked = st.ctop10; $('cum-top10').onchange = (e) => { st.ctop10 = e.target.checked; if (ctx) render(ctx); };
     if (st.ctop10) {
       const keep = new Set();
-      for (const [, xs] of d3.group(scope.filter((x) => x.a[0].length >= 12), (x) => x.w.op)) xs.sort((p, q) => q.a[0][11] - p.a[0][11]).slice(0, 10).forEach((x) => keep.add(x.w.api));
+      for (const [, xs] of d3.group(scope.filter((x) => oil6(x.a, x.w.len) != null), (x) => x.w.op)) xs.sort((p, q) => oil6(q.a, q.w.len) - oil6(p.a, p.w.len)).slice(0, 10).forEach((x) => keep.add(x.w.api));
       scope = scope.filter((x) => keep.has(x.w.api));
     }
     if (!scope.length) { $('leg-cum').replaceChildren(); $('cum-list').replaceChildren(); $('h-cum-list').textContent = ''; return empty(host, st.mode === 'pick' && !st.sel.length ? pickHint : 'No wells with enough history here.'); }
@@ -704,11 +706,11 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       return { name: o, n: rs.length, color: byWell ? 'var(--color-fg)' : color(o), dash: byWell ? ['', '9 5', '2 5', '9 4 2 4', '14 4'][names.indexOf(o) % 5] : '', pts };
     }).filter((s) => s.pts.length > 1);
     /* average of the 25 best wells in the selected formation (all operators), ranked by oil in their first 12 months per 1,000 ft */
-    const topLab = 'Show the average of the top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells (ranked by oil in the first 12 months per lateral foot' + (st.cl2y ? '; recent wells only' : '') + ') as a dashed line';
+    const topLab = 'Show the average of the top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells (ranked by cumulative oil in the first 6 months' + (st.cl2y ? '; recent wells only' : '') + ') as a dashed line';
     $('cum-top-lab').textContent = topLab; $('cum-top').checked = st.ctop; $('cum-top').onchange = (e) => { st.ctop = e.target.checked; if (ctx) render(ctx); };
     let topAvg = null;
     if (st.ctop) {
-      const pool = d.wells.filter((w) => inFm(w) && d.wellcurves[w.api] && d.wellcurves[w.api][0].length >= 12 && (!st.cl2y || recent(w.api))).map((w) => ({ w, o: d.wellcurves[w.api][0][11], a: d.wellcurves[w.api][pi].map((v) => v * nf) })).sort((p, q) => q.o - p.o).slice(0, 25);
+      const pool = d.wells.filter((w) => inFm(w) && d.wellcurves[w.api] && oil6(d.wellcurves[w.api], w.len) != null && (!st.cl2y || recent(w.api))).map((w) => ({ w, o: oil6(d.wellcurves[w.api], w.len), a: d.wellcurves[w.api][pi].map((v) => v * nf) })).sort((p, q) => q.o - p.o).slice(0, 25);
       const pts = [];
       for (let mo = 1; mo <= st.cmo; mo++) { const v = pool.filter((r) => r.a.length >= mo).map((r) => r.a[mo - 1]); if (v.length < 5) break; pts.push({ m: mo, v: d3.mean(v) }); }
       if (pts.length > 1) topAvg = { name: 'Top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells, average', n: pool.length, pts };
