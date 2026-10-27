@@ -683,7 +683,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     seg($('seg-cummo'), [{ v: 12, label: '12 mo' }, { v: 24, label: '24 mo' }, { v: 36, label: '36 mo' }], 'cmo');
     const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 10.56 : 1, nl = st.cn2 ? '10,560' : '1,000';
     $('cum-n2').checked = st.cn2; $('cum-n2').onchange = (e) => { st.cn2 = e.target.checked; if (ctx) render(ctx); };
-    $('lede-cum').textContent = 'Cumulative ' + nm + ' in barrels per ' + nl + ' ft of lateral, from each well’s first month with oil. Thin lines are individual wells, thick lines the median well' + (st.mode === 'pick' ? ' for each selected operator' : '') + '. This chart follows the Formation and Operators choices but not the Window or Basis ones.';
+    $('lede-cum').textContent = 'Cumulative ' + nm + ' in barrels per ' + nl + ' ft of lateral, from each well’s first month with oil. Each line is one well. This chart follows the Formation and Operators choices but not the Window or Basis ones.';
     const names = st.mode === 'all' ? [ALL] : st.sel;
     let scope = d.wells.filter(inScope).map((w) => ({ w, a: d.wellcurves[w.api] })).filter((x) => x.a && x.a[pi].length >= 2);
     const now = new Date(), cut = now.getFullYear() * 12 + now.getMonth() - 24;     /* first oil within the last 24 months */
@@ -700,11 +700,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const rows = scope.map((x) => ({ api: x.w.api, op: x.w.op, name: x.w.name, yr: x.w.yr, pts: x.a[pi].slice(0, st.cmo).map((v, i) => ({ m: i + 1, v: v * nf })) }));
     const byWell = st.cby === 'well', dk = matchMedia('(prefers-color-scheme: dark)').matches;
     rows.slice().sort((a, b) => (a.name < b.name ? -1 : 1)).forEach((r, i) => { r.col = byWell ? 'hsl(' + Math.round((i * 137.508) % 360) + ',' + (dk ? 62 : 68) + '%,' + (dk ? 62 : 42) + '%)' : color(r.op); });
-    const meds = names.map((o) => {
-      const rs = st.mode === 'all' ? rows : rows.filter((r) => r.op === o), pts = [];
-      for (let m = 1; m <= st.cmo; m++) { const v = rs.filter((r) => r.pts.length >= m).map((r) => r.pts[m - 1].v); if (v.length < 4) break; pts.push({ m, v: d3.median(v) }); }
-      return { name: o, n: rs.length, color: byWell ? 'var(--color-fg)' : color(o), dash: byWell ? ['', '9 5', '2 5', '9 4 2 4', '14 4'][names.indexOf(o) % 5] : '', pts };
-    }).filter((s) => s.pts.length > 1);
+    const meds = [];     /* operator median lines were removed from this chart; wells (and the optional top-25 average) are all it shows */
     /* average of the 25 best wells in the selected formation (all operators), ranked by oil in their first 12 months per 1,000 ft */
     const topLab = 'Show the average of the top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells (ranked by cumulative oil in the first 6 months' + (st.cl2y ? '; recent wells only' : '') + ') as a dashed line';
     $('cum-top-lab').textContent = topLab; $('cum-top').checked = st.ctop; $('cum-top').onchange = (e) => { st.ctop = e.target.checked; if (ctx) render(ctx); };
@@ -716,7 +712,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       if (pts.length > 1) topAvg = { name: 'Top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells, average', n: pool.length, pts };
     }
     if (byWell) { if (rows.length <= 40) legend($('leg-cum'), rows.slice().sort((a, b) => (a.name < b.name ? -1 : 1)).map((r) => ({ color: r.col, label: r.name }))); else { $('leg-cum').replaceChildren(el('span', 'px-note', rows.length + ' wells, one colour each: hover a line to see which well it is.')); } }
-    else legend($('leg-cum'), names.map((o) => { const s = meds.find((q) => q.name === o); return { color: color(o), label: o + ' (' + (st.mode === 'all' ? rows.length : rows.filter((r) => r.op === o).length) + ' wells' + (s ? '' : ', too few for a median') + ')' }; }).concat(topAvg ? [{ color: 'var(--color-fg)', label: topAvg.name + ' (' + topAvg.n + ' wells, dashed)' }] : []));
+    else legend($('leg-cum'), names.map((o) => { const s = meds.find((q) => q.name === o); return { color: color(o), label: o + ' (' + (st.mode === 'all' ? rows.length : rows.filter((r) => r.op === o).length) + ' wells' + '' + ')' }; }).concat(topAvg ? [{ color: 'var(--color-fg)', label: topAvg.name + ' (' + topAvg.n + ' wells, dashed)' }] : []));
     cumExport = { rows, meds, topAvg, nm, nl };
     cumList(rows, d, nm, nl);
     host.classList.remove('dash-skeleton'); host.replaceChildren();
@@ -733,8 +729,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const cid = 'clipcum';
     svg.append('clipPath').attr('id', cid).append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b + 1);
     const g = svg.append('g').attr('clip-path', `url(#${cid})`), line = d3.line().x((p) => x(p.m)).y((p) => y(p.v));
-    const thin = st.mode === 'pick' ? 0.3 : Math.max(0.05, Math.min(0.25, 40 / rows.length));
-    g.append('g').selectAll('path').data(rows).join('path').attr('d', (r) => line(r.pts)).attr('fill', 'none').attr('stroke', (r) => r.col).attr('stroke-opacity', byWell ? 0.9 : thin).attr('stroke-width', byWell ? 1.6 : 1);
+    const thin = st.mode === 'pick' ? 0.75 : Math.max(0.1, Math.min(0.4, 60 / rows.length));
+    g.append('g').selectAll('path').data(rows).join('path').attr('d', (r) => line(r.pts)).attr('fill', 'none').attr('stroke', (r) => r.col).attr('stroke-opacity', byWell ? 0.9 : thin).attr('stroke-width', byWell ? 1.6 : 1.4);
     for (const s of meds) g.append('path').attr('d', line(s.pts)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 3.2).attr('stroke-dasharray', s.dash || null).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
     if (topAvg) g.append('path').attr('d', line(topAvg.pts)).attr('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 2.6).attr('stroke-dasharray', '7 5').attr('stroke-linecap', 'round');
     const T = tip(host), rule = svg.append('line').attr('class', 'px-ref').attr('y1', m.t).attr('y2', H - m.b).attr('visibility', 'hidden');
