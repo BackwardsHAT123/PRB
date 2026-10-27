@@ -117,7 +117,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 .px-opname { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .px-opname h3 { margin: 0; }
 .px-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 12px 14px; margin: 0; }
-.px-stats dt { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.px-stats dt { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); white-space: pre-line; }
 .px-stats dd { margin: 2px 0 0; font-family: var(--font-anthropic-serif); font-size: var(--cds-font-size-title); line-height: 1.15; font-variant-numeric: tabular-nums; }
 .px-stats dd small { font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
 .px-method { color: var(--color-fg-muted); font-size: var(--cds-font-size-body); line-height: 1.55; max-width: 78ch; }
@@ -215,7 +215,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 <script>
 (function () {
   const MAP = 'https://backwardshat123.github.io/PRB/';
-  const MAXSEL = 5;
+  const MAXSEL = 6;
   const ALL = 'All operators';
   const $ = (id) => document.getElementById(id);
   const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'] };
@@ -481,8 +481,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       cell('Median lateral', num(s.len), 'ft');
       cell('Median oil', num(s.o), unitS());
       cell('Median water', num(s.w), unitS());
-      cell('Oil vs same-formation basin', idx(s.io), '');
-      cell('Water vs same-formation basin', idx(s.iw), '');
+      cell('Oil vs same-formation\nbasin', idx(s.io), '');
+      cell('Water vs same-formation\nbasin', idx(s.iw), '');
       card.appendChild(dl);
       host.appendChild(card);
     }
@@ -887,7 +887,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     seg($('seg-h'), [{ v: 3, label: '3 months' }, { v: 6, label: '6 months' }, { v: 12, label: '12 months' }], 'h');
     seg($('seg-b'), [{ v: 'ft', label: 'Per 1,000 ft' }, { v: 'total', label: 'Total barrels' }], 'b');
     seg($('seg-fm'), fopts, 'fm');
-    seg($('seg-mode'), [{ v: 'all', label: 'All operators' }, { v: 'pick', label: 'Pick up to 5' }], 'mode');
+    seg($('seg-mode'), [{ v: 'all', label: 'All operators' }, { v: 'pick', label: 'Pick up to 6' }], 'mode');
     opsBar(d);
     words(d);
     standouts(d);
