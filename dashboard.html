@@ -228,6 +228,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   const pct = (v) => Math.round(v * 100) + '%';
   const tickf = d3.format('.2~s');
   const color = (op) => { const i = st.mode === 'pick' ? st.sel.indexOf(op) : -1; return i >= 0 ? dash.colors[i] : 'var(--cds-chart-muted)'; };
+  const kf = () => ({ o: 'of' + st.h, w: 'wf' + st.h }); /* basin multipliers are always per 1,000 ft of lateral, whatever the barrels/feet toggle says */
   const K = () => { const ft = st.b === 'ft'; return { o: (ft ? 'of' : 'o') + st.h, w: (ft ? 'wf' : 'w') + st.h }; };
   const unit = () => (st.b === 'ft' ? 'bbl per 1,000 ft of lateral' : 'bbl');
   const unitS = () => (st.b === 'ft' ? 'bbl/1,000 ft' : 'bbl');
@@ -326,7 +327,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
         tone = score >= 1 ? 'good' : score <= -1 ? 'bad' : 'neutral';
       }
     }
-    return { n: ws.length, nw: ws.filter((w) => w[k.o] != null).length, n12, len: med(ws, (w) => w.len), o: med(ws, (w) => w[k.o]), w: med(ws, (w) => w[k.w]), io: med(ws, (w) => ratio(w, k.o)), iw: med(ws, (w) => ratio(w, k.w)), io12, iw12, read, tone };
+    return { n: ws.length, nw: ws.filter((w) => w[k.o] != null).length, n12, len: med(ws, (w) => w.len), o: med(ws, (w) => w[k.o]), w: med(ws, (w) => w[k.w]), io: med(ws, (w) => ratio(w, kf().o)), iw: med(ws, (w) => ratio(w, kf().w)), io12, iw12, read, tone };
   }
   const pillCls = (t) => 'px-pill ' + (t === 'good' ? 'good' : t === 'bad' ? 'bad' : '');
 
@@ -754,12 +755,12 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const line = d3.line().x((c) => proj(c)[0]).y((c) => proj(c)[1]);
     const a = wellG.selectAll('a').data(pts).join('a').attr('href', (w) => mapLink(w.api)).attr('target', '_blank').attr('rel', 'noopener');
     a.append('path').attr('d', (w) => { const p = pathOf(w); return p ? line(p) : null; }).attr('fill', 'none')
-      .attr('stroke', (w) => band(ratio(w, k.o))).attr('stroke-width', (w) => { const p = pathOf(w); return p && p.length > 2 ? 2.6 : 2; })
+      .attr('stroke', (w) => band(ratio(w, kf().o))).attr('stroke-width', (w) => { const p = pathOf(w); return p && p.length > 2 ? 2.6 : 2; })
       .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('vector-effect', 'non-scaling-stroke');
     const dot = a.append('circle').attr('cx', (w) => proj([w.lon, w.lat])[0]).attr('cy', (w) => proj([w.lon, w.lat])[1]).attr('r', (w) => (pathOf(w) ? (st.mode === 'pick' ? 3 : 0) : 3.5))
-      .attr('fill', (w) => (pathOf(w) ? (st.mode === 'pick' ? color(w.op) : 'none') : band(ratio(w, k.o)))).attr('stroke', 'var(--color-panel)').attr('stroke-width', 0.8);
+      .attr('fill', (w) => (pathOf(w) ? (st.mode === 'pick' ? color(w.op) : 'none') : band(ratio(w, kf().o)))).attr('stroke', 'var(--color-panel)').attr('stroke-width', 0.8);
     dot.attr('data-r', function () { return this.getAttribute('r'); });
-    a.on('pointermove', (e, w) => T.show(e, w.name, [w.op + ' · ' + w.fm + ' · ' + w.cty + ' County · ' + w.twp, 'Oil vs basin ' + idx(ratio(w, k.o)), 'Water vs basin ' + idx(ratio(w, k.w)), 'Lateral ' + num(w.len) + ' ft'])).on('pointerleave', () => T.hide());
+    a.on('pointermove', (e, w) => T.show(e, w.name, [w.op + ' · ' + w.fm + ' · ' + w.cty + ' County · ' + w.twp, 'Oil vs basin ' + idx(ratio(w, kf().o)), 'Water vs basin ' + idx(ratio(w, kf().w)), 'Lateral ' + num(w.len) + ' ft'])).on('pointerleave', () => T.hide());
     // street-map tiles and section lines for the current view
     let tf = d3.zoomIdentity, pending = 0;
     const refresh = () => {
@@ -873,7 +874,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const lines = [
       'Production comes from WOGCC monthly reports. A well’s first month is its first month with oil. The 3-, 6- and 12-month figures add up the first 3, 6 or 12 months from there, and a well appears only when it has that much history. The first month is often a partial month.',
       'Per-foot values divide by lateral length, measured along the filed survey path where there is one and along the straight line from surface hole to bottom hole where there is not. A bottom hole that is wrong makes a lateral look too short or long.',
-      'The basin comparison is the median well in the same formation across every operator on the map (' + f0(nb) + ' wells with 12 months of history in formations with at least eight such wells), the selected operators’ own wells included. Formations below that size have no comparison. The map covers Campbell, Converse and Johnson counties, so this is not the whole basin.',
+      'The oil and water “vs basin” multipliers are always per 1,000 ft of lateral, whichever unit the page is showing: a well’s barrels per 1,000 ft divided by the median well in the same formation across every operator on the map (' + f0(nb) + ' wells with 12 months of history in formations with at least eight such wells), the selected operators’ own wells included. Formations below that size have no comparison. The map covers Campbell, Converse and Johnson counties, so this is not the whole basin.',
       'The “what explains” table fits each factor to the logarithm of the outcome and reports adjusted R². Operators and townships with fewer than eight wells are grouped as “other”. It shows association, not cause. Completion design, spacing, parent wells and landing zone are not in this data, which is why most of the spread stays unexplained.',
     ];
     for (const l of lines) host.appendChild(el('p', null, l));
