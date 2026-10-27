@@ -343,14 +343,31 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       hide() { t.hidden = true; },
     };
   }
+  /* Hovering a legend entry spotlights the marks of that colour in the charts of the same card or section and dims the other data marks. */
+  function spot(host, color, colors) {
+    const box = host.closest('.px-card') || host.closest('section') || host.parentElement;
+    if (!box) return;
+    const want = color == null ? null : String(color).toLowerCase();
+    for (const m of box.querySelectorAll('svg path, svg circle, svg line, svg rect')) {
+      const f = (m.getAttribute('fill') || '').toLowerCase(), s = (m.getAttribute('stroke') || '').toLowerCase();
+      const key = colors.has(f) ? f : colors.has(s) ? s : null;
+      if (!key) continue;
+      if (want == null) { m.style.removeProperty('opacity'); m.style.removeProperty('stroke-width'); continue; }
+      if (key === want) { m.style.opacity = '1'; if (m.tagName === 'path' && colors.has(s)) m.style.strokeWidth = '3.4px'; }
+      else m.style.opacity = '0.12';
+    }
+  }
   function legend(host, items) {
     host.replaceChildren();
+    const colors = new Set(items.map((i) => String(i.color).toLowerCase()));
     for (const it of items) {
       const s = el('span');
       const dot = el('span', 'px-dot');
       dot.style.background = it.color;
       s.appendChild(dot);
       s.appendChild(document.createTextNode(it.label));
+      s.addEventListener('pointerenter', () => spot(host, it.color, colors));
+      s.addEventListener('pointerleave', () => spot(host, null, colors));
       host.appendChild(s);
     }
   }
