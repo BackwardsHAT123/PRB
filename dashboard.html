@@ -160,6 +160,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
         </div>
         <aside id="cum-panel" aria-label="Chart controls" style="flex:0 0 235px;border:1px solid var(--color-border-line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:12px;font-size:12.5px">
           <div><div class="px-ctllab" style="margin-bottom:4px">Show</div><div class="px-seg" id="seg-cumph" role="group" aria-label="Oil or water"></div></div>
+          <div><div class="px-ctllab" style="margin-bottom:4px">Color by</div><div class="px-seg" id="seg-cumcol" role="group" aria-label="Colour lines by operator or well"></div></div>
           <div><div class="px-ctllab" style="margin-bottom:4px">Time</div><div class="px-seg" id="seg-cummo" role="group" aria-label="Months shown"></div></div>
           <div><div class="px-ctllab" style="margin-bottom:4px">Wells</div>
             <label style="display:flex;gap:6px;align-items:flex-start;margin:0 0 6px"><input type="checkbox" id="cum-l2y" style="margin-top:2px"> <span>Only wells that came on in the last 2 years</span></label>
@@ -170,6 +171,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
             <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-top" style="margin-top:2px"> <span id="cum-top-lab"></span></label></div>
         </aside>
       </div>
+      <h3 id="h-cum-list" style="margin:16px 0 6px"></h3>
+      <div class="px-tablewrap tall" id="cum-list"></div>
     </article>
   </section>
 
@@ -243,7 +246,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   const MAXSEL = 6;
   const ALL = 'All operators';
   const $ = (id) => document.getElementById(id);
-  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24, ctop: false, ctop10: false, cn2: false, cl2y: false };
+  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24, ctop: false, ctop10: false, cn2: false, cl2y: false, cby: 'op' };
   let ctx = null, BM = {};
   /* Remember the viewer's filter choices across reloads (this browser only). */
   const SKEY = 'prb-dashboard-filters-v1';
@@ -265,6 +268,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       if (typeof s.ctop10 === 'boolean') st.ctop10 = s.ctop10;
       if (typeof s.cn2 === 'boolean') st.cn2 = s.cn2;
       if (typeof s.cl2y === 'boolean') st.cl2y = s.cl2y;
+      if (s.cby === 'op' || s.cby === 'well') st.cby = s.cby;
     } catch (e) { /* unreadable saved state: use the defaults */ }
   }
 
@@ -635,7 +639,29 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   }
 
   /* ---------- cumulative production per 1,000 ft: every well in scope plus the median well per operator; own controls (phase, months), follows the Formation and Operators filters only ---------- */
-  let cumExport = null;
+  let cumExport = null, cumSort = { k: 'val', dir: -1 };
+  function cumList(rows, d, nm, nl) {
+    const host = $('cum-list'), wm = new Map(d.wells.map((w) => [w.api, w]));
+    $('h-cum-list').textContent = rows.length + ' well' + (rows.length === 1 ? '' : 's') + ' shown';
+    const data = rows.map((r) => { const w = wm.get(r.api) || {}, wc = d.wellcurves[r.api] || []; return { col: r.col, api: r.api, name: r.name, op: r.op, fm: w.fm || '', first: wc[2] || String(r.yr), len: w.len, n: r.pts.length, val: r.pts[r.pts.length - 1].v }; });
+    const keyed = { name: (r) => r.name, op: (r) => r.op, fm: (r) => r.fm, first: (r) => r.first, len: (r) => r.len || 0, n: (r) => r.n, val: (r) => r.val };
+    const draw = () => {
+      const f = keyed[cumSort.k], dir = cumSort.dir;
+      data.sort((a, b) => { const x = f(a), y = f(b); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
+      const cols = [
+        { label: 'Well', k: 'name', w: 30, cls: 'name', cell: (r, td) => { const a = el('a', null, r.name); a.href = mapLink(r.api); a.target = '_blank'; a.rel = 'noopener'; a.title = r.name; td.appendChild(a); } },
+        { label: 'Operator', k: 'op', w: 22, cell: (r, td) => { const dot = el('span', 'px-dot'); dot.style.background = r.col; td.appendChild(dot); td.appendChild(document.createTextNode(r.op)); } },
+        { label: 'Formation', k: 'fm', w: 12, cell: (r, td) => { td.textContent = r.fm; } },
+        { label: 'First oil', k: 'first', w: 11, n: true, cell: (r, td) => { td.textContent = r.first; } },
+        { label: 'Lateral, ft', k: 'len', w: 10, n: true, cell: (r, td) => { td.textContent = num(r.len); } },
+        { label: 'Months', k: 'n', w: 7, n: true, cell: (r, td) => { td.textContent = r.n; } },
+        { label: 'Cumulative ' + nm + ', bbl per ' + nl + ' ft', k: 'val', w: 18, n: true, cell: (r, td) => { td.textContent = num(r.val); } }
+      ];
+      table(host, null, 'api', cols, data);
+      host.querySelectorAll('th').forEach((th, i) => { th.style.cursor = 'pointer'; th.title = 'Sort by this column'; th.setAttribute('aria-sort', cols[i].k === cumSort.k ? (dir < 0 ? 'descending' : 'ascending') : 'none'); if (cols[i].k === cumSort.k) th.textContent += dir < 0 ? ' ↓' : ' ↑'; th.addEventListener('click', () => { cumSort = { k: cols[i].k, dir: cumSort.k === cols[i].k ? -dir : (cols[i].k === 'name' || cols[i].k === 'op' || cols[i].k === 'fm' ? 1 : -1) }; draw(); }); });
+    };
+    draw();
+  }
   function exportCum() {
     if (!cumExport) return;
     const { rows, meds, topAvg, nm, nl } = cumExport, q = (s) => (/[",\r\n]/.test(s) ? '"' + String(s).replace(/"/g, '""') + '"' : s), out = [['series', 'name', 'operator', 'api', 'first_oil_year', 'month_since_first_oil', 'cumulative_' + nm + '_bbl_per_' + nl.replace(',', '') + '_ft'].join(',')];
@@ -651,6 +677,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const host = $('ch-cum');
     $('cum-export').onclick = exportCum;
     seg($('seg-cumph'), [{ v: 'oil', label: 'Oil' }, { v: 'water', label: 'Water' }], 'cph');
+    seg($('seg-cumcol'), [{ v: 'op', label: 'Operator' }, { v: 'well', label: 'Well' }], 'cby');
     seg($('seg-cummo'), [{ v: 12, label: '12 mo' }, { v: 24, label: '24 mo' }, { v: 36, label: '36 mo' }], 'cmo');
     const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 10.56 : 1, nl = st.cn2 ? '10,560' : '1,000';
     $('cum-n2').checked = st.cn2; $('cum-n2').onchange = (e) => { st.cn2 = e.target.checked; if (ctx) render(ctx); };
@@ -667,12 +694,14 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       for (const [, xs] of d3.group(scope.filter((x) => x.a[0].length >= 12), (x) => x.w.op)) xs.sort((p, q) => q.a[0][11] - p.a[0][11]).slice(0, 10).forEach((x) => keep.add(x.w.api));
       scope = scope.filter((x) => keep.has(x.w.api));
     }
-    if (!scope.length) { $('leg-cum').replaceChildren(); return empty(host, st.mode === 'pick' && !st.sel.length ? pickHint : 'No wells with enough history here.'); }
+    if (!scope.length) { $('leg-cum').replaceChildren(); $('cum-list').replaceChildren(); $('h-cum-list').textContent = ''; return empty(host, st.mode === 'pick' && !st.sel.length ? pickHint : 'No wells with enough history here.'); }
     const rows = scope.map((x) => ({ api: x.w.api, op: x.w.op, name: x.w.name, yr: x.w.yr, pts: x.a[pi].slice(0, st.cmo).map((v, i) => ({ m: i + 1, v: v * nf })) }));
+    const byWell = st.cby === 'well', dk = matchMedia('(prefers-color-scheme: dark)').matches;
+    rows.slice().sort((a, b) => (a.name < b.name ? -1 : 1)).forEach((r, i) => { r.col = byWell ? 'hsl(' + Math.round((i * 137.508) % 360) + ',' + (dk ? 62 : 68) + '%,' + (dk ? 62 : 42) + '%)' : color(r.op); });
     const meds = names.map((o) => {
       const rs = st.mode === 'all' ? rows : rows.filter((r) => r.op === o), pts = [];
       for (let m = 1; m <= st.cmo; m++) { const v = rs.filter((r) => r.pts.length >= m).map((r) => r.pts[m - 1].v); if (v.length < 4) break; pts.push({ m, v: d3.median(v) }); }
-      return { name: o, n: rs.length, color: color(o), pts };
+      return { name: o, n: rs.length, color: byWell ? 'var(--color-fg)' : color(o), dash: byWell ? ['', '9 5', '2 5', '9 4 2 4', '14 4'][names.indexOf(o) % 5] : '', pts };
     }).filter((s) => s.pts.length > 1);
     /* average of the 25 best wells in the selected formation (all operators), ranked by oil in their first 12 months per 1,000 ft */
     const topLab = 'Show the average of the top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells (ranked by oil in the first 12 months per lateral foot' + (st.cl2y ? '; recent wells only' : '') + ') as a dashed line';
@@ -684,8 +713,10 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       for (let mo = 1; mo <= st.cmo; mo++) { const v = pool.filter((r) => r.a.length >= mo).map((r) => r.a[mo - 1]); if (v.length < 5) break; pts.push({ m: mo, v: d3.mean(v) }); }
       if (pts.length > 1) topAvg = { name: 'Top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells, average', n: pool.length, pts };
     }
-    legend($('leg-cum'), names.map((o) => { const s = meds.find((q) => q.name === o); return { color: color(o), label: o + ' (' + (st.mode === 'all' ? rows.length : rows.filter((r) => r.op === o).length) + ' wells' + (s ? '' : ', too few for a median') + ')' }; }).concat(topAvg ? [{ color: 'var(--color-fg)', label: topAvg.name + ' (' + topAvg.n + ' wells, dashed)' }] : []));
+    if (byWell) { if (rows.length <= 40) legend($('leg-cum'), rows.slice().sort((a, b) => (a.name < b.name ? -1 : 1)).map((r) => ({ color: r.col, label: r.name }))); else { $('leg-cum').replaceChildren(el('span', 'px-note', rows.length + ' wells, one colour each: hover a line to see which well it is.')); } }
+    else legend($('leg-cum'), names.map((o) => { const s = meds.find((q) => q.name === o); return { color: color(o), label: o + ' (' + (st.mode === 'all' ? rows.length : rows.filter((r) => r.op === o).length) + ' wells' + (s ? '' : ', too few for a median') + ')' }; }).concat(topAvg ? [{ color: 'var(--color-fg)', label: topAvg.name + ' (' + topAvg.n + ' wells, dashed)' }] : []));
     cumExport = { rows, meds, topAvg, nm, nl };
+    cumList(rows, d, nm, nl);
     host.classList.remove('dash-skeleton'); host.replaceChildren();
     const W = Math.max(280, host.clientWidth), H = Math.round(Math.min(420, Math.max(260, W * 0.5))), m = { t: 10, r: 14, b: 40, l: 58 };
     const maxM = d3.max(rows, (r) => r.pts.length), ends = rows.map((r) => r.pts[r.pts.length - 1].v).sort(d3.ascending);
@@ -701,8 +732,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     svg.append('clipPath').attr('id', cid).append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b + 1);
     const g = svg.append('g').attr('clip-path', `url(#${cid})`), line = d3.line().x((p) => x(p.m)).y((p) => y(p.v));
     const thin = st.mode === 'pick' ? 0.3 : Math.max(0.05, Math.min(0.25, 40 / rows.length));
-    g.append('g').selectAll('path').data(rows).join('path').attr('d', (r) => line(r.pts)).attr('fill', 'none').attr('stroke', (r) => color(r.op)).attr('stroke-opacity', thin).attr('stroke-width', 1);
-    for (const s of meds) g.append('path').attr('d', line(s.pts)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 3.2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    g.append('g').selectAll('path').data(rows).join('path').attr('d', (r) => line(r.pts)).attr('fill', 'none').attr('stroke', (r) => r.col).attr('stroke-opacity', byWell ? 0.9 : thin).attr('stroke-width', byWell ? 1.6 : 1);
+    for (const s of meds) g.append('path').attr('d', line(s.pts)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 3.2).attr('stroke-dasharray', s.dash || null).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
     if (topAvg) g.append('path').attr('d', line(topAvg.pts)).attr('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 2.6).attr('stroke-dasharray', '7 5').attr('stroke-linecap', 'round');
     const T = tip(host), rule = svg.append('line').attr('class', 'px-ref').attr('y1', m.t).attr('y2', H - m.b).attr('visibility', 'hidden');
     svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
