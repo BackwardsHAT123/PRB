@@ -58,10 +58,21 @@ const ALL=D.wells.map(w=>{if(w.eff&&w.len&&w.eff>1.5*w.len){w.eff=null;w.slen=nu
 const f0=d3.format(',.0f'),f1=d3.format(',.1f'),med=a=>{a=a.filter(x=>x!=null&&!isNaN(x));return a.length?d3.median(a):null};
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n);
 let W=ALL,ops,r1,r2;
-function kp(){const rg=a=>{a=a.filter(x=>x!=null&&!isNaN(x));return a.length?f0(d3.min(a))+' to '+f0(d3.max(a)):''};
-const ppfs=W.filter(w=>!w.flag).map(w=>w.ppf),sl=W.map(w=>w.slen),oil=W.map(w=>w.oil1k);
-const k=[['Wells',W.length],['Operators',new Set(W.map(w=>w.op)).size],['Median stages',f0(med(W.map(w=>w.stages)))],['Median sand (lb/ft)',f0(med(ppfs)),'range '+rg(ppfs)],['Median stage length (ft)',f0(med(sl)),'range '+rg(sl)],['Median oil, first 12 mo (bbl/1000 ft)',f0(med(oil)),'range '+rg(oil)],['With ISIP / gradient',W.filter(w=>w.isip).length+' wells']];
-document.getElementById('kpis').innerHTML=k.map(x=>'<div class="kpi"><b>'+x[1]+'</b><span>'+x[0]+'</span>'+(x[2]?'<small style="display:block;color:var(--color-fg-muted);font-size:11px;margin-top:2px">'+x[2]+'</small>':'')+'</div>').join('')}
+function hist(card,vals){vals=vals.filter(x=>x!=null&&!isNaN(x));if(vals.length<5)return;const w=170,h=62,m={l:2,r:2,t:14,b:16};
+ const ex=d3.extent(vals),x=d3.scaleLinear(ex,[m.l,w-m.r]),bins=d3.bin().domain(ex).thresholds(18)(vals),y=d3.scaleLinear([0,d3.max(bins,b=>b.length)],[h-m.b,m.t]),md=d3.median(vals);
+ const s=d3.select(card).append('svg').attr('viewBox','0 0 '+w+' '+h).style('width','100%').style('height','auto').style('display','block').style('margin-top','6px');
+ s.selectAll('rect').data(bins).join('rect').attr('x',b=>x(b.x0)+.4).attr('width',b=>Math.max(.6,x(b.x1)-x(b.x0)-.8)).attr('y',b=>y(b.length)).attr('height',b=>y(0)-y(b.length)).attr('fill','#1b6ca8').attr('fill-opacity',.65).append('title').text(b=>b.length+' wells, '+f0(b.x0)+' to '+f0(b.x1));
+ s.append('line').attr('x1',m.l).attr('x2',w-m.r).attr('y1',h-m.b).attr('y2',h-m.b).attr('stroke','var(--cds-chart-axis)').attr('stroke-width',.8);
+ s.append('line').attr('x1',x(md)).attr('x2',x(md)).attr('y1',m.t-3).attr('y2',h-m.b).attr('stroke','var(--color-fg)').attr('stroke-width',1.2).attr('stroke-dasharray','2 1.5');
+ const mx=Math.min(w-14,Math.max(14,x(md)));
+ s.append('text').attr('x',mx).attr('y',m.t-5).attr('text-anchor','middle').attr('font-size',8.5).attr('fill','var(--color-fg)').text('median '+f0(md));
+ s.append('text').attr('x',m.l).attr('y',h-4).attr('font-size',8.5).attr('fill','var(--color-fg-muted)').text(f0(ex[0]));
+ s.append('text').attr('x',w-m.r).attr('y',h-4).attr('text-anchor','end').attr('font-size',8.5).attr('fill','var(--color-fg-muted)').text(f0(ex[1]))}
+function kp(){
+const ppfs=W.filter(w=>!w.flag).map(w=>w.ppf),sl=W.filter(w=>w.stages>=5).map(w=>w.slen),oil=W.map(w=>w.oil1k);
+const k=[['Wells',W.length],['Operators',new Set(W.map(w=>w.op)).size],['Median stages',f0(med(W.map(w=>w.stages)))],['Median sand (lb/ft)',f0(med(ppfs)),null,ppfs],['Median stage length (ft), 5+ stage wells',f0(med(sl)),null,sl],['Median oil, first 12 mo (bbl/1000 ft)',f0(med(oil)),null,oil],['With ISIP / gradient',W.filter(w=>w.isip).length+' wells']];
+document.getElementById('kpis').innerHTML=k.map(x=>'<div class="kpi"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>').join('');
+document.querySelectorAll('#kpis .kpi').forEach((c,i)=>{if(k[i][3])hist(c,k[i][3])})}
 function bars(id,rows,fmt,color){const el=document.getElementById(id);el.innerHTML='';const w=Math.max(el.clientWidth,320),h=rows.length*24+10,m=150;
  const x=d3.scaleLinear([0,d3.max(rows,r=>r.v)*1.1||1],[0,w-m-60]);const s=d3.select(el).append('svg').attr('width',w).attr('height',h).attr('viewBox','0 0 '+w+' '+h);
  rows.forEach((r,i)=>{const g=s.append('g').attr('transform','translate(0,'+(i*24+4)+')');g.append('text').attr('x',m-6).attr('y',13).attr('text-anchor','end').text(r.k.length>22?r.k.slice(0,21)+'…':r.k);
