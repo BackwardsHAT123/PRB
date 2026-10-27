@@ -11,6 +11,13 @@ more=[]
 for f in sorted(glob.glob('rest_*.json')):
     r=json.load(open(f)); more+=r['wells']; D['stages'].update(r['stages']); D['src'].update(r['src'])
 D['wells']=top+more
+def cv(v):
+    """Vendor name only: drop parenthetical notes and customer names, shorten known companies."""
+    v=re.sub(r"\s*\(.*?\)","",v or "").strip()
+    for k,n in (("liberty","Liberty"),("pressure summary","Liberty"),("per-stage final isip","Liberty"),("element","Element"),("halliburton","Halliburton"),("calfrac","Calfrac"),("fts","FTS International"),("baker","Baker Hughes"),("schlumberger","Schlumberger")):
+        if v.lower().startswith(k): return n
+    return v
+for w in D['wells']: w['vendor']=cv(w.get('vendor'))
 s=s[:m.start(g)]+json.dumps(D,separators=(',',':'))+s[m.end(g):]
 s=re.sub(r'<meta name="description" content="[^"]*">','<meta name="description" content="Stages, proppant, fluid type, vendor and treating data for Niobrara wells in the Powder River Basin.">',s)
 open(p,'w').write(s)
