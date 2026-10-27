@@ -19,7 +19,12 @@ def build(nums,cl):
     ratec=[d for d in rest if 30<=med(d)<=140 and dec(d)>0.5]
     fgc=[d for d in rest if 0.7<=med(d)<=1.2 and dec(d)>0.8]
     out={}
-    if fgc and len(ratec)>=2:   # A: Pressure Summary
+    ratec_all=[d for d in rest[1:] if 30<=med(d)<=140 and len(d[1])>=8]
+    if fgc and len(ratec)<2 and len(ratec_all)>=2:   # C: Pressure Summary, integer rates (avg rate, avg psi, max rate, max psi ...)
+        rate=ratec_all[0]; i=rest.index(rate); press=rest[i+1]
+        fg=fgc[-1]; j=rest.index(fg); isip=rest[j-2]
+        m={"press":press,"rate":rate,"isip":isip,"fg":fg}
+    elif fgc and len(ratec)>=2:   # A: Pressure Summary
         rate=ratec[1]; i=rest.index(rate); press=rest[i-1]
         fg=fgc[-1]; j=rest.index(fg); isip=rest[j-2]
         m={"press":press,"rate":rate,"isip":isip,"fg":fg}
@@ -35,7 +40,7 @@ def build(nums,cl):
     for y in ys:
         if yc and y-yc[-1][-1]<9: yc[-1].append(y)
         else: yc.append([y])
-    base=1 if "fg" in m and len(ratec)>=2 else 0
+    base=1 if "fg" in m else 0
     rows=[]
     for k,c in enumerate(yc):
         y=sum(c)/len(c); r={"n":base+len(rows)}
@@ -46,6 +51,9 @@ def build(nums,cl):
     return rows
 RNG={"isip":(2500,9500),"press":(5000,13500),"rate":(30,140),"fg":(0.7,1.2),"fluid":(3000,40000),"prop":(100000,1500000)}
 def clean(r):
+    for k in ("press","isip"):
+        v=r.get(k)
+        if v is not None and v<100 and abs(v*1000-round(v*1000))<1e-6*1000 and round(v,3)==v: r[k]=round(v*1000)
     for k,(lo,hi) in RNG.items():
         v=r.get(k)
         if v is not None and not lo<=v<=hi: r[k]=None
@@ -55,8 +63,8 @@ def run(api):
     for f in sorted(glob.glob(f"wells/{api}/f3_*.pdf")):
         doc=pdfium.PdfDocument(f); txt=json.load(open(f.replace(".pdf",".json")))
         for i in range(len(doc)):
-            t=txt[i].lower() if i<len(txt) else ""
-            if i<len(txt) and not any(k in t for k in ("isip","pressure summary","frac summary")): continue
+            t=txt[i].lower().replace(" ","") if i<len(txt) else ""
+            if i<len(txt) and not any(k in t for k in ("isip","pressuresummary","fracsummary")): continue
             im=doc[i].render(scale=2.4).to_pil().convert("RGB")
             r0,_s=best_rotation(doc[i])
             for rot in dict.fromkeys((r0,0,90,270,180)):
