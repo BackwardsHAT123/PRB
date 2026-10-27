@@ -173,6 +173,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     <article class="px-card" style="margin-top: var(--cds-gap-md)">
       <h3 id="h-opfm">Operators compared</h3>
       <p class="px-note" id="note-opfm"></p>
+      <div class="px-note" id="note-x3"></div>
       <div class="px-tablewrap tall" id="host-opfm"></div>
     </article>
     <p class="px-note" id="note-curves" style="margin: var(--cds-gap-md) 0 6px; max-width: 74ch">Median well, by months since first oil.</p>
@@ -233,6 +234,18 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   const unit = () => (st.b === 'ft' ? 'bbl per 1,000 ft of lateral' : 'bbl');
   const unitS = () => (st.b === 'ft' ? 'bbl/1,000 ft' : 'bbl');
   const win = () => 'first ' + st.h + ' months';
+  /* A well whose first month with oil shows under 10 days on production gets a 4th month in its 3-month figures (done when the tables are built); list those wells. */
+  function x3Note(scope) {
+    const host = $('note-x3'); host.replaceChildren();
+    if (st.h !== 3 || !ctx || !ctx.wells.some((w) => w.x3 != null)) return;     /* nothing to say until days on production are in the tables */
+    const ws = scope.filter((w) => w.x3 != null && w.o3 != null).sort((a, b) => (a.op < b.op ? -1 : a.op > b.op ? 1 : a.name < b.name ? -1 : 1));
+    if (!ws.length) { host.textContent = 'No well in this view has a first month under 10 days on production, so every 3-month figure covers exactly three months.'; return; }
+    const det = el('details');
+    det.appendChild(el('summary', null, ws.length + ' well' + (ws.length === 1 ? '' : 's') + ' in this view use the first 4 months in the 3-month figures (first month under 10 days on production)'));
+    const list = el('div', 'px-note', ws.map((w) => w.name + ' (' + w.op + ', ' + w.x3 + ' day' + (w.x3 === 1 ? '' : 's') + ')').join('; '));
+    list.style.maxHeight = '150px'; list.style.overflowY = 'auto';
+    det.appendChild(list); host.appendChild(det);
+  }
   const inFm = (w) => st.fm === 'all' || w.fm === st.fm;
   const inScope = (w) => inFm(w) && (st.mode === 'all' || st.sel.includes(w.op));
   const fmTag = () => (st.fm === 'all' ? '' : ' in ' + st.fm + ' wells');
@@ -497,6 +510,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       .sort((a, b) => (b.io == null) - (a.io == null) || (b.io || 0) - (a.io || 0));
     $('h-opfm').textContent = split ? 'Selected operators by formation' : st.mode === 'all' ? 'All operators' + (st.fm === 'all' ? '' : ' in ' + st.fm) : 'Selected operators' + (st.fm === 'all' ? '' : ' in ' + st.fm);
     $('note-opfm').textContent = 'Medians of the ' + win() + (st.b === 'ft' ? ', per 1,000 ft of lateral' : ', total barrels') + (st.mode === 'all' ? '; operators with at least three wells' : '') + '. “Vs basin” divides each well by the median well in its formation across all operators, then takes the median: above 1.00× is more oil than typical, below 1.00× is less water than typical. The verdict needs five wells with 12 months and uses 12-month per-foot values: strong oil is 1.10× or more, low water is 0.90× or less, high water is above 1.20×.';
+    x3Note(scope);
     if (!rows.length) return empty($('host-opfm'), st.mode === 'pick' && !st.sel.length ? pickHint : 'No operator has enough wells here.');
     const k = K();
     const cols = [
@@ -707,24 +721,13 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   }
 
   /* ---------- geographic scatter and township table ---------- */
-  let geoCty = null;
   const layers = { street: true, twp: true, sec: true };
   function geo(d) {
     const k = K(), host = $('ch-geo');
     const scoped = d.wells.filter((w) => w.lon != null && w.lat != null && inScope(w));
     if (!scoped.length) { $('seg-geo').hidden = true; return empty(host, 'No wells to show.'); }
-    const ctys = [...d3.rollup(scoped, (v) => v.length, (w) => w.cty)].sort((a, b) => b[1] - a[1]);
-    if (!ctys.some((c) => c[0] === geoCty)) geoCty = ctys[0][0];
-    const segHost = $('seg-geo');
-    segHost.hidden = ctys.length < 2;
-    segHost.replaceChildren();
-    for (const [cty, n] of ctys) {
-      const b = el('button', 'px-segbtn', cty + ' (' + n + ')');
-      b.type = 'button'; b.setAttribute('aria-pressed', String(cty === geoCty));
-      b.addEventListener('click', () => { geoCty = cty; geo(d); });
-      segHost.appendChild(b);
-    }
-    const pts = scoped.filter((w) => w.cty === geoCty);
+    $('seg-geo').hidden = true;     /* one map for all selected wells, fitted to their extent (no county split) */
+    const pts = scoped;
     host.classList.remove('dash-skeleton'); host.replaceChildren();
     const pathOf = (w) => { const out = []; if (w.ln) for (let i = 0; i + 1 < w.ln.length; i += 2) out.push([w.ln[i], w.ln[i + 1]]); return out.length > 1 ? out : null; };
     const coords = [];
@@ -737,7 +740,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const proj = d3.geoMercator().fitExtent([[m, m], [W - m, H - m]], feat);
     const band = (v) => (v == null ? 'var(--cds-chart-grid)' : v >= 1.1 ? 'var(--color-ok)' : v < 0.9 ? 'var(--cds-chart-status-critical)' : 'var(--cds-chart-muted)');
     legend($('leg-geo'), [{ color: 'var(--color-ok)', label: 'Oil 1.10× basin or more' }, { color: 'var(--cds-chart-muted)', label: 'In line' }, { color: 'var(--cds-chart-status-critical)', label: 'Below 0.90×' }]);
-    $('note-geo').textContent = 'Each line is a well’s lateral path in ' + geoCty + ' County' + fmTag() + ' (from its filed directional survey where there is one, otherwise straight from surface hole to bottom hole), colored by oil in the ' + win() + (st.b === 'ft' ? ' per foot' : '') + ' against the median well in the same formation across all operators.' + (st.mode === 'pick' ? ' The dot at the surface hole shows the operator.' : '') + ' Drag to pan, use the buttons or Ctrl-scroll to zoom, click a well to open it on the map.';
+    $('note-geo').textContent = 'Each line is a well’s lateral path' + fmTag() + ' (from its filed directional survey where there is one, otherwise straight from surface hole to bottom hole), colored by oil in the ' + win() + (st.b === 'ft' ? ' per foot' : '') + ' against the median well in the same formation across all operators.' + (st.mode === 'pick' ? ' The dot at the surface hole shows the operator.' : '') + ' Drag to pan, use the buttons or Ctrl-scroll to zoom, click a well to open it on the map.';
     const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Map of well paths colored by oil performance').style('touch-action', 'pan-y');
     svg.append('rect').attr('width', W).attr('height', H).attr('fill', 'var(--color-panel)');
     const T = tip(host);
@@ -760,7 +763,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const dot = a.append('circle').attr('cx', (w) => proj([w.lon, w.lat])[0]).attr('cy', (w) => proj([w.lon, w.lat])[1]).attr('r', (w) => (pathOf(w) ? (st.mode === 'pick' ? 3 : 0) : 3.5))
       .attr('fill', (w) => (pathOf(w) ? (st.mode === 'pick' ? color(w.op) : 'none') : band(ratio(w, kf().o)))).attr('stroke', 'var(--color-panel)').attr('stroke-width', 0.8);
     dot.attr('data-r', function () { return this.getAttribute('r'); });
-    a.on('pointermove', (e, w) => T.show(e, w.name, [w.op + ' · ' + w.fm + ' · ' + w.cty + ' County · ' + w.twp, 'Oil vs basin ' + idx(ratio(w, kf().o)), 'Water vs basin ' + idx(ratio(w, kf().w)), 'Lateral ' + num(w.len) + ' ft'])).on('pointerleave', () => T.hide());
+    a.on('pointermove', (e, w) => T.show(e, w.name, [w.op + ' · ' + w.fm + ' · ' + w.cty + ' County · ' + w.twp, 'Oil vs basin ' + idx(ratio(w, kf().o)), 'Water vs basin ' + idx(ratio(w, kf().w)), 'Lateral ' + num(w.len) + ' ft'].concat(st.h === 3 && w.x3 != null ? ['3-month window uses 4 months (first month ' + w.x3 + ' days)'] : []))).on('pointerleave', () => T.hide());
     // street-map tiles and section lines for the current view
     let tf = d3.zoomIdentity, pending = 0;
     const refresh = () => {
