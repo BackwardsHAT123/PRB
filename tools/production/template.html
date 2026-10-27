@@ -1,0 +1,74 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRB production comparison</title><meta name="description" content="Monthly production comparison for Niobrara wells: cumulative oil and water per lateral foot, water cut and water-oil ratio.">
+/*STYLES*/
+<style>
+.pc-ctl{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:0 0 12px;font-size:13px}.pc-ctl label{display:flex;gap:5px;align-items:center}.pc-ctl select{font:inherit;padding:3px 6px;background:var(--color-panel);color:var(--color-fg);border:1px solid var(--color-border-line);border-radius:5px}
+.pc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;margin-bottom:12px}.pc-grid>*{min-width:0}
+.pc-card h2{font-size:14px;margin:0 0 4px}.pc-card .sub2{font-size:12px;color:var(--color-fg-muted);margin:0 0 4px}
+.pc-leg{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 14px;font-size:12px}.pc-leg h3{grid-column:1/-1;font-size:12px;margin:8px 0 2px;color:var(--color-fg-muted);font-weight:600}
+.pc-leg button{all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:2px 3px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pc-leg button:hover{background:var(--cds-chart-grid)}.pc-leg button.off{opacity:.35;text-decoration:line-through}
+.pc-leg i{flex:none;width:18px;height:3px;border-radius:2px}
+.pc-tip{position:fixed;pointer-events:none;background:var(--cds-surface-popover);border:1px solid var(--cds-border);box-shadow:var(--cds-shadow-popover);border-radius:6px;padding:6px 8px;font-size:12px;line-height:1.35;z-index:9;display:none;max-width:260px}
+svg text{fill:var(--color-fg-muted);font-size:11px}.pc-ax path,.pc-ax line{stroke:var(--cds-chart-axis)}.pc-gr line{stroke:var(--cds-chart-grid)}.pc-gr path{display:none}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script></head><body><div id="dash-root"><div class="wrap">
+<p style="margin:0 0 6px"><a href="dashboard.html">&larr; Operator and formation performance</a> &nbsp;|&nbsp; <a href="completions.html">Completion details</a> &nbsp;|&nbsp; <a href="./">Map</a></p>
+<h1>Production comparison: Ballard and WRC Niobrara wells</h1>
+<p class="sub">Monthly production from the first month with oil. Lines are wells, coloured by operator; click a name to hide it, hover a line to read it. Volumes are WOGCC monthly reports, so time is calendar months since first oil (not producing days).</p>
+<div class="pc-ctl" id="ctl"></div>
+<div class="pc-grid">
+<div class="card pc-card"><h2>Cumulative oil per lateral foot</h2><p class="sub2">MSTB per ft of lateral against months since first oil</p><div id="c1"></div></div>
+<div class="card pc-card"><h2>Water cut vs cumulative liquid</h2><p class="sub2">Monthly water ÷ (oil + water) against cumulative oil plus water (MSTB)</p><div id="c2"></div></div>
+<div class="card pc-card"><h2>Cumulative water per lateral foot</h2><p class="sub2">MSTB per ft of lateral against months since first oil</p><div id="c3"></div></div>
+<div class="card pc-card"><h2>Water-oil ratio</h2><p class="sub2">Monthly water ÷ oil (bbl/bbl) against months since first oil; axis capped at 4</p><div id="c4"></div></div>
+</div>
+<div class="card" style="margin-bottom:12px"><h2 style="font-size:14px;margin:0 0 4px">Wells</h2><div class="pc-leg" id="leg"></div>
+<p class="note" style="margin-top:8px">Lateral length is from the filed directional survey (straight surface-to-bottom-hole where there is none). Months with no reported liquid are skipped in the water-cut and WOR lines. 1 MSTB = 1,000 bbl.</p></div>
+</div></div><div class="pc-tip" id="tip"></div>
+<script>
+const D=/*DATA*/;
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n);
+const f0=d3.format(',.0f'),f3=d3.format('.4f');
+const hue={ [D.ops[0]]:[200,285], [D.ops[1]]:[2,48] };
+D.wells.forEach(w=>{w.cum=[];let co=0,cw=0;w.o.forEach((o,i)=>{co+=o;cw+=w.w[i];w.cum.push({m:i+1,co,cw,o,w:w.w[i]})})});
+const byOp=d3.group(D.wells,w=>w.op);
+byOp.forEach((ws,op)=>{const [a,b]=hue[op]||[0,300];ws.forEach((w,i)=>{const t=ws.length>1?i/(ws.length-1):.5;w.color='hsl('+(a+(b-a)*t)+','+(78-16*Math.abs(t-.5))+'%,'+(42+10*Math.sin(i*1.7))+'%)'})});
+const st={maxM:36,ops:new Set(D.ops),off:new Set(),hi:null};
+const ctl=document.getElementById('ctl');
+ctl.innerHTML='<span>Operators:</span>'+D.ops.map(o=>'<label><input type="checkbox" data-op="'+o+'" checked> '+o+' ('+byOp.get(o).length+')</label>').join('')+'<label>Months shown <select id="mm"><option value="12">12</option><option value="24">24</option><option value="36" selected>36</option><option value="60">60</option><option value="999">all</option></select></label>';
+ctl.querySelectorAll('input').forEach(c=>c.onchange=()=>{c.checked?st.ops.add(c.dataset.op):st.ops.delete(c.dataset.op);draw()});
+document.getElementById('mm').onchange=e=>{st.maxM=+e.target.value;draw()};
+const vis=()=>D.wells.filter(w=>st.ops.has(w.op)&&!st.off.has(w.api));
+const tip=document.getElementById('tip');
+function showTip(e,w,lines){tip.style.display='block';tip.innerHTML='<b>'+w.name+'</b><br>'+w.op+', first oil '+w.yr+'<br>'+lines.join('<br>');const x=Math.min(innerWidth-270,e.clientX+14);tip.style.left=x+'px';tip.style.top=(e.clientY+14)+'px'}
+function chart(id,o){
+ const host=document.getElementById(id);host.innerHTML='';const W=host.clientWidth||520,H=330,m={l:56,r:12,t:10,b:38};
+ const ws=vis(),series=ws.map(w=>({w,pts:o.pts(w).filter(p=>p.x!=null&&p.y!=null&&isFinite(p.x)&&isFinite(p.y)&&p.m<=st.maxM)})).filter(s=>s.pts.length>1);
+ const svg=d3.select(host).append('svg').attr('viewBox','0 0 '+W+' '+H).style('width','100%').style('height','auto').style('display','block');
+ if(!series.length){svg.append('text').attr('x',W/2).attr('y',H/2).attr('text-anchor','middle').text('No wells selected');return}
+ const xs=series.flatMap(s=>s.pts.map(p=>p.x)),ys=series.flatMap(s=>s.pts.map(p=>p.y));
+ const x=d3.scaleLinear([0,d3.max(xs)*1.02],[m.l,W-m.r]),yMax=o.ymax?o.ymax(ys):d3.max(ys)*1.05,y=d3.scaleLinear([0,yMax],[H-m.b,m.t]).nice();
+ svg.append('g').attr('class','pc-gr').attr('transform','translate('+m.l+',0)').call(d3.axisLeft(y).ticks(6).tickSize(-(W-m.l-m.r)).tickFormat(''));
+ svg.append('g').attr('class','pc-ax').attr('transform','translate(0,'+(H-m.b)+')').call(d3.axisBottom(x).ticks(7));
+ svg.append('g').attr('class','pc-ax').attr('transform','translate('+m.l+',0)').call(d3.axisLeft(y).ticks(6).tickFormat(o.yfmt));
+ svg.append('text').attr('x',(m.l+W-m.r)/2).attr('y',H-5).attr('text-anchor','middle').text(o.xl);
+ svg.append('text').attr('transform','rotate(-90)').attr('x',-(H-m.b+m.t)/2).attr('y',12).attr('text-anchor','middle').text(o.yl);
+ const cid='clip'+id;svg.append('clipPath').attr('id',cid).append('rect').attr('x',m.l).attr('y',m.t).attr('width',W-m.l-m.r).attr('height',H-m.t-m.b+1);
+ const g=svg.append('g').attr('clip-path','url(#'+cid+')'),line=d3.line().x(p=>x(p.x)).y(p=>y(p.y)).defined(p=>p.y<=y.domain()[1]*1.5);
+ const paths=g.selectAll('path.l').data(series).join('path').attr('class','l').attr('d',s=>line(s.pts)).attr('fill','none').attr('stroke',s=>s.w.color).attr('stroke-width',1.6).attr('stroke-linejoin','round');
+ g.selectAll('path.h').data(series).join('path').attr('class','h').attr('d',s=>line(s.pts)).attr('fill','none').attr('stroke','transparent').attr('stroke-width',10).style('cursor','pointer')
+  .on('pointermove',(e,s)=>{const px=d3.pointer(e,svg.node())[0],p=d3.least(s.pts,q=>Math.abs(x(q.x)-px));hl(s.w.api);showTip(e,s.w,[o.tip(p)])}).on('pointerleave',()=>{hl(null);tip.style.display='none'});
+}
+function hl(api){st.hi=api;document.querySelectorAll('.pc-grid path.l').forEach(p=>{const s=d3.select(p).datum();d3.select(p).attr('stroke-opacity',api&&s.w.api!==api?.15:1).attr('stroke-width',api&&s.w.api===api?3:1.6)})}
+const defs=[
+ {id:'c1',xl:'Months since first oil',yl:'Cumulative oil per lateral ft (MSTB/ft)',yfmt:d3.format('.3f'),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.co/w.len/1000,c:p})),tip:p=>'Month '+p.m+': '+f3(p.y)+' MSTB/ft ('+f0(p.c.co)+' bbl cumulative)'},
+ {id:'c2',xl:'Cumulative liquid (MSTB)',yl:'Water cut',yfmt:d3.format('.0%'),ymax:()=>1,pts:w=>w.cum.map(p=>({m:p.m,x:(p.co+p.cw)/1000,y:(p.o+p.w)>0?p.w/(p.o+p.w):null,c:p})),tip:p=>'Month '+p.m+': water cut '+d3.format('.0%')(p.y)+', '+f0(p.x*1000)+' bbl liquid cumulative'},
+ {id:'c3',xl:'Months since first oil',yl:'Cumulative water per lateral ft (MSTB/ft)',yfmt:d3.format('.3f'),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.cw/w.len/1000,c:p})),tip:p=>'Month '+p.m+': '+f3(p.y)+' MSTB/ft ('+f0(p.c.cw)+' bbl cumulative)'},
+ {id:'c4',xl:'Months since first oil',yl:'Water-oil ratio (bbl/bbl)',yfmt:d3.format('.1f'),ymax:ys=>Math.min(4,d3.max(ys)*1.05),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.o>0?p.w/p.o:null,c:p})),tip:p=>'Month '+p.m+': WOR '+d3.format('.2f')(p.y)+' ('+f0(p.c.w)+' bbl water, '+f0(p.c.o)+' bbl oil)'}
+];
+function legend(){const leg=document.getElementById('leg');leg.innerHTML='';byOp.forEach((ws,op)=>{if(!st.ops.has(op))return;const h=document.createElement('h3');h.textContent=op;leg.appendChild(h);
+ ws.forEach(w=>{const b=document.createElement('button');b.className=st.off.has(w.api)?'off':'';b.innerHTML='<i style="background:'+w.color+'"></i>'+w.name+' <span style="color:var(--color-fg-muted)">'+w.yr+'</span>';b.title=w.name+', '+w.o.length+' months of production, '+f0(w.len)+' ft lateral';
+  b.onclick=()=>{st.off.has(w.api)?st.off.delete(w.api):st.off.add(w.api);draw()};b.onmouseenter=()=>hl(w.api);b.onmouseleave=()=>hl(null);leg.appendChild(b)})})}
+function draw(){defs.forEach(d=>chart(d.id,d));legend()}
+draw();addEventListener('resize',draw);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+</script></body></html>
