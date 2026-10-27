@@ -26,8 +26,10 @@ for a,e in ex.items():
         if cfl: cfv=cfl[0]; src='Calfrac job summary'
     ven=''
     if src: ven=("Calfrac" if src.startswith("Calfrac") else "Liberty" if src.startswith("Liberty") else "Halliburton" if src.startswith("Halli") else "Element Technical Services (frac report)" if src.startswith("Element") else "FTS International")
-    elif e['vendor_p1']: ven=e['vendor_p1'][0]
-    elif e['vendor_any']: ven=e['vendor_any'][0]
+    else:
+        nm=b['name'].lower()
+        vl=[v for v in e['vendor_p1']+e['vendor_any'] if not (v=='NINE Energy' and 'nine' in nm) and not (v=='Select Energy' and 'select' in nm)]
+        ven=vl[0] if vl else ''
     fw=e['fluid_words']; ft=''
     if 'slickwater' in fw or 'HVFR' in fw: ft='Slickwater'+(' (HVFR)' if 'HVFR' in fw else '')
     if 'crosslink/hybrid words' in fw: ft=(ft+'; ' if ft else '')+'crosslink or gel mentioned'

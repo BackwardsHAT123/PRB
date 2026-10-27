@@ -23,6 +23,10 @@ for a,e in ex.items():
         rows=[r for r in rows if r.get('n',0)>0]
         if n: rows=rows[:n]
         out[a]=[dict(n=r['n'],**norm(r)) for r in rows]; src[a]="Liberty "+("pressure summary" if A else "stage summary"); continue
+    f=f'camino_{a}.json'
+    if os.path.exists(f) and os.path.getsize(f)>5:
+        rows=[r for p,rot,rs in sorted(json.load(open(f)),key=lambda t:t[0]) for r in rs]
+        out[a]=[dict(n=i+1,**norm(r)) for i,r in enumerate(rows)]; src[a]="Halliburton stimulation job report"; continue
     f=f'hal2_{a}.json'
     if os.path.exists(f) and os.path.getsize(f)>5:
         h=json.load(open(f)); out[a]=[dict(n=int(k),**norm(v)) for k,v in sorted(h.items(),key=lambda t:int(t[0])) if int(k)>0]; src[a]="Halliburton stage summary"; continue
