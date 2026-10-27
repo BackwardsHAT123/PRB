@@ -43,10 +43,10 @@ svg text{fill:var(--color-fg-muted);font-size:11px}.pc-ax path,.pc-ax line{strok
 <p class="sub">Monthly production from the first month with oil. Lines are wells, coloured by operator; click a name to hide it, hover a line to read it. Volumes are WOGCC monthly reports, so time is calendar months since first oil (not producing days).</p>
 <div class="pc-ctl" id="ctl"></div>
 <div class="pc-grid">
-<div class="card pc-card"><h2>Cumulative oil per lateral foot</h2><p class="sub2">MSTB per ft of lateral against months since first oil</p><div id="c1"></div></div>
-<div class="card pc-card"><h2>Water cut vs cumulative liquid</h2><p class="sub2">Monthly water ÷ (oil + water) against cumulative oil plus water (MSTB)</p><div id="c2"></div></div>
-<div class="card pc-card"><h2>Cumulative water per lateral foot</h2><p class="sub2">MSTB per ft of lateral against months since first oil</p><div id="c3"></div></div>
-<div class="card pc-card"><h2>Water-oil ratio</h2><p class="sub2">Monthly water ÷ oil (bbl/bbl) against months since first oil; axis capped at 4</p><div id="c4"></div></div>
+<div class="card pc-card"><h2 id="t1"></h2><p class="sub2" id="s1"></p><div id="c1"></div></div>
+<div class="card pc-card"><h2 id="t2"></h2><p class="sub2" id="s2"></p><div id="c2"></div></div>
+<div class="card pc-card"><h2 id="t3"></h2><p class="sub2" id="s3"></p><div id="c3"></div></div>
+<div class="card pc-card"><h2 id="t4"></h2><p class="sub2" id="s4"></p><div id="c4"></div></div>
 </div>
 <div class="card" style="margin-bottom:12px"><h2 style="font-size:14px;margin:0 0 4px">Wells</h2><div class="pc-leg" id="leg"></div>
 <p class="note" style="margin-top:8px">Lateral length is from the filed directional survey (straight surface-to-bottom-hole where there is none). Months with no reported liquid are skipped in the water-cut and WOR lines. 1 MSTB = 1,000 bbl.</p></div>
@@ -59,10 +59,11 @@ const hue={ [D.ops[0]]:[200,285], [D.ops[1]]:[2,48] };
 D.wells.forEach(w=>{w.cum=[];let co=0,cw=0;w.o.forEach((o,i)=>{co+=o;cw+=w.w[i];w.cum.push({m:i+1,co,cw,o,w:w.w[i]})})});
 const byOp=d3.group(D.wells,w=>w.op);
 byOp.forEach((ws,op)=>{const [a,b]=hue[op]||[0,300];ws.forEach((w,i)=>{const t=ws.length>1?i/(ws.length-1):.5;w.color='hsl('+(a+(b-a)*t)+','+(78-16*Math.abs(t-.5))+'%,'+(42+10*Math.sin(i*1.7))+'%)'})});
-const st={maxM:36,ops:new Set(D.ops),off:new Set(),hi:null};
+const st={maxM:36,ops:new Set(D.ops),off:new Set(),hi:null,ph:'water'};
 const ctl=document.getElementById('ctl');
-ctl.innerHTML='<span>Operators:</span>'+D.ops.map(o=>'<label><input type="checkbox" data-op="'+o+'" checked> '+o+' ('+byOp.get(o).length+')</label>').join('')+'<label>Months shown <select id="mm"><option value="12">12</option><option value="24">24</option><option value="36" selected>36</option><option value="60">60</option><option value="999">all</option></select></label>';
+ctl.innerHTML='<label>Show <select id="ph"><option value="water">Water version</option><option value="oil">Oil version</option></select></label><span>Operators:</span>'+D.ops.map(o=>'<label><input type="checkbox" data-op="'+o+'" checked> '+o+' ('+byOp.get(o).length+')</label>').join('')+'<label>Months shown <select id="mm"><option value="12">12</option><option value="24">24</option><option value="36" selected>36</option><option value="60">60</option><option value="999">all</option></select></label>';
 ctl.querySelectorAll('input').forEach(c=>c.onchange=()=>{c.checked?st.ops.add(c.dataset.op):st.ops.delete(c.dataset.op);draw()});
+document.getElementById('ph').onchange=e=>{st.ph=e.target.value;draw()};
 document.getElementById('mm').onchange=e=>{st.maxM=+e.target.value;draw()};
 const vis=()=>D.wells.filter(w=>st.ops.has(w.op)&&!st.off.has(w.api));
 const tip=document.getElementById('tip');
@@ -86,15 +87,23 @@ function chart(id,o){
   .on('pointermove',(e,s)=>{const px=d3.pointer(e,svg.node())[0],p=d3.least(s.pts,q=>Math.abs(x(q.x)-px));hl(s.w.api);showTip(e,s.w,[o.tip(p)])}).on('pointerleave',()=>{hl(null);tip.style.display='none'});
 }
 function hl(api){st.hi=api;document.querySelectorAll('.pc-grid path.l').forEach(p=>{const s=d3.select(p).datum();d3.select(p).attr('stroke-opacity',api&&s.w.api!==api?.15:1).attr('stroke-width',api&&s.w.api===api?3:1.6)})}
-const defs=[
- {id:'c1',xl:'Months since first oil',yl:'Cumulative oil per lateral ft (MSTB/ft)',yfmt:d3.format('.3f'),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.co/w.len/1000,c:p})),tip:p=>'Month '+p.m+': '+f3(p.y)+' MSTB/ft ('+f0(p.c.co)+' bbl cumulative)'},
- {id:'c2',xl:'Cumulative liquid (MSTB)',yl:'Water cut',yfmt:d3.format('.0%'),ymax:()=>1,pts:w=>w.cum.map(p=>({m:p.m,x:(p.co+p.cw)/1000,y:(p.o+p.w)>0?p.w/(p.o+p.w):null,c:p})),tip:p=>'Month '+p.m+': water cut '+d3.format('.0%')(p.y)+', '+f0(p.x*1000)+' bbl liquid cumulative'},
- {id:'c3',xl:'Months since first oil',yl:'Cumulative water per lateral ft (MSTB/ft)',yfmt:d3.format('.3f'),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.cw/w.len/1000,c:p})),tip:p=>'Month '+p.m+': '+f3(p.y)+' MSTB/ft ('+f0(p.c.cw)+' bbl cumulative)'},
- {id:'c4',xl:'Months since first oil',yl:'Water-oil ratio (bbl/bbl)',yfmt:d3.format('.1f'),ymax:ys=>Math.min(4,d3.max(ys)*1.05),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.o>0?p.w/p.o:null,c:p})),tip:p=>'Month '+p.m+': WOR '+d3.format('.2f')(p.y)+' ('+f0(p.c.w)+' bbl water, '+f0(p.c.o)+' bbl oil)'}
-];
+const base={
+ c1:{xl:'Months since first oil',yl:'Cumulative oil per lateral ft (MSTB/ft)',yfmt:d3.format('.3f'),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.co/w.len/1000,c:p})),tip:p=>'Month '+p.m+': '+f3(p.y)+' MSTB/ft ('+f0(p.c.co)+' bbl cumulative)',t:'Cumulative oil per lateral foot',s:'MSTB per ft of lateral against months since first oil'}};
+const sets={
+ water:[base.c1,
+  {id:'c2',t:'Water cut vs cumulative liquid',s:'Monthly water ÷ (oil + water) against cumulative oil plus water (MSTB)',xl:'Cumulative liquid (MSTB)',yl:'Water cut',yfmt:d3.format('.0%'),ymax:()=>1,pts:w=>w.cum.map(p=>({m:p.m,x:(p.co+p.cw)/1000,y:(p.o+p.w)>0?p.w/(p.o+p.w):null,c:p})),tip:p=>'Month '+p.m+': water cut '+d3.format('.0%')(p.y)+', '+f0(p.x*1000)+' bbl liquid cumulative'},
+  {id:'c3',t:'Cumulative water per lateral foot',s:'MSTB per ft of lateral against months since first oil',xl:'Months since first oil',yl:'Cumulative water per lateral ft (MSTB/ft)',yfmt:d3.format('.3f'),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.cw/w.len/1000,c:p})),tip:p=>'Month '+p.m+': '+f3(p.y)+' MSTB/ft ('+f0(p.c.cw)+' bbl cumulative)'},
+  {id:'c4',t:'Water-oil ratio',s:'Monthly water ÷ oil (bbl/bbl) against months since first oil; axis capped at 4',xl:'Months since first oil',yl:'Water-oil ratio (bbl/bbl)',yfmt:d3.format('.1f'),ymax:ys=>Math.min(4,d3.max(ys)*1.05),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.o>0?p.w/p.o:null,c:p})),tip:p=>'Month '+p.m+': WOR '+d3.format('.2f')(p.y)+' ('+f0(p.c.w)+' bbl water, '+f0(p.c.o)+' bbl oil)'}],
+ oil:[base.c1,
+  {id:'c2',t:'Oil cut vs cumulative liquid',s:'Monthly oil ÷ (oil + water) against cumulative oil plus water (MSTB)',xl:'Cumulative liquid (MSTB)',yl:'Oil cut',yfmt:d3.format('.0%'),ymax:()=>1,pts:w=>w.cum.map(p=>({m:p.m,x:(p.co+p.cw)/1000,y:(p.o+p.w)>0?p.o/(p.o+p.w):null,c:p})),tip:p=>'Month '+p.m+': oil cut '+d3.format('.0%')(p.y)+', '+f0(p.x*1000)+' bbl liquid cumulative'},
+  {id:'c3',t:'Monthly oil per lateral foot',s:'bbl per ft of lateral per month against months since first oil (the oil counterpart to the water curve; cumulative oil is the first chart)',xl:'Months since first oil',yl:'Oil per lateral ft per month (bbl/ft)',yfmt:d3.format('.1f'),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.o/w.len,c:p})),tip:p=>'Month '+p.m+': '+d3.format('.2f')(p.y)+' bbl/ft ('+f0(p.c.o)+' bbl)'},
+  {id:'c4',t:'Oil-water ratio',s:'Monthly oil ÷ water (bbl/bbl) against months since first oil; axis capped at 10',xl:'Months since first oil',yl:'Oil-water ratio (bbl/bbl)',yfmt:d3.format('.1f'),ymax:ys=>Math.min(10,d3.max(ys)*1.05),pts:w=>w.cum.map(p=>({m:p.m,x:p.m,y:p.w>0?p.o/p.w:null,c:p})),tip:p=>'Month '+p.m+': OWR '+d3.format('.2f')(p.y)+' ('+f0(p.c.o)+' bbl oil, '+f0(p.c.w)+' bbl water)'}]
+};
+sets.water[0].id='c1';sets.oil[0]=Object.assign({},base.c1,{id:'c1'});
+
 function legend(){const leg=document.getElementById('leg');leg.innerHTML='';byOp.forEach((ws,op)=>{if(!st.ops.has(op))return;const h=document.createElement('h3');h.textContent=op;leg.appendChild(h);
  ws.forEach(w=>{const b=document.createElement('button');b.className=st.off.has(w.api)?'off':'';b.innerHTML='<i style="background:'+w.color+'"></i>'+w.name+' <span style="color:var(--color-fg-muted)">'+w.yr+'</span>';b.title=w.name+', '+w.o.length+' months of production, '+f0(w.len)+' ft lateral';
   b.onclick=()=>{st.off.has(w.api)?st.off.delete(w.api):st.off.add(w.api);draw()};b.onmouseenter=()=>hl(w.api);b.onmouseleave=()=>hl(null);leg.appendChild(b)})})}
-function draw(){defs.forEach(d=>chart(d.id,d));legend()}
+function draw(){sets[st.ph].forEach(d=>{document.getElementById('t'+d.id.slice(1)).textContent=d.t;document.getElementById('s'+d.id.slice(1)).textContent=d.s;chart(d.id,d)});legend()}
 draw();addEventListener('resize',draw);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
 </script></body></html>
