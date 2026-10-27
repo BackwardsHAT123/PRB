@@ -5,6 +5,7 @@ from orient import best_rotation
 from lib import cols_of,colvals
 RNG={"press":(3000,13500),"maxpress":(3000,14500),"rate":(30,140),"maxrate":(30,150),"fluid":(3000,40000),"prop":(100000,1500000)}
 def page_rows(bx):
+    bx=[(b[0],b[1],b[2],b[3],re.sub(r'^([1-9]\d?)\.(\d{3})$',r'\1\2',b[4].strip())) if re.match(r'^[1-9]\d?\.\d{3}$',b[4].strip()) else b for b in bx]    # thousands comma read as a period
     nums,cl=cols_of(bx,tol=16,minn=8)
     D=[(cx,colvals(nums,cx,16)) for cx in cl]
     med=lambda d:st.median(v for _,v in d[1])
@@ -13,15 +14,16 @@ def page_rows(bx):
     m={"maxpress":D[-1],"press":D[-2],"maxrate":D[-3],"rate":D[-4],"fluid":D[-5],"prop":D[-8]}
     if not (30<=med(m["rate"])<=140 and 3000<=med(m["press"])<=13500): return None
     if not (100000<=med(m["prop"])<=1500000): return None
-    ys=sorted({y for k in ("press","rate","prop") for y,_ in m[k][1]}); yc=[]
-    for y in ys:
-        if yc and y-yc[-1][-1]<8: yc[-1].append(y)
+    base=max(("press","rate","maxpress","maxrate","fluid","prop"),key=lambda k:len(m[k][1]))      # the most complete column sets the rows
+    rowsy=sorted(y for y,_ in m[base][1]); yc=[]
+    for y in rowsy:
+        if yc and y-yc[-1][-1]<12: yc[-1].append(y)
         else: yc.append([y])
     rows=[]
     for c in yc:
         y=sum(c)/len(c); r={}
         for k,d in m.items():
-            v=[x for yy,x in d[1] if abs(yy-y)<8]; r[k]=v[0] if v else None
+            v=sorted(((abs(yy-y),x) for yy,x in d[1] if abs(yy-y)<13)); r[k]=v[0][1] if v else None
         rows.append(r)
     pm=st.median([r["prop"] for r in rows if r["prop"]] or [0])
     rows=[r for r in rows if not (r["prop"] and pm and r["prop"]>4*pm)]
@@ -37,11 +39,14 @@ def run(api):
         doc=pdfium.PdfDocument(f); txt=json.load(open(f.replace(".pdf",".json")))
         for i in range(len(doc)):
             t=txt[i].lower().replace(" ","") if i<len(txt) else ""
-            if not ("additivesamounts" in t or ("propp" in t and "slurry" in t and "ave" in t and "psi" in t) or (i>=2 and 0<len(t)<800 and ("pressure" in t or "psi" in t or "rate" in t))): continue
-            r0,_=best_rotation(doc[i]); im=doc[i].render(scale=2.6).to_pil().convert("RGB")
-            for rot in dict.fromkeys((r0,0,90,270)):
-                rows=page_rows(boxes(im.rotate(rot,expand=True) if rot else im))
-                if rows and len(rows)>=8: best.append((i+1,rot,[clean(r) for r in rows])); break
+            if i<2 or len(t)>6000: continue      # Form 3 pages and long text pages are not the table
+            r0,_=best_rotation(doc[i]); got=False
+            for scale in (2.6,4.4):          # small-print pages need a larger render
+                im=doc[i].render(scale=scale).to_pil().convert("RGB")
+                for rot in dict.fromkeys((r0,0,90,270)):
+                    rows=page_rows(boxes(im.rotate(rot,expand=True) if rot else im))
+                    if rows and len(rows)>=8: best.append((i+1,rot,[clean(r) for r in rows])); got=True; break
+                if got: break
     return best
 if __name__=="__main__":
     b=run(sys.argv[1]); json.dump(b,open(f"eog_{sys.argv[1]}.json","w"))
