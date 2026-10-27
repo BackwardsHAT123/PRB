@@ -27,9 +27,14 @@ for d in D:
     r = {"api": d["a"], "name": d["n"], "op": d["oc"], "fm": d["r"], "cty": d["cty"], "twp": d["sec"].split("-", 1)[1] if d.get("sec") else None,
          "yr": fy, "len": L, "lon": d["shl"][0] if d.get("shl") else None, "lat": d["shl"][1] if d.get("shl") else None,
          "ln": [round(c, 4) for pt in d["ln"] for c in pt] if d.get("ln") and len(d["ln"]) > 1 else None}   # simplified lateral path, lon,lat pairs
+    dd = p.get("d") or []
+    d0 = dd[k] if k < len(dd) else None        # days on production in the first month with oil (None when not on file)
+    short = d0 is not None and d0 < 10         # a first month under 10 days: the 3-month window takes a 4th month
+    if short: r["x3"] = d0
     for h in H:
-        if n >= h:
-            oo = sum(o[k:k + h]); ww = sum(w[k:k + h])
+        hh = h + 1 if (h == 3 and short) else h
+        if n >= hh:
+            oo = sum(o[k:k + hh]); ww = sum(w[k:k + hh])
             r[f"o{h}"] = round(oo); r[f"w{h}"] = round(ww)
             r[f"of{h}"] = round(oo / L * 1000, 1) if L else None; r[f"wf{h}"] = round(ww / L * 1000, 1) if L else None
         else:

@@ -688,7 +688,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <label>Color by <select id="cb"><option value="sg">Well status</option><option value="r" selected>Producing formation</option><option value="oc">Operator</option></select></label>
 <label>County <select id="ct"></select></label><label>Operator <select id="op"></select></label><label>Status <select id="st"></select></label>
 <label>Highlight operator <select id="hl"></select></label><div id="leg"></div>
-<details id="disp"><summary>Display</summary><label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="rg" checked> Active drilling rigs (inferred)</label><label><input type="checkbox" id="trl"> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label></details>
+<details id="disp"><summary>Display</summary><label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="bub"> Oil production bubbles at bottom hole</label><label id="bubo" hidden>Size by oil in the first <select id="bw"><option value="3">3 months</option><option value="6">6 months</option><option value="12" selected>12 months</option></select></label><div id="bubleg"></div><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="rg" checked> Active drilling rigs (inferred)</label><label><input type="checkbox" id="trl"> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label></details>
 <details id="exp"><summary>Export production</summary><label>Operator <select id="xop"></select></label><label>Formation <select id="xfm"></select></label><div class="xdate"><label>From <input type="month" id="xfrom"></label><label>To <input type="month" id="xto"></label></div><div id="xinfo">loading production…</div><button class="pbtn" id="xdl" disabled>Download CSV</button><div class="plg" style="color:var(--muted);margin-top:4px">Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.</div></details>
 <div id="dashlink"><a href="https://backwardshat123.github.io/PRB/dashboard.html" target="_blank" rel="noopener">Operator performance dashboard</a> <small>Ballard Petroleum and Sage Butte</small></div>
 <div id="note">Grid is township and range; roads and towns from OpenStreetMap (OSM roads cover Campbell County only). Well data as of <span id="asof">Oct 24, 2026</span> (updated daily). Lines run surface to bottom hole; 1077 wells have a multi-point surveyed path (thicker).</div></details>
@@ -717,6 +717,7 @@ function build(){const k=cb.value;if(k=='sg'){cmap={};SORD.forEach(g=>cmap[g]=SC
 const cnt={};D.forEach(d=>cnt[d[k]]=(cnt[d[k]]||0)+1);
 leg.innerHTML=Object.keys(cmap).filter(v=>cnt[v]).map(v=>`<div><i style="background:${cmap[v]}"></i>${v} <small>(${cnt[v]})</small></div>`).join('')+(k!='sg'&&Object.keys(cnt).length>=PAL.length?'<div><i style="background:#999"></i>Other</div>':'')}
 const col=d=>cmap[d[cb.value]]||'#999';
+const bubL=L.layerGroup().addTo(map);
 const g=L.layerGroup().addTo(map);
 function fill(id,key){const s=document.getElementById(id),c={};D.forEach(d=>c[d[key]]=(c[d[key]]||0)+1);const vs=Object.keys(c).sort(key=='oc'?(a,b)=>c[b]-c[a]||a.localeCompare(b):undefined);s.innerHTML='<option value="">All</option>'+vs.map(v=>`<option value="${v}">${v}${key=='oc'?' ('+c[v]+')':''}</option>`).join('')}
 fill('ct','cty');fill('op','oc');fill('hl','oc');hl.options[0].text='None';fill('st','sg');
@@ -728,7 +729,7 @@ ordered.forEach(d=>{n++;const c=col(d),on=!h||d.oc==h,dim=h&&!on;
 if(d.ln)L.polyline(d.ln.map(x=>[x[1],x[0]]),{color:c,weight:on?(h?(d.surv?5:4):(d.surv?3:2)):1,opacity:dim?.18:.9}).bindPopup(()=>pop(d)).addTo(g);
 if(p){const r=on&&h?4:3,fo=dim?.25:1;L.circleMarker([d.shl[1],d.shl[0]],{radius:r,color:cs('--ptline'),weight:1,opacity:fo,fillColor:cs('--ptfill'),fillOpacity:fo}).bindPopup(()=>pop(d)).addTo(g);
 if(d.bhl)L.circleMarker([d.bhl[1],d.bhl[0]],{radius:r,color:c,weight:1,opacity:fo,fillColor:c,fillOpacity:fo}).bindPopup(()=>pop(d)).addTo(g)}
-b.push([d.shl[1],d.shl[0]])});count.textContent=n+' wells'+(h?' · '+vis.filter(d=>d.oc==h).length+' '+h:'');return b}
+b.push([d.shl[1],d.shl[0]])});count.textContent=n+' wells'+(h?' · '+vis.filter(d=>d.oc==h).length+' '+h:'');drawBub(vis);return b}
 let first=true;function go(){const b=draw();if(first&&b.length){map.fitBounds(b,{padding:[30,30]});first=false}}
 cb.onchange=()=>{build();go()};op.onchange=st.onchange=ct.onchange=pts.onchange=hl.onchange=go;build();go();
 function goWell(){const m=/^#(\d{2}-\d{3}-\d{5})$/.exec(location.hash);if(!m)return;const d=D.find(x=>x.a==m[1]);if(!d)return;
@@ -766,8 +767,30 @@ const PROD_INLINE=null;
 /* ---- production: popup summary + monthly plot ---- */
 let PROD=PROD_INLINE, plotApi=null;
 const plotEl=document.getElementById('plot'),psvg=document.getElementById('psvg'),pro=document.getElementById('pro'),plog=document.getElementById('plog');
-function loadProd(){if(PROD)return;fetch('data/production.json').then(r=>r.json()).then(j=>{PROD=j;if(typeof initExport==='function')initExport();const p=map._popup;if(p&&p.isOpen())p.update();if(plotApi)drawPlot()}).catch(()=>{PROD=false})}
+function loadProd(){if(PROD)return;fetch('data/production.json').then(r=>r.json()).then(j=>{PROD=j;if(typeof initExport==='function')initExport();const p=map._popup;if(p&&p.isOpen())p.update();if(plotApi)drawPlot();drawBub()}).catch(()=>{PROD=false})}
 loadProd();
+/* Oil bubbles at each well's bottom hole, area = oil in its first 3, 6 or 12 months. A well whose first month with oil shows under 10 days on production takes a 4th month in the 3-month view (when days are on file). */
+let lastVis=null;
+function drawBub(vis){
+ if(vis)lastVis=vis;
+ bubL.clearLayers();bubleg.innerHTML='';bubo.hidden=!bub.checked;
+ if(!bub.checked||!lastVis)return;
+ if(PROD===null){bubleg.innerHTML='<small>Loading production…</small>';return}
+ if(PROD===false){bubleg.innerHTML='<small>Production data unavailable.</small>';return}
+ const h=+bw.value,rows=[];let miss=0,ext=0;
+ lastVis.forEach(d=>{const ll=d.bhl||(d.ln&&d.ln.length?d.ln[d.ln.length-1]:null);if(!ll)return;
+  const p=PROD[d.a];if(!p||p.none||!p.o){miss++;return}
+  const k=p.o.findIndex(v=>v>0);if(k<0){miss++;return}
+  const d0=p.d&&k<p.d.length?p.d[k]:null,hh=(h==3&&d0!=null&&d0<10)?4:h;
+  if(p.o.length-k<hh){miss++;return}
+  let v=0;for(let i=k;i<k+hh;i++)v+=p.o[i];if(hh!=h)ext++;rows.push({d,ll,v,hh})});
+ if(!rows.length){bubleg.innerHTML='<small>No wells here have '+h+' months of oil.</small>';return}
+ const mx=Math.max(1,...rows.map(r=>r.v)),R=26,rad=v=>Math.max(2,R*Math.sqrt(v/mx));
+ rows.sort((a,b)=>b.v-a.v).forEach(r=>{const c=col(r.d);L.circleMarker([r.ll[1],r.ll[0]],{radius:rad(r.v),color:c,weight:1,opacity:.9,fillColor:c,fillOpacity:.35}).bindPopup(()=>pop(r.d)+'<br><b>Oil, first '+r.hh+' months:</b> '+Math.round(r.v).toLocaleString('en-US')+' bbl').addTo(bubL)});
+ const e=Math.pow(10,Math.floor(Math.log10(mx))),m=mx/e,a=(m>=5?5:m>=2?2:1)*e,rs=[a,a/2,a/10].map(v=>[v,rad(v)]),W=Math.ceil(2*rs[0][1])+2;
+ bubleg.innerHTML='<svg width="'+(W+92)+'" height="'+W+'" style="color:var(--fg)">'+rs.map(([v,r])=>'<circle cx="'+W/2+'" cy="'+(W-r-1)+'" r="'+r+'" fill="none" stroke="currentColor" opacity=".6"/><line x1="'+W/2+'" y1="'+(W-2*r-1)+'" x2="'+(W+6)+'" y2="'+(W-2*r-1)+'" stroke="currentColor" opacity=".4"/><text x="'+(W+9)+'" y="'+(W-2*r+3)+'" font-size="10" fill="currentColor">'+Math.round(v).toLocaleString('en-US')+' bbl</text>').join('')+'</svg><small>Bubble area = oil in the first '+h+' months (colour as above). '+rows.length+' wells shown'+(miss?'; '+miss+' without '+h+' months of oil':'')+(ext?'; '+ext+' use 4 months (first month under 10 days on production)':'')+'.</small>';
+}
+bub.onchange=bw.onchange=()=>drawBub();
 const sum=a=>a.reduce((x,y)=>x+y,0),fmtN=n=>Math.round(n).toLocaleString('en-US'),mmyyyy=s=>s.slice(5)+'-'+s.slice(0,4);
 function prodHTML(a){
  if(PROD===null)return '<hr><b>Production</b><br>loading…';

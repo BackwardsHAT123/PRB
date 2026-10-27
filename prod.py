@@ -22,6 +22,7 @@ def fetch(pkey, tmp="prod.tmp"):
 
 def parse(txt):
     mon = collections.defaultdict(lambda: [0, 0, 0])
+    dys = collections.defaultdict(int)      # days on production per month (the largest across reservoirs)
     for r in re.split(r"[\r\n]+", txt)[1:]:
         c = r.split(",")
         if len(c) < 6:
@@ -34,6 +35,10 @@ def parse(txt):
         k = f"{y}-{m}"
         for i in range(3):
             mon[k][i] += v[i]
+        try:
+            dys[k] = max(dys[k], int(float(c[5] or 0)))
+        except (ValueError, IndexError):
+            pass
     nz = [k for k in sorted(mon) if any(mon[k])]
     if not nz:
         return None
@@ -45,7 +50,8 @@ def parse(txt):
         if m > 12:
             y, m = y + 1, 1
     z = [0, 0, 0]
-    return {"s": nz[0], "o": [mon.get(k, z)[0] for k in ks], "g": [mon.get(k, z)[1] for k in ks], "w": [mon.get(k, z)[2] for k in ks]}
+    return {"s": nz[0], "o": [mon.get(k, z)[0] for k in ks], "g": [mon.get(k, z)[1] for k in ks], "w": [mon.get(k, z)[2] for k in ks],
+            "d": [dys.get(k, 0) for k in ks[:8]]}      # days on production, first eight months only
 
 
 def _curl(url, tmp="prod2.tmp"):
