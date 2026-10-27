@@ -11,6 +11,7 @@ for w in W:
     if "element" in txt or "zonereport" in txt: todo.append(("element",f"el_{a}.json"))
     if "halliburton" in txt or "stagesummary" in txt: todo.append(("hal2",f"hal2_{a}.json"))
     if "fts" in txt or "treatmentreport" in txt: todo.append(("ftsi",f"ftsi_{a}.json"))
+    if "additivesamounts" in txt or op=="eog": todo.append(("eog",f"eog_{a}.json"))
     if "stimulationjobreport" in txt: todo.append(("camino",f"camino_{a}.json"))
     if "calfrac" in txt or "fracturingzone" in txt: todo.append(("calfrac",f"calfrac_{a}.json"))
     if not todo: log(f"{a} {w['name']}: no vendor keyword"); continue

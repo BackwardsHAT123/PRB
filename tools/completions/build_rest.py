@@ -25,7 +25,7 @@ for a,e in ex.items():
         cfl=[x for x in json.load(open(cff)) if x]
         if cfl: cfv=cfl[0]; src='Calfrac job summary'
     ven=''
-    if src: ven=("Calfrac" if src.startswith("Calfrac") else "Liberty" if src.startswith("Liberty") else "Halliburton" if src.startswith("Halli") else "Element Technical Services (frac report)" if src.startswith("Element") else "FTS International")
+    if src and not src.startswith('EOG'): ven=("Calfrac" if src.startswith("Calfrac") else "Liberty" if src.startswith("Liberty") else "Halliburton" if src.startswith("Halli") else "Element Technical Services (frac report)" if src.startswith("Element") else "FTS International")
     else:
         nm=b['name'].lower()
         vl=[v for v in e['vendor_p1']+e['vendor_any'] if not (v=='NINE Energy' and 'nine' in nm) and not (v=='Select Energy' and 'select' in nm)]
