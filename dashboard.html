@@ -232,6 +232,25 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   const $ = (id) => document.getElementById(id);
   const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24, ctop: false };
   let ctx = null, BM = {};
+  /* Remember the viewer's filter choices across reloads (this browser only). */
+  const SKEY = 'prb-dashboard-filters-v1';
+  let restored = false;
+  function saveState() { try { localStorage.setItem(SKEY, JSON.stringify(st)); } catch (e) { /* storage blocked: fall back to defaults next time */ } }
+  function restoreState(d) {
+    try {
+      const s = JSON.parse(localStorage.getItem(SKEY) || 'null');
+      if (!s || typeof s !== 'object') return;
+      const ops = new Set(d.wells.map((w) => w.op)), fms = new Set(['all'].concat(d.bench.map((b) => b.fm)));
+      if ([3, 6, 12].includes(s.h)) st.h = s.h;
+      if (s.b === 'ft' || s.b === 'total') st.b = s.b;
+      if (fms.has(s.fm)) st.fm = s.fm;
+      if (s.mode === 'all' || s.mode === 'pick') st.mode = s.mode;
+      if (Array.isArray(s.sel)) { const sel = s.sel.filter((o) => ops.has(o)).slice(0, MAXSEL); if (sel.length || s.mode === 'all') st.sel = sel; }
+      if (s.cph === 'oil' || s.cph === 'water') st.cph = s.cph;
+      if ([12, 24, 36].includes(s.cmo)) st.cmo = s.cmo;
+      if (typeof s.ctop === 'boolean') st.ctop = s.ctop;
+    } catch (e) { /* unreadable saved state: use the defaults */ }
+  }
 
   const f0 = d3.format(',');
   const f2 = d3.format('.2f');
@@ -956,6 +975,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   }
 
   function render(d) {
+    if (!restored) { restored = true; restoreState(d); }
     BM = {};
     for (const b of d.bench) BM[b.fm] = b;
     const fc = d3.rollup(d.wells, (v) => v.length, (w) => w.fm);
@@ -977,6 +997,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     geo(d);
     areaTable(d);
     method(d);
+    saveState();
   }
 
   dash.onData(() => {
