@@ -33,8 +33,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   const IDS = ['wells', 'bench', 'curves', 'grid', 'sections', 'wellcurves'];
   const store = {}, errs = {}, cbs = [];
   const dark = matchMedia('(prefers-color-scheme: dark)');
-  const light = ['#1b6ca8', '#d4731a', '#2f9e6e', '#8e5bb5', '#b8962e', '#3aa3b8', '#c2506b', '#6b7b8c'];
-  const night = ['#6fb1e6', '#f0a257', '#6fcf9f', '#b99be0', '#e0c25c', '#6ccbe0', '#ec8ba3', '#a8b6c4'];
+  const light = ['#0072b2', '#d55e00', '#009e73', '#cc79a7', '#c99700', '#7a3e9d', '#56b4e9', '#6b7b8c'];     /* blue, vermillion, green, pink, gold, violet, sky, slate: six that stay apart at a glance */
+  const night = ['#4da3e0', '#ff8a4c', '#33c79b', '#e79bc5', '#f0c13a', '#b58de0', '#7fd0f5', '#a8b6c4'];
   const run = () => cbs.forEach((f) => f());
   window.dash = {
     get colors() { return dark.matches ? night : light; },
