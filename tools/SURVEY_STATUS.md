@@ -31,6 +31,7 @@ the bottom hole, held back), **depth gap** (>1,200 ft gap in the survey inside t
 | Converse, batch 4 (`targets_converse4.json`, 100 wells: Continental 100) | 100 | 64 ok (51 exact, 4 adjusted, 9 depth-gap), 22 rejected, 3 none, 11 unreadable | **51 paths** (fx 8) | see git log |
 | Converse, batch 5 (`targets_converse5.json`, 100 wells: Continental 100) | 100 | 67 ok (52 exact, 10 adjusted, 5 depth-gap), 15 rejected, 9 none, 9 unreadable | **52 paths** (fx 8) | see git log |
 | Converse, batch 6 (`targets_converse6.json`, 100 wells: Continental 100) | 100 | 71 ok (60 exact, 3 adjusted, 8 depth-gap), 18 rejected, 1 none, 10 unreadable | **60 paths** (fx 8) | see git log |
+| Cadet wells, Johnson (`tools/survey_work/targets_cadet.json`, 7 straight-line producers added to the map Oct 27, 2026) | 7 | 7 ok (6 exact, 1 depth-gap) | **6 paths** (fx 8); `49-019-42247` held for a depth gap (`survey_held_cadet.json`) | see git log |
 | Converse T36N R71W (`targets_3671.json`, 156 wells) | 6 of 156 | 4 ok, 1 unreadable, 1 none | none yet | — |
 
 Of the ok wells in the sixth batch (`targets_chunk5.json`): 36 applied, 4 held as "adjusted", 2 held for depth gaps (`49-005-61785`, `77703`); lists in `survey_held_chunk5.json`.
