@@ -40,7 +40,7 @@ for d in D:
         else:
             r[f"o{h}"] = r[f"w{h}"] = r[f"of{h}"] = r[f"wf{h}"] = None
     wells.append(r)
-    cum[d["a"]] = (np.cumsum(o[k:k + 24]), np.cumsum(w[k:k + 24]))
+    cum[d["a"]] = (np.cumsum(o[k:k + 36]), np.cumsum(w[k:k + 36]))     # 36 months kept for the per-well curves; the median curves below use the first 24
 json.dump(wells, open("wells.json", "w"), separators=(",", ":"))
 print("wells", len(wells), "operators", len(set(r["op"] for r in wells)))
 
@@ -94,3 +94,12 @@ k = S.index("const SEC="); SEC = json.loads(S[k + len("const SEC="):S.index(";\n
 json.dump([{"b": [g[0], g[1], g[2], g[3]], "t": g[4]} for g in GRID], open("grid.json", "w"), separators=(",", ":"))
 json.dump([{"s": r[0], "c": [r[1], r[2]], "b": [r[3], r[4], r[5], r[6]], "p": [[round(x, 5), round(y, 5)] for x, y in r[7]]} for r in SEC], open("sections.json", "w"), separators=(",", ":"))
 print("grid", len(GRID), "sections", len(SEC))
+
+# wellcurves: each well's cumulative oil and water per 1,000 ft of lateral over its first 36 months (barrels, whole numbers), for the cumulative-production chart
+wc = {}
+for r in wells:
+    if not r["len"]: continue
+    oc, wcm = cum[r["api"]]
+    wc[r["api"]] = [[int(round(v / r["len"] * 1000)) for v in oc], [int(round(v / r["len"] * 1000)) for v in wcm]]
+json.dump(wc, open("wellcurves.json", "w"), separators=(",", ":"))
+print("wellcurves", len(wc))

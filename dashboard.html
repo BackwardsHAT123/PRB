@@ -30,7 +30,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 <script>
 /* Small stand-in for the data layer the page was written against: loads the JSON tables from dashboard/data and re-runs the page's draw function when data arrives, the window resizes or the color scheme changes. */
 (function () {
-  const IDS = ['wells', 'bench', 'curves', 'grid', 'sections'];
+  const IDS = ['wells', 'bench', 'curves', 'grid', 'sections', 'wellcurves'];
   const store = {}, errs = {}, cbs = [];
   const dark = matchMedia('(prefers-color-scheme: dark)');
   const light = ['#1b6ca8', '#d4731a', '#2f9e6e', '#8e5bb5', '#b8962e', '#3aa3b8', '#c2506b', '#6b7b8c'];
@@ -149,6 +149,16 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   </nav>
   <div class="px-opsbar" id="px-opsbar" hidden></div>
 
+  <section class="px-sec" id="cumprod">
+    <h2>Cumulative production</h2>
+    <p class="px-lede" id="lede-cum"></p>
+    <article class="px-card">
+      <div class="px-ctlbar" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:8px"><div class="px-seg" id="seg-cumph" role="group" aria-label="Oil or water"></div><div class="px-seg" id="seg-cummo" role="group" aria-label="Months shown"></div></div>
+      <div class="px-legend" id="leg-cum"></div>
+      <div class="px-chart dash-skeleton" id="ch-cum" data-source="wellcurves"></div>
+    </article>
+  </section>
+
   <section class="px-sec" id="standouts">
     <h2>Which wells stand out</h2>
     <p class="px-lede">Cumulative production over the first months a well produced oil. Click a well name to find it on the map.</p>
@@ -219,7 +229,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   const MAXSEL = 6;
   const ALL = 'All operators';
   const $ = (id) => document.getElementById(id);
-  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'] };
+  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24 };
   let ctx = null, BM = {};
 
   const f0 = d3.format(',');
@@ -273,7 +283,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   function mapLink(api) { return MAP + '#' + api; }
   function ready() {
     const d = {};
-    for (const id of ['wells', 'bench', 'curves', 'grid', 'sections']) {
+    for (const id of ['wells', 'bench', 'curves', 'grid', 'sections', 'wellcurves']) {
       const x = dash.data(id);
       if (x.status === 'error') return 'error';
       if (x.status !== 'ok') return null;
@@ -569,6 +579,55 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     if (!have.length) { empty($('ch-curve-oil'), 'Too few wells for a curve.'); empty($('ch-curve-water'), 'Too few wells for a curve.'); return; }
     lineChart($('ch-curve-oil'), have.map((o) => mk(o, ft ? 'oil_ft' : 'oil')), 'Cumulative oil by month');
     lineChart($('ch-curve-water'), have.map((o) => mk(o, ft ? 'water_ft' : 'water')), 'Cumulative water by month');
+  }
+
+  /* ---------- cumulative production per 1,000 ft: every well in scope plus the median well per operator; own controls (phase, months), follows the Formation and Operators filters only ---------- */
+  function cumChart(d) {
+    const host = $('ch-cum');
+    seg($('seg-cumph'), [{ v: 'oil', label: 'Oil' }, { v: 'water', label: 'Water' }], 'cph');
+    seg($('seg-cummo'), [{ v: 12, label: 'First 12 months' }, { v: 24, label: 'First 24 months' }, { v: 36, label: 'First 36 months' }], 'cmo');
+    const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water';
+    $('lede-cum').textContent = 'Cumulative ' + nm + ' in barrels per 1,000 ft of lateral, from each well’s first month with oil. Thin lines are individual wells, thick lines the median well' + (st.mode === 'pick' ? ' for each selected operator' : '') + '. This chart follows the Formation and Operators choices but not the Window or Basis ones.';
+    const names = st.mode === 'all' ? [ALL] : st.sel;
+    const scope = d.wells.filter(inScope).map((w) => ({ w, a: d.wellcurves[w.api] })).filter((x) => x.a && x.a[pi].length >= 2);
+    if (!scope.length) { $('leg-cum').replaceChildren(); return empty(host, st.mode === 'pick' && !st.sel.length ? pickHint : 'No wells with enough history here.'); }
+    const rows = scope.map((x) => ({ op: x.w.op, name: x.w.name, yr: x.w.yr, pts: x.a[pi].slice(0, st.cmo).map((v, i) => ({ m: i + 1, v })) }));
+    const meds = names.map((o) => {
+      const rs = st.mode === 'all' ? rows : rows.filter((r) => r.op === o), pts = [];
+      for (let m = 1; m <= st.cmo; m++) { const v = rs.filter((r) => r.pts.length >= m).map((r) => r.pts[m - 1].v); if (v.length < 4) break; pts.push({ m, v: d3.median(v) }); }
+      return { name: o, n: rs.length, color: color(o), pts };
+    }).filter((s) => s.pts.length > 1);
+    legend($('leg-cum'), names.map((o) => { const s = meds.find((q) => q.name === o); return { color: color(o), label: o + ' (' + (st.mode === 'all' ? rows.length : rows.filter((r) => r.op === o).length) + ' wells' + (s ? '' : ', too few for a median') + ')' }; }));
+    host.classList.remove('dash-skeleton'); host.replaceChildren();
+    const W = Math.max(280, host.clientWidth), H = Math.round(Math.min(420, Math.max(260, W * 0.5))), m = { t: 10, r: 14, b: 40, l: 58 };
+    const maxM = d3.max(rows, (r) => r.pts.length), ends = rows.map((r) => r.pts[r.pts.length - 1].v).sort(d3.ascending);
+    const yTop = Math.max(d3.quantile(ends, 0.97) * 1.12, (d3.max(meds, (s) => d3.max(s.pts, (p) => p.v)) || 0) * 1.25);
+    const x = d3.scaleLinear([1, Math.max(2, maxM)], [m.l, W - m.r]), y = d3.scaleLinear([0, yTop], [H - m.b, m.t]).nice();
+    const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Cumulative ' + nm + ' per 1,000 ft by month');
+    svg.append('g').attr('class', 'px-grid').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickSize(-(W - m.l - m.r)).tickFormat(''));
+    svg.append('g').attr('class', 'px-ax').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(Math.min(maxM, W < 420 ? 6 : 12)).tickFormat(d3.format('d'))).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
+    svg.append('g').attr('class', 'px-ax').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickFormat(tickf)).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
+    svg.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 6).attr('text-anchor', 'middle').text('Months since first oil');
+    svg.append('text').attr('transform', 'rotate(-90)').attr('x', -(m.t + H - m.b) / 2).attr('y', 13).attr('text-anchor', 'middle').text('Cumulative ' + nm + ', bbl per 1,000 ft');
+    const cid = 'clipcum';
+    svg.append('clipPath').attr('id', cid).append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b + 1);
+    const g = svg.append('g').attr('clip-path', `url(#${cid})`), line = d3.line().x((p) => x(p.m)).y((p) => y(p.v));
+    const thin = st.mode === 'pick' ? 0.3 : Math.max(0.05, Math.min(0.25, 40 / rows.length));
+    g.append('g').selectAll('path').data(rows).join('path').attr('d', (r) => line(r.pts)).attr('fill', 'none').attr('stroke', (r) => color(r.op)).attr('stroke-opacity', thin).attr('stroke-width', 1);
+    for (const s of meds) g.append('path').attr('d', line(s.pts)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 3.2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    const T = tip(host), rule = svg.append('line').attr('class', 'px-ref').attr('y1', m.t).attr('y2', H - m.b).attr('visibility', 'hidden');
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (e) => {
+        const r = host.getBoundingClientRect(), k = W / r.width;
+        const mm = Math.max(1, Math.min(maxM, Math.round(x.invert((e.clientX - r.left) * k)))), py = (e.clientY - r.top) * k;
+        rule.attr('x1', x(mm)).attr('x2', x(mm)).attr('visibility', 'visible');
+        const lines = meds.map((s) => { const p = s.pts.find((q) => q.m === mm); return 'Median, ' + s.name + ': ' + (p ? num(p.v) : '—') + ' bbl'; });
+        let best = null, bd = 14;
+        for (const rr of rows) { const p = rr.pts[mm - 1]; if (!p) continue; const dd = Math.abs(y(p.v) - py); if (dd < bd) { bd = dd; best = [rr, p]; } }
+        if (best) lines.push(best[0].name + ' (' + best[0].op + ', ' + best[0].yr + '): ' + num(best[1].v) + ' bbl');
+        T.show(e, 'Month ' + mm, lines);
+      })
+      .on('pointerleave', () => { rule.attr('visibility', 'hidden'); T.hide(); });
   }
 
   /* ---------- by year first produced, 2015 onward ---------- */
@@ -894,6 +953,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     seg($('seg-mode'), [{ v: 'all', label: 'All operators' }, { v: 'pick', label: 'Pick up to 6' }], 'mode');
     opsBar(d);
     words(d);
+    cumChart(d);
     standouts(d);
     scatter(d);
     opCards(d);
