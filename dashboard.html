@@ -157,7 +157,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       <div class="px-legend" id="leg-cum"></div>
       <div class="px-chart dash-skeleton" id="ch-cum" data-source="wellcurves"></div>
       <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:8px 0 0"><input type="checkbox" id="cum-top"> <span id="cum-top-lab"></span></label>
-      <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-top10"> <span>Only each operator’s 10 best wells (ranked by oil in the first 12 months per 1,000 ft; wells with less than 12 months of history are left out)</span></label>
+      <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-n2"> <span>Normalize to 2,000 ft of lateral instead of 1,000 ft (every value is simply doubled)</span></label>
+      <label class="px-note" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="cum-top10"> <span>Only each operator’s 10 best wells (ranked by oil in the first 12 months per lateral foot; wells with less than 12 months of history are left out)</span></label>
     </article>
   </section>
 
@@ -231,7 +232,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   const MAXSEL = 6;
   const ALL = 'All operators';
   const $ = (id) => document.getElementById(id);
-  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24, ctop: false, ctop10: false };
+  const st = { h: 6, b: 'ft', fm: 'Niobrara', mode: 'pick', sel: ['Ballard Petroleum', 'Sage Butte'], cph: 'oil', cmo: 24, ctop: false, ctop10: false, cn2: false };
   let ctx = null, BM = {};
   /* Remember the viewer's filter choices across reloads (this browser only). */
   const SKEY = 'prb-dashboard-filters-v1';
@@ -251,6 +252,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       if ([12, 24, 36].includes(s.cmo)) st.cmo = s.cmo;
       if (typeof s.ctop === 'boolean') st.ctop = s.ctop;
       if (typeof s.ctop10 === 'boolean') st.ctop10 = s.ctop10;
+      if (typeof s.cn2 === 'boolean') st.cn2 = s.cn2;
     } catch (e) { /* unreadable saved state: use the defaults */ }
   }
 
@@ -608,8 +610,9 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const host = $('ch-cum');
     seg($('seg-cumph'), [{ v: 'oil', label: 'Oil' }, { v: 'water', label: 'Water' }], 'cph');
     seg($('seg-cummo'), [{ v: 12, label: 'First 12 months' }, { v: 24, label: 'First 24 months' }, { v: 36, label: 'First 36 months' }], 'cmo');
-    const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water';
-    $('lede-cum').textContent = 'Cumulative ' + nm + ' in barrels per 1,000 ft of lateral, from each well’s first month with oil. Thin lines are individual wells, thick lines the median well' + (st.mode === 'pick' ? ' for each selected operator' : '') + '. This chart follows the Formation and Operators choices but not the Window or Basis ones.';
+    const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 2 : 1, nl = st.cn2 ? '2,000' : '1,000';
+    $('cum-n2').checked = st.cn2; $('cum-n2').onchange = (e) => { st.cn2 = e.target.checked; if (ctx) render(ctx); };
+    $('lede-cum').textContent = 'Cumulative ' + nm + ' in barrels per ' + nl + ' ft of lateral, from each well’s first month with oil. Thin lines are individual wells, thick lines the median well' + (st.mode === 'pick' ? ' for each selected operator' : '') + '. This chart follows the Formation and Operators choices but not the Window or Basis ones.';
     const names = st.mode === 'all' ? [ALL] : st.sel;
     let scope = d.wells.filter(inScope).map((w) => ({ w, a: d.wellcurves[w.api] })).filter((x) => x.a && x.a[pi].length >= 2);
     $('cum-top10').checked = st.ctop10; $('cum-top10').onchange = (e) => { st.ctop10 = e.target.checked; if (ctx) render(ctx); };
@@ -619,18 +622,18 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       scope = scope.filter((x) => keep.has(x.w.api));
     }
     if (!scope.length) { $('leg-cum').replaceChildren(); return empty(host, st.mode === 'pick' && !st.sel.length ? pickHint : 'No wells with enough history here.'); }
-    const rows = scope.map((x) => ({ op: x.w.op, name: x.w.name, yr: x.w.yr, pts: x.a[pi].slice(0, st.cmo).map((v, i) => ({ m: i + 1, v })) }));
+    const rows = scope.map((x) => ({ op: x.w.op, name: x.w.name, yr: x.w.yr, pts: x.a[pi].slice(0, st.cmo).map((v, i) => ({ m: i + 1, v: v * nf })) }));
     const meds = names.map((o) => {
       const rs = st.mode === 'all' ? rows : rows.filter((r) => r.op === o), pts = [];
       for (let m = 1; m <= st.cmo; m++) { const v = rs.filter((r) => r.pts.length >= m).map((r) => r.pts[m - 1].v); if (v.length < 4) break; pts.push({ m, v: d3.median(v) }); }
       return { name: o, n: rs.length, color: color(o), pts };
     }).filter((s) => s.pts.length > 1);
     /* average of the 25 best wells in the selected formation (all operators), ranked by oil in their first 12 months per 1,000 ft */
-    const topLab = 'Show the average of the top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells (ranked by oil in the first 12 months per 1,000 ft) as a dashed line';
+    const topLab = 'Show the average of the top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells (ranked by oil in the first 12 months per lateral foot) as a dashed line';
     $('cum-top-lab').textContent = topLab; $('cum-top').checked = st.ctop; $('cum-top').onchange = (e) => { st.ctop = e.target.checked; if (ctx) render(ctx); };
     let topAvg = null;
     if (st.ctop) {
-      const pool = d.wells.filter((w) => inFm(w) && d.wellcurves[w.api] && d.wellcurves[w.api][0].length >= 12).map((w) => ({ w, o: d.wellcurves[w.api][0][11], a: d.wellcurves[w.api][pi] })).sort((p, q) => q.o - p.o).slice(0, 25);
+      const pool = d.wells.filter((w) => inFm(w) && d.wellcurves[w.api] && d.wellcurves[w.api][0].length >= 12).map((w) => ({ w, o: d.wellcurves[w.api][0][11], a: d.wellcurves[w.api][pi].map((v) => v * nf) })).sort((p, q) => q.o - p.o).slice(0, 25);
       const pts = [];
       for (let mo = 1; mo <= st.cmo; mo++) { const v = pool.filter((r) => r.a.length >= mo).map((r) => r.a[mo - 1]); if (v.length < 5) break; pts.push({ m: mo, v: d3.mean(v) }); }
       if (pts.length > 1) topAvg = { name: 'Top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells, average', n: pool.length, pts };
@@ -641,12 +644,12 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     const maxM = d3.max(rows, (r) => r.pts.length), ends = rows.map((r) => r.pts[r.pts.length - 1].v).sort(d3.ascending);
     const yTop = Math.max(d3.quantile(ends, 0.97) * 1.12, Math.max(d3.max(meds, (s) => d3.max(s.pts, (p) => p.v)) || 0, topAvg ? d3.max(topAvg.pts, (p) => p.v) : 0) * 1.25);
     const x = d3.scaleLinear([1, Math.max(2, maxM)], [m.l, W - m.r]), y = d3.scaleLinear([0, yTop], [H - m.b, m.t]).nice();
-    const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Cumulative ' + nm + ' per 1,000 ft by month');
+    const svg = d3.select(host).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('role', 'img').attr('aria-label', 'Cumulative ' + nm + ' per ' + nl + ' ft by month');
     svg.append('g').attr('class', 'px-grid').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickSize(-(W - m.l - m.r)).tickFormat(''));
     svg.append('g').attr('class', 'px-ax').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(Math.min(maxM, W < 420 ? 6 : 12)).tickFormat(d3.format('d'))).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
     svg.append('g').attr('class', 'px-ax').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickFormat(tickf)).call((g) => g.selectAll('text').attr('font-size', null).attr('font-family', null));
     svg.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 6).attr('text-anchor', 'middle').text('Months since first oil');
-    svg.append('text').attr('transform', 'rotate(-90)').attr('x', -(m.t + H - m.b) / 2).attr('y', 13).attr('text-anchor', 'middle').text('Cumulative ' + nm + ', bbl per 1,000 ft');
+    svg.append('text').attr('transform', 'rotate(-90)').attr('x', -(m.t + H - m.b) / 2).attr('y', 13).attr('text-anchor', 'middle').text('Cumulative ' + nm + ', bbl per ' + nl + ' ft');
     const cid = 'clipcum';
     svg.append('clipPath').attr('id', cid).append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b + 1);
     const g = svg.append('g').attr('clip-path', `url(#${cid})`), line = d3.line().x((p) => x(p.m)).y((p) => y(p.v));
