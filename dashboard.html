@@ -653,7 +653,6 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       const cols = [
         { label: 'Well', k: 'name', w: 30, cls: 'name', cell: (r, td) => { const a = el('a', null, r.name); a.href = mapLink(r.api); a.target = '_blank'; a.rel = 'noopener'; a.title = r.name; td.appendChild(a); } },
         { label: 'Operator', k: 'op', w: 22, cell: (r, td) => { const dot = el('span', 'px-dot'); dot.style.background = r.col; td.appendChild(dot); td.appendChild(document.createTextNode(r.op)); } },
-        { label: 'Formation', k: 'fm', w: 12, cell: (r, td) => { td.textContent = r.fm; } },
         { label: 'First oil', k: 'first', w: 11, n: true, cell: (r, td) => { td.textContent = r.first; } },
         { label: 'Lateral, ft', k: 'len', w: 10, n: true, cell: (r, td) => { td.textContent = num(r.len); } },
         { label: 'Months', k: 'n', w: 7, n: true, cell: (r, td) => { td.textContent = r.n; } },
