@@ -6,6 +6,14 @@ import numpy as np
 
 S = open("index.html").read(); i = S.index("const D=") + 8; D = json.loads(S[i:S.index(";\nconst GRID", i)])
 P = json.load(open("production.json"))
+import os
+# state producing intervals (WOGCC Producing Intervals page, measured depth, top and bottom per row); the lateral is the span from the top of the first to the bottom of the last interval, which excludes the run from the surface location to the heel that the map path includes
+LS = json.load(open("lateral_state.json")) if os.path.exists("lateral_state.json") else {}
+def state_len(api, path_len):
+    rows = [(a, b) for a, b in LS.get(api, []) if b > a]
+    if not rows or not path_len: return None
+    s = max(b for a, b in rows) - min(a for a, b in rows)
+    return round(s) if 3000 <= s <= 20000 and 0.55 * path_len <= s <= 1.1 * path_len else None    # reject typos, partial intervals and anything far off the mapped path
 H = (3, 6, 12)
 
 def hav(a, b):
@@ -23,7 +31,7 @@ for d in D:
     k = next((j for j, v in enumerate(o) if v and v > 0), None)
     if k is None: continue
     n = len(o) - k; fy = (y * 12 + m - 1 + k) // 12
-    L = plen(d["ln"]); L = round(L) if L else None
+    L = plen(d["ln"]); L = round(L) if L else None; L = state_len(d["a"], L) or L
     r = {"api": d["a"], "name": d["n"], "op": d["oc"], "fm": d["r"], "cty": d["cty"], "twp": d["sec"].split("-", 1)[1] if d.get("sec") else None,
          "yr": fy, "len": L, "lon": d["shl"][0] if d.get("shl") else None, "lat": d["shl"][1] if d.get("shl") else None,
          "ln": [round(c, 4) for pt in d["ln"] for c in pt] if d.get("ln") and len(d["ln"]) > 1 else None}   # simplified lateral path, lon,lat pairs
