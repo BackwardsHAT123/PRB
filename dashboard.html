@@ -159,9 +159,9 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
           <div class="px-chart dash-skeleton" id="ch-cum" data-source="wellcurves"></div>
         </div>
         <aside id="cum-panel" aria-label="Chart controls" style="flex:0 0 235px;border:1px solid var(--color-border-line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:12px;font-size:12.5px">
-          <div><div class="px-ctllab" style="margin-bottom:4px">Show</div><div id="seg-cumph" style="display:flex;flex-direction:column;gap:6px" role="group" aria-label="Oil or water"></div></div>
-          <div><div class="px-ctllab" style="margin-bottom:4px">Color by</div><div id="seg-cumcol" style="display:flex;flex-direction:column;gap:6px" role="group" aria-label="Colour lines by operator or well"></div></div>
-          <div><div class="px-ctllab" style="margin-bottom:4px">Time</div><div id="seg-cummo" style="display:flex;flex-direction:column;gap:6px" role="group" aria-label="Months shown"></div></div>
+          <div><div class="px-ctllab" style="margin-bottom:4px">Show</div><div class="px-seg" id="seg-cumph" role="group" aria-label="Oil or water"></div></div>
+          <div><div class="px-ctllab" style="margin-bottom:4px">Color by</div><div class="px-seg" id="seg-cumcol" role="group" aria-label="Colour lines by operator or well"></div></div>
+          <div><div class="px-ctllab" style="margin-bottom:4px">Time</div><div class="px-seg" id="seg-cummo" role="group" aria-label="Months shown"></div></div>
           <div><div class="px-ctllab" style="margin-bottom:4px">Wells</div>
             <label style="display:flex;gap:6px;align-items:flex-start;margin:0 0 6px"><input type="checkbox" id="cum-l2y" style="margin-top:2px"> <span>Only wells that came on in the last 2 years</span></label>
             <label style="display:flex;gap:6px;align-items:flex-start;margin:0"><input type="checkbox" id="cum-top10" style="margin-top:2px"> <span>Only each operator’s 10 best wells <span class="px-note" style="display:block;margin:2px 0 0">Ranked by cumulative oil in the first 6 months (total barrels, not per foot); wells with less history are left out.</span></span></label></div>
@@ -340,17 +340,6 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
       b.setAttribute('aria-pressed', String(st[key] === o.v));
       b.addEventListener('click', () => { st[key] = o.v; if (after) after(); if (ctx) render(ctx); });
       host.appendChild(b);
-    }
-  }
-  /* checkbox rows (same look as the other panel checkboxes); one box per group stays ticked */
-  function cbseg(host, opts, key) {
-    host.replaceChildren();
-    for (const o of opts) {
-      const lab = el('label'); lab.style.cssText = 'display:flex;gap:6px;align-items:flex-start;margin:0';
-      const i = el('input'); i.type = 'checkbox'; i.style.marginTop = '2px'; i.checked = st[key] === o.v;
-      i.addEventListener('change', () => { st[key] = o.v; if (ctx) render(ctx); });
-      lab.appendChild(i); lab.appendChild(el('span', null, o.label));
-      host.appendChild(lab);
     }
   }
   function tip(host) {
@@ -689,9 +678,9 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   function cumChart(d) {
     const host = $('ch-cum');
     $('cum-export').onclick = exportCum;
-    cbseg($('seg-cumph'), [{ v: 'oil', label: 'Oil' }, { v: 'water', label: 'Water' }], 'cph');
-    cbseg($('seg-cumcol'), [{ v: 'op', label: 'Operator' }, { v: 'well', label: 'Well' }], 'cby');
-    cbseg($('seg-cummo'), [{ v: 12, label: 'First 12 months' }, { v: 24, label: 'First 24 months' }, { v: 36, label: 'First 36 months' }], 'cmo');
+    seg($('seg-cumph'), [{ v: 'oil', label: 'Oil' }, { v: 'water', label: 'Water' }], 'cph');
+    seg($('seg-cumcol'), [{ v: 'op', label: 'Operator' }, { v: 'well', label: 'Well' }], 'cby');
+    seg($('seg-cummo'), [{ v: 12, label: '12 mo' }, { v: 24, label: '24 mo' }, { v: 36, label: '36 mo' }], 'cmo');
     const pi = st.cph === 'oil' ? 0 : 1, nm = st.cph === 'oil' ? 'oil' : 'water', nf = st.cn2 ? 9.5 : 1, nl = st.cn2 ? '9,500' : '1,000';
     $('cum-n2').checked = st.cn2; $('cum-n2').onchange = (e) => { st.cn2 = e.target.checked; if (ctx) render(ctx); };
     $('lede-cum').textContent = 'Cumulative ' + nm + ' in barrels per ' + nl + ' ft of lateral, from each well’s first month with oil. Each line is one well. This chart follows the Formation and Operators choices but not the Window or Basis ones.';
