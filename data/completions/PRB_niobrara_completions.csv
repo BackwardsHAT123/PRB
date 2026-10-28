@@ -408,8 +408,8 @@ Ballard Petroleum,GDU 11-3PH,4900562537,Parkman,Campbell,47N-73W,2015,more than 
 Ballard Petroleum,STATE 12-36- PH,4900560879,Parkman,Campbell,48N-74W,2010,more than top 5,4386,,,,,,,20/40,,Calfrac,crosslink or gel mentioned,,,,,,32169,7334,
 Ballard Petroleum,STODDARD FED 11-22-23 PH,4900577950,Parkman,Campbell,42N-72W,2022,more than top 5,11551,,,,,,,20/40,,Liberty,Slickwater (HVFR),,,,,,79865,6914,
 Ballard Petroleum,LJ FED 31-13-24 NH,4900579113,Niobrara,Campbell,42N-74W,2025,more than top 5,9590,9590,44,218,"calculated (deepest minus shallowest perf, divided by stages)",,,"100 mesh, 40/70",,Liberty,Slickwater,,,,,,53248,5552,
+Ballard Petroleum,IBERLIN RANCH 33-3H,4900535842,Frontier,Campbell,42N-74W,2000,more than top 5,955,4,1,4,"calculated (deepest minus shallowest perf, divided by stages)",,,,,,,,,,,,4904,5135,
 Ballard Petroleum,KINNEY DIVIDE FED 21-3-10 PH,4900564322,Parkman,Campbell,50N-76W,2023,more than top 5,9570,9570,48,199,"calculated (deepest minus shallowest perf, divided by stages)",9607340,1004,20/40,106944,Liberty,,,,,,,46058,4813,
-Ballard Petroleum,IBERLIN RANCH 33-3H,4900535842,Frontier,Campbell,42N-74W,2000,more than top 5,1309,4,1,4,"calculated (deepest minus shallowest perf, divided by stages)",,,,,,,,,,,,4904,3746,
 Ballard Petroleum,KT FED 41-14-23 TH,4900577575,Turner,Campbell,42N-74W,2023,more than top 5,9146,9855,37,266,"calculated (deepest minus shallowest perf, divided by stages)",8596200,940,20/40,124343,Liberty,crosslink or gel mentioned,44.6,8278,,0.81,4334,18623,2036,"mean of per-stage values (Liberty pressure summary, OCR-parsed)"
 Ballard Petroleum,HAYDEN STATE 41-16NH,4900562373,Niobrara,Campbell,51N-76W,2014,more than top 5,3949,3907,,,,,,40/70,,,,,,,,,6063,1535,
 Ballard Petroleum,HAYDEN TRUST 44-9 M H,4900561742,Muddy,Campbell,51N-76W,2013,more than top 5,6072,,20,,,2520875,415,20/40,52523,Cudd/RPC,,,,,,,7341,1209,

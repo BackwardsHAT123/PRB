@@ -1,0 +1,8 @@
+{
+ "49-005-62627": {"len": 4257, "note": "T COSNER FED 204372-4PH: state producing interval 7,595 to 11,852 ft MD; map bottom hole is wrong"},
+ "49-009-28269": {"len": 4220, "note": "HR FEDERAL 31-32H: state producing interval 10,393 to 14,613 ft MD; map bottom hole is wrong"},
+ "49-005-61878": {"len": 4287, "note": "ARBALEST 443-19H: state producing interval and perfs 7,758 to 12,045 ft MD; map bottom hole is wrong"},
+ "49-005-62015": {"len": 4143, "note": "CASTLE 3-21TH: state perforations 9,638 to 13,781 ft MD; map bottom hole is wrong"},
+ "49-005-62891": {"len": 4430, "note": "CASTLE 12-11TH: state perforations 9,310 to 13,740 ft MD; map bottom hole is wrong"},
+ "49-005-35842": {"len": 955, "note": "IBERLIN RANCH 33-3H: open hole 11,441 to 12,396 ft MD (the first horizontal, short); the map path includes the run from the surface location"}
+}

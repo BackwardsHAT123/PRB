@@ -9,6 +9,7 @@ P = json.load(open("production.json"))
 import os
 # state producing intervals (WOGCC Producing Intervals page, measured depth, top and bottom per row); the lateral is the span from the top of the first to the bottom of the last interval, which excludes the run from the surface location to the heel that the map path includes
 LS = json.load(open("lateral_state.json")) if os.path.exists("lateral_state.json") else {}
+LO = json.load(open("lateral_override.json")) if os.path.exists("lateral_override.json") else {}     # hand-checked lateral lengths (map bottom hole wrong); beat the state interval and the path
 def state_len(api, path_len):
     rows = [(a, b) for a, b in LS.get(api, []) if b > a]
     if not rows or not path_len: return None
@@ -31,7 +32,7 @@ for d in D:
     k = next((j for j, v in enumerate(o) if v and v > 0), None)
     if k is None: continue
     n = len(o) - k; fy = (y * 12 + m - 1 + k) // 12
-    L = plen(d["ln"]); L = round(L) if L else None; L = state_len(d["a"], L) or L
+    L = plen(d["ln"]); L = round(L) if L else None; L = LO.get(d["a"], {}).get("len") or state_len(d["a"], L) or L
     r = {"api": d["a"], "name": d["n"], "op": d["oc"], "fm": d["r"], "cty": d["cty"], "twp": d["sec"].split("-", 1)[1] if d.get("sec") else None,
          "yr": fy, "len": L, "lon": d["shl"][0] if d.get("shl") else None, "lat": d["shl"][1] if d.get("shl") else None,
          "ln": [round(c, 4) for pt in d["ln"] for c in pt] if d.get("ln") and len(d["ln"]) > 1 else None}   # simplified lateral path, lon,lat pairs

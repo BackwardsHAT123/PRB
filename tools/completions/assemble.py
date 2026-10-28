@@ -27,12 +27,14 @@ def state_len(api,path_len):
     if not rows or not path_len: return None
     sp=max(y for x,y in rows)-min(x for x,y in rows)
     return round(sp) if 3000<=sp<=20000 and 0.55*path_len<=sp<=1.1*path_len else None
+LO=json.load(open('../pub2/data/lateral_override.json'))
 nst=0
 for w in D['wells']:
     base=w.get('len_path') or w.get('len')
     if not base: continue
     w['len_path']=base; sl=state_len(w['api'].replace('-','').replace('49','',1) if False else w['api'],base)
-    w['len']=sl or base; nst+=bool(sl)
+    ov=LO.get(w['api'],{}).get('len')          # hand-checked laterals (data/lateral_override.json) beat the state interval and the path
+    w['len']=ov or sl or base; nst+=bool(sl or ov)
     if w.get('o12'): w['oil1k']=round(w['o12']/w['len']*1000)
 print(nst,'of',len(D['wells']),'wells use the state producing-interval lateral')
 s=s[:m.start(g)]+json.dumps(D,separators=(',',':'))+s[m.end(g):]
