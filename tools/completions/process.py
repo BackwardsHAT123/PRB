@@ -11,10 +11,12 @@ for w in W:
     if ("liberty" in txt or "avepsi" in txt) and "avepsi" in txt: todo.append(("lib2",f"lib2_{a}.json"))     # 2025 Liberty report with a scanned pressure table
     if "element" in txt or "zonereport" in txt: todo.append(("element",f"el_{a}.json"))
     if "halliburton" in txt or "stagesummary" in txt: todo.append(("hal2",f"hal2_{a}.json"))
+    if "halliburton" in txt or "stagesummary" in txt: todo.append(("hal3",f"hal3_{a}.json"))     # older landscape Stage Summary spreadsheet
     if "fts" in txt or "treatmentreport" in txt: todo.append(("ftsi",f"ftsi_{a}.json"))
     if "additivesamounts" in txt or op=="eog": todo.append(("eog",f"eog_{a}.json"))
     if "stimulationjobreport" in txt: todo.append(("camino",f"camino_{a}.json"))
     if "calfrac" in txt or "fracturingzone" in txt: todo.append(("calfrac",f"calfrac_{a}.json"))
+    todo=[t for t in todo if t[0] not in set(os.environ.get("SKIP","").split(","))]      # SKIP=hal2 leaves out a reader
     if not todo: log(f"{a} {w['name']}: no vendor keyword"); continue
     for rd,out in todo:
         if os.path.exists(out): log(f"{a} {rd} cached"); continue

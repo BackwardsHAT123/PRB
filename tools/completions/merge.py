@@ -40,6 +40,13 @@ for a,e in ex.items():
     f=f'hal2_{a}.json'
     if os.path.exists(f) and os.path.getsize(f)>5:
         h=json.load(open(f)); out[a]=[dict(n=int(k),**norm(v)) for k,v in sorted(h.items(),key=lambda t:int(t[0])) if int(k)>0]; src[a]="Halliburton stage summary"; continue
+    f=f'hal3_{a}.json'
+    if os.path.exists(f) and os.path.getsize(f)>5:
+        h=json.load(open(f)); rows=[dict(n=int(k),**norm(v)) for k,v in sorted(h.items(),key=lambda t:int(t[0]))]
+        sp=sum(r.get('prop',0) for r in rows); pl=e.get('proppant_lb')
+        # OCR of these scans is patchy: keep the table only when its stage count matches Form 3, or its proppant adds up to the Form 3 total (within 8%)
+        if (n and len(rows)==n) or (pl and sp and abs(sp/pl-1)<=0.08):
+            out[a]=rows; src[a]="Halliburton stage summary spreadsheet"; continue
     f=f'el_{a}.json'
     if os.path.exists(f) and os.path.getsize(f)>5:
         z=json.load(open(f)); rows=[dict(n=int(k),**norm(dict(press=v.get('press'),maxpress=v.get('maxpress'),fluid=v.get('tclean'),prop=v.get('prop')))) for k,v in sorted(z.items(),key=lambda t:int(t[0]))]
