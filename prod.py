@@ -1,5 +1,5 @@
 """Monthly production from the WOGCC comma-delimited export (one request per well), merged across reservoirs."""
-import collections, datetime, json, os, re, subprocess, time
+import collections, datetime, json, os, re, subprocess, threading, time
 
 EXPORT = "https://pipeline.wyo.gov/DWPRODPIMS.cfm?uniquenumber={k}&Oops=OkieDokie&oneapi={k}&GoGet=8"
 CONTROL = "545589"          # a well that always has production, used to tell "no data" from "blocked"
@@ -51,10 +51,11 @@ def parse(txt):
             y, m = y + 1, 1
     z = [0, 0, 0]
     return {"s": nz[0], "o": [mon.get(k, z)[0] for k in ks], "g": [mon.get(k, z)[1] for k in ks], "w": [mon.get(k, z)[2] for k in ks],
-            "d": [dys.get(k, 0) for k in ks[:8]]}      # days on production, first eight months only
+            "d": [dys.get(k, 0) for k in ks]}      # days on production for every month, aligned with o, g and w
 
 
-def _curl(url, tmp="prod2.tmp"):
+def _curl(url, tmp=None):
+    tmp = tmp or f"prod2_{threading.get_ident()}.tmp"      # one temp file per thread
     for t in range(4):
         p = subprocess.run(["curl", "-sL", "-m", "90", "-A", "Mozilla/5.0", "-w", "%{http_code}", url, "-o", tmp], capture_output=True, text=True, timeout=120)
         if p.stdout.strip() == "200":
@@ -79,6 +80,7 @@ def fetch_wyoprod(pkey, gap=3):
     m = re.search(r"Cumulative Production.*?Oil\s*([\d,]+)\s*BBLS.*?Gas\s*([\d,]+)\s*MCF.*?Water\s*([\d,]+)\s*BBLS", re.sub(r"<[^>]+>", " ", lst), flags=re.S)
     cum = [int(x.replace(",", "")) for x in m.groups()] if m else None
     mon = collections.defaultdict(lambda: [0, 0, 0])
+    dys = collections.defaultdict(int)      # days on production per month (largest across reservoirs; the tables use 99 before the well produced)
     num = lambda x: int(float(x.replace(",", ""))) if re.fullmatch(r"-?[\d,]*\.?\d+", x or "") else 0
     for code in codes:
         time.sleep(gap)
@@ -96,6 +98,14 @@ def fetch_wyoprod(pkey, gap=3):
                         continue
                     for mth in range(12):
                         mon[f"{year}-{mth + 1:02d}"][idx] += num(c[j + 1 + mth])
+                try:
+                    j = c.index("Days", i + 1, i + 70)
+                    for mth in range(12):
+                        v = c[j + 1 + mth] if j + 1 + mth < len(c) else ""
+                        if re.fullmatch(r"\d+", v or ""):
+                            dys[f"{year}-{mth + 1:02d}"] = max(dys[f"{year}-{mth + 1:02d}"], 0 if int(v) >= 99 else int(v))
+                except ValueError:
+                    pass
     nz = [k for k in sorted(mon) if any(mon[k])]
     if not nz:
         return None, cum
@@ -107,7 +117,8 @@ def fetch_wyoprod(pkey, gap=3):
         if mm > 12:
             y, mm = y + 1, 1
     z = [0, 0, 0]
-    return {"s": nz[0], "o": [mon.get(k, z)[0] for k in ks], "g": [mon.get(k, z)[1] for k in ks], "w": [mon.get(k, z)[2] for k in ks]}, cum
+    return {"s": nz[0], "o": [mon.get(k, z)[0] for k in ks], "g": [mon.get(k, z)[1] for k in ks], "w": [mon.get(k, z)[2] for k in ks],
+            "d": [dys.get(k, 0) for k in ks] if dys else []}, cum
 
 
 def fetch_days_wyoprod(pkey, gap=3):
