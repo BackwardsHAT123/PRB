@@ -11,7 +11,7 @@ html,body{height:100%}body{background:var(--bg);color:var(--fg);font:13px/1.4 sy
 #panel small,#note{color:var(--muted)}#panel label{display:block;margin:7px 0 0}#panel select{width:100%;margin-top:2px;padding:4px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px}
 #dashlink{margin-top:8px;font-size:12px}#dashlink a{color:var(--accent)}#dashlink small{color:var(--muted)}
 #count{font-variant-numeric:tabular-nums;margin-top:4px;color:var(--accent);font-weight:600}
-#leg{margin:8px 0;max-height:210px;overflow:auto;font-size:12px}#leg i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-2px}
+#leg{margin:8px 0;max-height:210px;overflow:auto;font-size:12px}#leg i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-2px}#leg .lg{cursor:pointer;padding:1px 4px;margin:0 -4px;border-radius:4px}#leg .lg:hover{background:var(--line)}#leg .lg.on{font-weight:600;outline:1px solid var(--fg)}
 #note{font-size:11px;margin-top:6px}
 .twn{font-weight:600;font-size:11px;color:var(--town);text-shadow:-1px -1px 0 var(--halo),1px -1px 0 var(--halo),-1px 1px 0 var(--halo),1px 1px 0 var(--halo);white-space:nowrap;pointer-events:none}.twn.c{font-size:13px}.leaflet-container{background:var(--bg);font:inherit}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--fg)}
 /* required styles */
@@ -712,10 +712,10 @@ const PAL=['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#0aa6b8','#c9a400'
 const GRP={'Producing Oil Well':'Active Producers','Producing Gas Well':'Active Producers','Pumping Rods':'Active Producers','Gas Lift':'Active Producers','Permanently Abandoned':'Abandoned','Subsequent Report of Abandonment':'Abandoned','Temporarily Abandoned':'Abandoned','Notice of Intent to Abandon':'Abandoned','Well Spudded':'Drilling','Proposed (APD)':'Proposed','Active Permit':'Drilling','Shut-In':'Shut in'};
 D.forEach(d=>{d.sg=GRP[d.s]||'Other';d.cty=d.cty||'Campbell'});
 const SC={'Active Producers':'#2ca02c','Drilling':'#7570b3','Proposed':'#f2a900','Shut in':'#8a8a8a','Abandoned':'#e31a1c','Other':'#1f78b4'},SORD=['Active Producers','Drilling','Proposed','Shut in','Abandoned','Other'];
-let cmap={};
+let cmap={},lh=null;   /* lh: legend highlight {k: colour-by key, v: value}, set by clicking a legend entry */
 function build(){const k=cb.value;if(k=='sg'){cmap={};SORD.forEach(g=>cmap[g]=SC[g]);}else{const c={};D.forEach(d=>c[d[k]]=(c[d[k]]||0)+1);const ks=Object.keys(c).sort((a,b)=>c[b]-c[a]);const FIX=k=='r'?{'Turner':'#2ca02c','Parkman':'#ff7f0e','Niobrara':'#ff69b4','Mowry':'#8b4513'}:{};const pool=PAL.filter(c=>k!='r'||!['#3cb44b','#f58231','#f032e6','#9a6324','#e6194b'].includes(c));let n=0;cmap={};ks.forEach(v=>{cmap[v]=FIX[v]||(v=='Unknown'?'#999':(n<pool.length-1?pool[n++]:'#999'))});}
 const cnt={};D.forEach(d=>cnt[d[k]]=(cnt[d[k]]||0)+1);
-leg.innerHTML=Object.keys(cmap).filter(v=>cnt[v]).map(v=>`<div><i style="background:${cmap[v]}"></i>${v} <small>(${cnt[v]})</small></div>`).join('')+(k!='sg'&&Object.keys(cnt).length>=PAL.length?'<div><i style="background:#999"></i>Other</div>':'')}
+const lvals=Object.keys(cmap).filter(v=>cnt[v]);leg.innerHTML=lvals.map(v=>`<div class="lg" title="Click to highlight these wells"><i style="background:${cmap[v]}"></i>${v} <small>(${cnt[v]})</small></div>`).join('')+(k!='sg'&&Object.keys(cnt).length>=PAL.length?'<div><i style="background:#999"></i>Other</div>':'');[...leg.querySelectorAll('.lg')].forEach((e,i)=>{e.classList.toggle('on',!!lh&&lh.k==k&&lh.v===lvals[i]);e.onclick=()=>{lh=lh&&lh.k==k&&lh.v===lvals[i]?null:{k,v:lvals[i]};build();go()}})}
 const col=d=>cmap[d[cb.value]]||'#999';
 const bubL=L.layerGroup().addTo(map);
 let lastVis=null;   /* declared before the first draw() call; drawBub (below) fills it */
@@ -725,14 +725,15 @@ fill('ct','cty');fill('fmf','r');fill('op','oc');fill('hl','oc');hl.options[0].t
 function pop(d){return `<b>${d.n}</b><br>API <a href="https://pipeline.wyo.gov/wellapi.cfm?nAPINO=${(+d.a.split('-')[1])+d.a.split('-')[2]}" target="_blank" rel="noopener">${d.a}</a><br>${d.oc} <small>(${d.o})</small><br>${d.s}<br>Field: ${d.f||'-'} · Formation: ${d.r}<br>${d.cty} Co. · Sec-Twp-Rge: ${d.sec}<br>Spud: ${d.sd||'-'} · Compl: ${d.cd||'-'}<br>TD: ${d.td||'-'} ft · Elev: ${d.el||'-'} ft<br>SHL ${d.shl[1]}, ${d.shl[0]}`+(d.fx==2?'<br><b>Path: corrected (state GIS track was in error)</b>':d.fx==9?'<br><b>Path: from the filed directional survey, adjusted to the header bottom hole</b>':d.fx==8?'<br><b>Path: from the filed directional survey (simplified)</b>':d.fx==7?'<br><b>Path: surface, heel, toe and bottom hole from the filed certification form</b>':d.fx==6?'<br><b>Path: from operator design survey (simplified)</b>':d.fx==5?'<br><b>Path: state track flipped east-west and fitted to the header bottom hole</b>':d.fx==4?'<br><b>Path: state track rescaled (it was 3.28x too short)</b>':d.fx==3?'<br><b>Path: straight line to header bottom hole (state track incomplete)</b>':d.note?'<br><b>'+d.note+'</b>':d.fx?'<br><b>Path: state track with one bad vertex removed</b>':'')+(d.bhl?`<br>BHL ${d.bhl[1]}, ${d.bhl[0]}`:'')+((d.oc=='Ballard Petroleum'||d.oc=='Sage Butte')?'<br><a href="https://backwardshat123.github.io/PRB/dashboard.html" target="_blank" rel="noopener">Operator performance dashboard</a>':'')}
 function draw(){g.clearLayers();const o=op.value,s=st.value,p=pts.checked,h=hl.value;let n=0,b=[];
 const vis=D.filter(d=>!(o&&d.oc!=o||s&&d.sg!=s||ct.value&&d.cty!=ct.value||fmf.value&&d.r!=fmf.value));
-const ordered=h?vis.filter(d=>d.oc!=h).concat(vis.filter(d=>d.oc==h)):vis;
-ordered.forEach(d=>{n++;const c=col(d),on=!h||d.oc==h,dim=h&&!on;
-if(d.ln)L.polyline(d.ln.map(x=>[x[1],x[0]]),{color:c,weight:on?(h?(d.surv?5:4):(d.surv?3:2)):1,opacity:dim?.18:.9}).bindPopup(()=>pop(d)).addTo(g);
-if(p){const r=on&&h?4:3,fo=dim?.25:1;L.circleMarker([d.shl[1],d.shl[0]],{radius:r,color:cs('--ptline'),weight:1,opacity:fo,fillColor:cs('--ptfill'),fillOpacity:fo}).bindPopup(()=>pop(d)).addTo(g);
+const hit=d=>(!h||d.oc==h)&&(!lh||d[lh.k]===lh.v),act=h||lh;
+const ordered=act?vis.filter(d=>!hit(d)).concat(vis.filter(hit)):vis;
+ordered.forEach(d=>{n++;const c=col(d),on=hit(d),dim=act&&!on;
+if(d.ln)L.polyline(d.ln.map(x=>[x[1],x[0]]),{color:c,weight:on?(act?(d.surv?5:4):(d.surv?3:2)):1,opacity:dim?.18:.9}).bindPopup(()=>pop(d)).addTo(g);
+if(p){const r=on&&act?4:3,fo=dim?.25:1;L.circleMarker([d.shl[1],d.shl[0]],{radius:r,color:cs('--ptline'),weight:1,opacity:fo,fillColor:cs('--ptfill'),fillOpacity:fo}).bindPopup(()=>pop(d)).addTo(g);
 if(d.bhl)L.circleMarker([d.bhl[1],d.bhl[0]],{radius:r,color:c,weight:1,opacity:fo,fillColor:c,fillOpacity:fo}).bindPopup(()=>pop(d)).addTo(g)}
-b.push([d.shl[1],d.shl[0]])});count.textContent=n+' wells'+(h?' · '+vis.filter(d=>d.oc==h).length+' '+h:'');drawBub(vis);return b}
+b.push([d.shl[1],d.shl[0]])});count.textContent=n+' wells'+(act?' · '+vis.filter(hit).length+' '+[h,lh&&lh.v].filter(Boolean).join(' / '):'');drawBub(vis);return b}
 let first=true;function go(){const b=draw();if(first&&b.length){map.fitBounds(b,{padding:[30,30]});first=false}}
-cb.onchange=()=>{build();go()};op.onchange=st.onchange=ct.onchange=fmf.onchange=pts.onchange=hl.onchange=go;build();go();
+cb.onchange=()=>{lh=null;build();go()};op.onchange=st.onchange=ct.onchange=fmf.onchange=pts.onchange=hl.onchange=go;build();go();
 function goWell(){const m=/^#(\d{2}-\d{3}-\d{5})$/.exec(location.hash);if(!m)return;const d=D.find(x=>x.a==m[1]);if(!d)return;
 if(op.value&&d.oc!=op.value||st.value&&d.sg!=st.value||ct.value&&d.cty!=ct.value||fmf.value&&d.r!=fmf.value){op.value='';st.value='';ct.value='';fmf.value='';go()}
 const ll=(d.ln&&d.ln.length>1?d.ln:[d.shl]).map(x=>[x[1],x[0]]);map.fitBounds(L.latLngBounds(ll),{padding:[70,70],maxZoom:14});
