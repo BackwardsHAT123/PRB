@@ -712,7 +712,8 @@ const PAL=['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#0aa6b8','#c9a400'
 const GRP={'Producing Oil Well':'Active Producers','Producing Gas Well':'Active Producers','Pumping Rods':'Active Producers','Gas Lift':'Active Producers','Permanently Abandoned':'Abandoned','Subsequent Report of Abandonment':'Abandoned','Temporarily Abandoned':'Abandoned','Notice of Intent to Abandon':'Abandoned','Well Spudded':'Drilling','Proposed (APD)':'Proposed','Active Permit':'Drilling','Shut-In':'Shut in'};
 /* 'Drilling' in GRP means state status Well Spudded or Active Permit; split it with the rig history (rg: date a rig last reported on the well's pad) and production (hp) */
 const RIGD=14,WOCD=92,rgAge=d=>d.rg?(Date.now()-Date.parse(d.rg))/864e5:null;
-function sgOf(d){const g=GRP[d.s]||'Other';if(g!='Drilling')return g;const a=rgAge(d);
+function sgOf(d){const g=GRP[d.s]||'Other';if(g!='Drilling')return g;if(d.hp)return 'Active Producers';   /* production reported: the state status just lags */
+const a=rgAge(d);
 if(a!=null&&a<=RIGD)return 'Drilling';                 /* rig on the pad now */
 if(a!=null&&a<=WOCD&&!d.hp)return 'Waiting on Completion';   /* rig on the pad in the last 3 months, no production reported yet */
 if(d.s=='Active Permit')return 'Active Permit';
