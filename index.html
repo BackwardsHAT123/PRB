@@ -8,7 +8,7 @@ html,body{height:100%}body{background:var(--bg);color:var(--fg);font:13px/1.4 sy
 #map{position:absolute;inset:0;background:var(--bg)}
 #panel{position:absolute;z-index:1000;top:16px;right:16px;width:min(270px,calc(100% - 32px));max-height:calc(100% - 32px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px #0003;padding:10px 12px}
 #panel summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none}#panel summary::-webkit-details-marker{display:none}
-#panel small,#note{color:var(--muted)}#panel label{display:block;margin:7px 0 0}#panel select{width:100%;margin-top:2px;padding:4px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px}
+#panel small,#note{color:var(--muted)}#panel label{display:block;margin:7px 0 0}#panel select{width:100%;margin-top:2px;padding:4px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px}#panel .ms{margin:7px 0 0}#panel .ms button{width:100%;margin-top:2px;padding:4px;text-align:left;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;font:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#panel .ms button::after{content:' \25BE';float:right}#stm{border:1px solid var(--line);border-radius:4px;padding:4px 6px;margin-top:2px}#stm label{margin:3px 0}.stclr{font-size:11px;cursor:pointer;text-decoration:underline;color:var(--muted)}
 #dashlink{margin-top:8px;font-size:12px}#dashlink a{color:var(--accent)}#dashlink small{color:var(--muted)}
 #count{font-variant-numeric:tabular-nums;margin-top:4px;color:var(--accent);font-weight:600}
 #leg{margin:8px 0;max-height:210px;overflow:auto;font-size:12px}#leg i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-2px}#leg .lg{cursor:pointer;padding:1px 4px;margin:0 -4px;border-radius:4px}#leg .lg:hover{background:var(--line)}#leg .lg.on{font-weight:600;outline:1px solid var(--fg)}
@@ -686,7 +686,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <details id="panel" open><summary>PRB WY horizontals<br><small>API ≥ 49-005-35840 (Campbell), 49-009-28220 (Converse), 49-019-29600 (Johnson) · WOGCC data</small></summary>
 <div id="count"></div>
 <label>Color by <select id="cb"><option value="sg">Well status</option><option value="r" selected>Producing formation</option><option value="oc">Operator</option></select></label>
-<label>County <select id="ct"></select></label><label>Formation <select id="fmf"></select></label><label>Operator <select id="op"></select></label><label>Status <select id="st"></select></label>
+<label>County <select id="ct"></select></label><label>Formation <select id="fmf"></select></label><label>Operator <select id="op"></select></label><div id="st" class="ms"><div>Status</div><button type="button" id="stb">All</button><div id="stm" hidden></div></div>
 <label>Highlight operator <select id="hl"></select></label><div id="leg"></div>
 <details id="disp"><summary>Display</summary><label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="bub"> Oil production bubbles at bottom hole</label><label id="bubo" hidden>Size by oil in the first <select id="bw"><option value="3">3 months</option><option value="6">6 months</option><option value="12" selected>12 months</option></select></label><div id="bubleg"></div><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="rg" checked> Active drilling rigs (inferred)</label><label><input type="checkbox" id="trl"> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label></details>
 <details id="exp"><summary>Export production</summary><label>Operator <select id="xop"></select></label><label>Formation <select id="xfm"></select></label><div class="xdate"><label>From <input type="month" id="xfrom"></label><label>To <input type="month" id="xto"></label></div><div id="xinfo">loading production…</div><button class="pbtn" id="xdl" disabled>Download CSV</button><div class="plg" style="color:var(--muted);margin-top:4px">Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.</div></details>
@@ -729,10 +729,16 @@ const bubL=L.layerGroup().addTo(map);
 let lastVis=null;   /* declared before the first draw() call; drawBub (below) fills it */
 const g=L.layerGroup().addTo(map);
 function fill(id,key){const s=document.getElementById(id),c={};D.forEach(d=>c[d[key]]=(c[d[key]]||0)+1);const vs=Object.keys(c).sort(key=='oc'||key=='r'?(a,b)=>c[b]-c[a]||a.localeCompare(b):undefined);s.innerHTML='<option value="">All</option>'+vs.map(v=>`<option value="${v}">${v}${key=='oc'||key=='r'?' ('+c[v]+')':''}</option>`).join('')}
-fill('ct','cty');fill('fmf','r');fill('op','oc');fill('hl','oc');hl.options[0].text='None';fill('st','sg');
+fill('ct','cty');fill('fmf','r');fill('op','oc');fill('hl','oc');hl.options[0].text='None';/* Status is a multi-select: st.sel holds the ticked categories, none ticked means all */
+st.sel=[];function stLabel(){stb.textContent=st.sel.length?st.sel.join(', '):'All'}
+function stClear(){st.sel=[];stm.querySelectorAll('input').forEach(i=>i.checked=false);stLabel()}
+(function(){const c={};D.forEach(d=>c[d.sg]=(c[d.sg]||0)+1);const vs=SORD.filter(v=>c[v]);
+stm.innerHTML='<div><span class="stclr" id="stclr">Clear (show all)</span></div>'+vs.map(v=>`<label><input type="checkbox" value="${v}"> ${v} <small>(${c[v]})</small></label>`).join('');
+stm.querySelectorAll('input').forEach(i=>i.onchange=()=>{st.sel=[...stm.querySelectorAll('input:checked')].map(x=>x.value);stLabel()});
+stclr.onclick=()=>{stClear();go()};stb.onclick=()=>{stm.hidden=!stm.hidden}})();
 function pop(d){return `<b>${d.n}</b><br>API <a href="https://pipeline.wyo.gov/wellapi.cfm?nAPINO=${(+d.a.split('-')[1])+d.a.split('-')[2]}" target="_blank" rel="noopener">${d.a}</a><br>${d.oc} <small>(${d.o})</small><br>${d.s}${d.rg?' <small>(rig last on the pad '+d.rg+')</small>':''}<br>Field: ${d.f||'-'} · Formation: ${d.r}<br>${d.cty} Co. · Sec-Twp-Rge: ${d.sec}<br>Spud: ${d.sd||'-'} · Compl: ${d.cd||'-'}<br>TD: ${d.td||'-'} ft · Elev: ${d.el||'-'} ft<br>SHL ${d.shl[1]}, ${d.shl[0]}`+(d.fx==2?'<br><b>Path: corrected (state GIS track was in error)</b>':d.fx==9?'<br><b>Path: from the filed directional survey, adjusted to the header bottom hole</b>':d.fx==8?'<br><b>Path: from the filed directional survey (simplified)</b>':d.fx==7?'<br><b>Path: surface, heel, toe and bottom hole from the filed certification form</b>':d.fx==6?'<br><b>Path: from operator design survey (simplified)</b>':d.fx==5?'<br><b>Path: state track flipped east-west and fitted to the header bottom hole</b>':d.fx==4?'<br><b>Path: state track rescaled (it was 3.28x too short)</b>':d.fx==3?'<br><b>Path: straight line to header bottom hole (state track incomplete)</b>':d.note?'<br><b>'+d.note+'</b>':d.fx?'<br><b>Path: state track with one bad vertex removed</b>':'')+(d.bhl?`<br>BHL ${d.bhl[1]}, ${d.bhl[0]}`:'')+((d.oc=='Ballard Petroleum'||d.oc=='Sage Butte')?'<br><a href="https://backwardshat123.github.io/PRB/dashboard.html" target="_blank" rel="noopener">Operator performance dashboard</a>':'')}
-function draw(){g.clearLayers();const o=op.value,s=st.value,p=pts.checked,h=hl.value;let n=0,b=[];
-const vis=D.filter(d=>!(o&&d.oc!=o||s&&d.sg!=s||ct.value&&d.cty!=ct.value||fmf.value&&d.r!=fmf.value));
+function draw(){g.clearLayers();const o=op.value,s=st.sel,p=pts.checked,h=hl.value;let n=0,b=[];
+const vis=D.filter(d=>!(o&&d.oc!=o||s.length&&!s.includes(d.sg)||ct.value&&d.cty!=ct.value||fmf.value&&d.r!=fmf.value));
 const hit=d=>(!h||d.oc==h)&&(!lh||d[lh.k]===lh.v),act=h||lh;
 const ordered=act?vis.filter(d=>!hit(d)).concat(vis.filter(hit)):vis;
 ordered.forEach(d=>{n++;const c=col(d),on=hit(d),dim=act&&!on;
@@ -743,7 +749,7 @@ b.push([d.shl[1],d.shl[0]])});count.textContent=n+' wells'+(act?' · '+vis.filte
 let first=true;function go(){const b=draw();if(first&&b.length){map.fitBounds(b,{padding:[30,30]});first=false}}
 cb.onchange=()=>{lh=null;build();go()};op.onchange=st.onchange=ct.onchange=fmf.onchange=pts.onchange=hl.onchange=go;build();go();
 function goWell(){const m=/^#(\d{2}-\d{3}-\d{5})$/.exec(location.hash);if(!m)return;const d=D.find(x=>x.a==m[1]);if(!d)return;
-if(op.value&&d.oc!=op.value||st.value&&d.sg!=st.value||ct.value&&d.cty!=ct.value||fmf.value&&d.r!=fmf.value){op.value='';st.value='';ct.value='';fmf.value='';go()}
+if(op.value&&d.oc!=op.value||st.sel.length&&!st.sel.includes(d.sg)||ct.value&&d.cty!=ct.value||fmf.value&&d.r!=fmf.value){op.value='';stClear();ct.value='';fmf.value='';go()}
 const ll=(d.ln&&d.ln.length>1?d.ln:[d.shl]).map(x=>[x[1],x[0]]);map.fitBounds(L.latLngBounds(ll),{padding:[70,70],maxZoom:14});
 L.popup({autoPan:true}).setLatLng([d.shl[1],d.shl[0]]).setContent(pop(d)).openOn(map)}
 goWell();addEventListener('hashchange',goWell);
