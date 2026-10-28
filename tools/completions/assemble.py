@@ -18,6 +18,21 @@ def cv(v):
         if v.lower().startswith(k): return n
     return v
 for w in D['wells']: w['vendor']=cv(w.get('vendor'))
+# lateral = span of the state's Producing Intervals (same rule as tools/dashboard/build_all.py); the mapped path length stays in len_path and is the fallback
+LS=json.load(open('../pub2/data/lateral_state.json'))
+def state_len(api,path_len):
+    rows=[(x,y) for x,y in LS.get(api,[]) if y>x]
+    if not rows or not path_len: return None
+    sp=max(y for x,y in rows)-min(x for x,y in rows)
+    return round(sp) if 3000<=sp<=20000 and 0.55*path_len<=sp<=1.1*path_len else None
+nst=0
+for w in D['wells']:
+    base=w.get('len_path') or w.get('len')
+    if not base: continue
+    w['len_path']=base; sl=state_len(w['api'].replace('-','').replace('49','',1) if False else w['api'],base)
+    w['len']=sl or base; nst+=bool(sl)
+    if w.get('o12'): w['oil1k']=round(w['o12']/w['len']*1000)
+print(nst,'of',len(D['wells']),'wells use the state producing-interval lateral')
 s=s[:m.start(g)]+json.dumps(D,separators=(',',':'))+s[m.end(g):]
 s=re.sub(r'<meta name="description" content="[^"]*">','<meta name="description" content="Stages, proppant, fluid type, vendor and treating data for Niobrara wells in the Powder River Basin.">',s)
 open(p,'w').write(s)
