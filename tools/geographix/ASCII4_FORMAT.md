@@ -45,11 +45,19 @@ lease end 783 · 10-digit API start 907.
 month `mm/01/yyyy` start 219 · `100` end 232 (probably the allocation percent) · days on production end 236.
 Every month from first production to the last reported month has a row, including zero months.
 
-**Seen in the sample but not written**: FT (formation tops), ST (survey stations), MC (casing; size in cols 32-50, depth 91-95, hole size 265-269),
-PF (perforation intervals; sequence at 44-60, top end 80, bottom end 90), IT (fluid gal end 129, proppant lbs end 163, date at 282),
+**ST** (written for wells with a complete filed survey in `data/survey_stations.json`): `Default` start 34 · measured depth end 83 · true vertical depth end 94 ·
+inclination end 102 · azimuth end 110 · north offset end 120 · east offset end 130 (feet from the surface location; first row is all zeros). Only MD, inclination and
+azimuth are stored, so TVD and offsets are computed by minimum curvature from a vertical tie-in at the surface; recomputing the sample's own stations this way
+matches Drillinginfo within 0.11 ft. A survey is "complete" when it starts within 3,000 ft MD at under 5 degrees and has no gap over 600 ft past 10 degrees; tables that hold
+only the lateral are skipped (about a third of the stored surveys), since their TVD and offsets would be wrong.
+
+**PF** (written from the state producing intervals in `data/lateral_state.json`): completion number end 44 (always 1) · interval number end 60 · top end 80 · bottom end 90.
+These are the state's producing-interval rows (top and bottom of each, deduplicated), not the individual perforation clusters the sample holds.
+
+**Seen in the sample but not written**: FT (formation tops), MC (casing; size in cols 32-50, depth 91-95, hole size 265-269), IT (fluid gal end 129, proppant lbs end 163, date at 282),
 IP (test date 121, oil bbl end 162, gas mcf end 186, water bbl end 210).
 
 ## Checked against the sample
 Exporting the same two wells from the PRB data reproduces the sample's section comments, the B0 lines and every oil, gas, water and date value in PT exactly.
 Differences are source data only: the Drillinginfo file has its own surface and bottom-hole coordinates, elevations, total depth, a few dates and a top-perf depth.
-Days on production are stored for the first 8 months only, so later months are blank.
+Days on production are filled in for every month once the backfill (`tools/dashboard/backfill_days_full.py`) has reached the well.

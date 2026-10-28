@@ -16,6 +16,7 @@ def state_len(api, path_len):
     s = max(b for a, b in rows) - min(a for a, b in rows)
     return round(s) if 3000 <= s <= 20000 and 0.55 * path_len <= s <= 1.1 * path_len else None    # reject typos, partial intervals and anything far off the mapped path
 H = (3, 6, 12)
+MIN_LAT = 1500      # laterals shorter than this keep their totals but are left out of every per-foot figure (wells table, benchmark, curves)
 
 def hav(a, b):
     R = 20902231; la1, lo1, la2, lo2 = map(math.radians, (a[1], a[0], b[1], b[0]))
@@ -36,6 +37,7 @@ for d in D:
     r = {"api": d["a"], "name": d["n"], "op": d["oc"], "fm": d["r"], "cty": d["cty"], "twp": d["sec"].split("-", 1)[1] if d.get("sec") else None,
          "yr": fy, "len": L, "lon": d["shl"][0] if d.get("shl") else None, "lat": d["shl"][1] if d.get("shl") else None,
          "ln": [round(c, 4) for pt in d["ln"] for c in pt] if d.get("ln") and len(d["ln"]) > 1 else None}   # simplified lateral path, lon,lat pairs
+    LF = L if L and L >= MIN_LAT else None     # lateral used for per-foot figures
     dd = [] if os.environ.get("NO_DAYS") else (p.get("d") or [])      # NO_DAYS=1: ignore the days-on-production data (used while it is only partly filled in)
     d0 = dd[k] if k < len(dd) else None        # days on production in the first month with oil (None when not on file)
     short = d0 is not None and d0 < 10         # a first month under 10 days: the 3-month window takes a 4th month
@@ -45,7 +47,7 @@ for d in D:
         if n >= hh:
             oo = sum(o[k:k + hh]); ww = sum(w[k:k + hh])
             r[f"o{h}"] = round(oo); r[f"w{h}"] = round(ww)
-            r[f"of{h}"] = round(oo / L * 1000, 1) if L else None; r[f"wf{h}"] = round(ww / L * 1000, 1) if L else None
+            r[f"of{h}"] = round(oo / LF * 1000, 1) if LF else None; r[f"wf{h}"] = round(ww / LF * 1000, 1) if LF else None
         else:
             r[f"o{h}"] = r[f"w{h}"] = r[f"of{h}"] = r[f"wf{h}"] = None
     wells.append(r)
@@ -73,7 +75,7 @@ BM = {b["fm"]: b for b in bench}
 
 # curves: median cumulative oil and water by month since first oil, per series
 def series(label, op, fm, rs, minw):
-    rs = [r for r in rs if r["len"]]
+    rs = [r for r in rs if r["len"] and r["len"] >= MIN_LAT]
     out = {"series": label, "op": op, "fm": fm, "n": [], "oil": [], "water": [], "oil_ft": [], "water_ft": []}
     for m in range(24):
         sel = [r for r in rs if len(cum[r["api"]][0]) > m]
@@ -108,7 +110,7 @@ print("grid", len(GRID), "sections", len(SEC))
 # wellcurves: each well's cumulative oil and water per 1,000 ft of lateral over its first 36 months (barrels, whole numbers), for the cumulative-production chart
 wc = {}
 for r in wells:
-    if not r["len"]: continue
+    if not r["len"] or r["len"] < MIN_LAT: continue
     oc, wcm = cum[r["api"]]
     y0, m0 = int(P[r["api"]]["s"][:4]), int(P[r["api"]]["s"][5:]) - 1 + FIRST[r["api"]]
     wc[r["api"]] = [[int(round(v / r["len"] * 1000)) for v in oc], [int(round(v / r["len"] * 1000)) for v in wcm], f"{y0 + m0 // 12}-{m0 % 12 + 1:02d}"]     # third item: calendar month of first oil
