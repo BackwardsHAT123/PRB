@@ -645,8 +645,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
   function cumList(rows, d, nm, nl) {
     const host = $('cum-list'), wm = new Map(d.wells.map((w) => [w.api, w]));
     $('h-cum-list').textContent = rows.length + ' well' + (rows.length === 1 ? '' : 's') + ' shown';
-    const data = rows.map((r) => { const w = wm.get(r.api) || {}, wc = d.wellcurves[r.api] || []; return { col: r.col, api: r.api, name: r.name, op: r.op, fm: w.fm || '', first: wc[2] || String(r.yr), len: w.len, n: r.pts.length, val: r.pts[r.pts.length - 1].v }; });
-    const keyed = { name: (r) => r.name, op: (r) => r.op, fm: (r) => r.fm, first: (r) => r.first, len: (r) => r.len || 0, n: (r) => r.n, val: (r) => r.val };
+    const data = rows.map((r) => { const w = wm.get(r.api) || {}, wc = d.wellcurves[r.api] || []; return { col: r.col, api: r.api, name: r.name, op: r.op, fm: w.fm || '', first: wc[2] || String(r.yr), len: w.len, n: r.pts.length, val: r.pts[r.pts.length - 1].v, tot: w.len ? r.pts[r.pts.length - 1].v / (nl === '9,500' ? 9.5 : 1) * w.len / 1000 : null }; });
+    const keyed = { name: (r) => r.name, op: (r) => r.op, fm: (r) => r.fm, first: (r) => r.first, len: (r) => r.len || 0, n: (r) => r.n, val: (r) => r.val, tot: (r) => (r.tot == null ? -1 : r.tot) };
     const draw = () => {
       const f = keyed[cumSort.k], dir = cumSort.dir;
       data.sort((a, b) => { const x = f(a), y = f(b); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
@@ -657,7 +657,8 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
         { label: 'First oil', k: 'first', w: 11, n: true, cell: (r, td) => { td.textContent = r.first; } },
         { label: 'Lateral, ft', k: 'len', w: 10, n: true, cell: (r, td) => { td.textContent = num(r.len); } },
         { label: 'Months', k: 'n', w: 7, n: true, cell: (r, td) => { td.textContent = r.n; } },
-        { label: 'Cumulative ' + nm + ', bbl per ' + nl + ' ft', k: 'val', w: 18, n: true, cell: (r, td) => { td.textContent = num(r.val); } }
+        { label: 'Cumulative ' + nm + ', bbl per ' + nl + ' ft', k: 'val', w: 18, n: true, cell: (r, td) => { td.textContent = num(r.val); } },
+        { label: 'Cumulative ' + nm + ', bbl (well total)', k: 'tot', w: 16, n: true, cell: (r, td) => { td.textContent = r.tot == null ? '—' : num(r.tot); } }
       ];
       table(host, null, 'api', cols, data);
       host.querySelectorAll('th').forEach((th, i) => { th.style.cursor = 'pointer'; th.title = 'Sort by this column'; th.setAttribute('aria-sort', cols[i].k === cumSort.k ? (dir < 0 ? 'descending' : 'ascending') : 'none'); if (cols[i].k === cumSort.k) th.textContent += dir < 0 ? ' ↓' : ' ↑'; th.addEventListener('click', () => { cumSort = { k: cols[i].k, dir: cumSort.k === cols[i].k ? -dir : (cols[i].k === 'name' || cols[i].k === 'op' || cols[i].k === 'fm' ? 1 : -1) }; draw(); }); });
