@@ -708,7 +708,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
     if (st.ctop) {
       const pool = d.wells.filter((w) => inFm(w) && d.wellcurves[w.api] && oil6(d.wellcurves[w.api], w.len) != null && (!st.cl2y || recent(w.api))).map((w) => ({ w, o: oil6(d.wellcurves[w.api], w.len), a: d.wellcurves[w.api][pi].map((v) => v * nf) })).sort((p, q) => q.o - p.o).slice(0, 25);
       const pts = [];
-      for (let mo = 1; mo <= st.cmo; mo++) { const v = pool.filter((r) => r.a.length >= mo).map((r) => r.a[mo - 1]); if (v.length < 5) break; pts.push({ m: mo, v: d3.mean(v) }); }
+      for (let mo = 1; mo <= st.cmo; mo++) { const v = pool.filter((r) => r.a.length >= mo).map((r) => r.a[mo - 1]); if (v.length < Math.max(5, pool.length / 2)) break;   /* stop once under half the wells have reached this month: the survivors are a different, older subset and bend the line */ pts.push({ m: mo, v: d3.mean(v) }); }
       if (pts.length > 1) topAvg = { name: 'Top 25 ' + (st.fm === 'all' ? '' : st.fm + ' ') + 'wells, average', n: pool.length, pts };
     }
     if (byWell) { if (rows.length <= 40) legend($('leg-cum'), rows.slice().sort((a, b) => (a.name < b.name ? -1 : 1)).map((r) => ({ color: r.col, label: r.name }))); else { $('leg-cum').replaceChildren(el('span', 'px-note', rows.length + ' wells, one colour each: hover a line to see which well it is.')); } }
