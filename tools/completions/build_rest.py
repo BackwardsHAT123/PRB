@@ -1,9 +1,9 @@
 """build_rest.py operator -> rest_<op>.json: dashboard well records (grp 'more') + stage rows for every fetched well of that operator."""
 import json,os,re,sys,statistics as st
-op=sys.argv[1]; slug=op.replace(" ","_")
+op=sys.argv[1]; slug=op.replace(" ","_")+os.environ.get("TAG","")
 os.system(f"python3 extract_b.py '{op}' >/dev/null && python3 merge.py '{op}' >/dev/null")
 ex={x['api']:x for x in json.load(open(f'extract_{slug}.json'))}
-sf=json.load(open(f'stage_{slug}.json')); base={w['api']:w for w in json.load(open('nio_rest.json'))}
+sf=json.load(open(f'stage_{slug}.json')); base={w['api']:w for w in json.load(open(os.environ.get('LIST','nio_rest.json')))}
 def tret(path):
     s=open(path,errors="replace").read(); t=re.sub(r"<script.*?</script>|<style.*?</style>","",s,flags=re.S); rows=[]
     for r in re.findall(r"<tr[^>]*>(.*?)</tr>",t,flags=re.S|re.I):
@@ -41,10 +41,11 @@ for a,e in ex.items():
         m=re.findall(r"(?:Niobrara|Intervals)[^|]{0,6}?(\d{2,3})\s*Intervals",txt,re.I)
         if not m: m=re.findall(r"Stgs\s*1\s*-\s*(\d{2,3})",txt,re.I)
         if m: stages=int(m[0])
+    if not stages and len(st_rows)>=8: stages=len(st_rows)      # no stage count in the Form 3 text: use the number of rows the stage table gave
     w=dict(api=a,name=b['name'],op=b['op'],cty=b['cty'],yr=b['yr'],len=b['len'],o12=b['o12'],stages=stages,sand=e['proppant_lb'] or None,fluid_bbl=e['fluid_bbl'] or None,sizes=mesh,vendor=ven,ftype=ft,
         rate=cfv.get('rate') if cfv else round(st.mean(rate),1) if rate else None,press=cfv.get('press') if cfv else round(st.mean(press)) if press else None,fg=cfv.get('fg') if cfv else round(st.mean(fg),2) if fg else None,isip=cfv.get('isip') if cfv else round(st.mean(isip)) if isip else None,
         basis='job summary' if cfv else f'mean of per-stage values ({src}, OCR-parsed)' if (rate or press or isip) else '',has_stage=a in sf['stages'],eff=eff,
-        slen=round(eff/stages) if eff and stages else None,slen_src='calc' if eff and stages else '',oil1k=round(b['o12']/b['len']*1000) if b.get('o12') and b.get('len') else None,twp=b['twp'],grp='more')
+        slen=round(eff/stages) if eff and stages else None,slen_src='calc' if eff and stages else '',oil1k=round(b['o12']/b['len']*1000) if b.get('o12') and b.get('len') else None,twp=b['twp'],fm=b['fm'],grp='more')
     wells.append(w)
 json.dump(dict(wells=wells,stages=sf['stages'],src=sf['src']),open(f'rest_{slug}.json','w'),separators=(',',':'))
 print(len(wells),'wells;',len(sf['stages']),'with stage rows')

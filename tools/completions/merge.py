@@ -1,6 +1,7 @@
 """merge.py operator -> stage_<op>.json {stages:{api:[rows]},src:{api:str},wells:{api:summary}} from reader outputs + Form 3 extract."""
 import json,os,sys,re,statistics as st
-op=sys.argv[1]; slug=op.replace(" ","_")
+import os
+op=sys.argv[1]; slug=op.replace(" ","_")+os.environ.get("TAG","")
 ex={x['api']:x for x in json.load(open(f'extract_{slug}.json'))}
 def norm(r):
     o={}
@@ -9,7 +10,7 @@ def norm(r):
         for s in ((1,1000,0.1,0.01,10,100) if scale else (1,)):
             x=v*s
             if lo<=x<=hi: o[k]=round(x,3) if hi<10 else round(x,1) if hi<200 else round(x); return
-    put('isip',r.get('isip'),3000,9500,1); put('press',r.get('press'),5000,13500,1); put('maxpress',r.get('maxpress'),5000,14000,1)
+    put('isip',r.get('isip'),3000,9500,1); put('press',r.get('press'),3000,13500,1); put('maxpress',r.get('maxpress'),3000,14000,1)
     put('rate',r.get('rate'),30,140,1); put('fg',r.get('fg'),0.7,1.2,1)
     put('fluid',r.get('fluid'),3000,40000); put('prop',r.get('prop'),100000,1500000)
     return o
@@ -23,6 +24,11 @@ for a,e in ex.items():
         rows=[r for r in rows if r.get('n',0)>0]
         if n: rows=rows[:n]
         out[a]=[dict(n=r['n'],**norm(r)) for r in rows]; src[a]="Liberty "+("pressure summary" if A else "stage summary"); continue
+    f=f'lib2_{a}.json'      # Liberty 2025 report: scanned pressure table (rate, ISIP and gradient are charts, so only pressure is read)
+    if os.path.exists(f) and os.path.getsize(f)>5:
+        rows=[r for r in json.load(open(f))]
+        if n: rows=rows[:n]
+        out[a]=[dict(n=r['n'],**norm(dict(press=r.get('press'),maxpress=r.get('maxp')))) for r in rows]; src[a]="Liberty completion report (pressure table; the rate, ISIP and gradient pages are charts)"; continue
     f=f'eog_{a}.json'
     if os.path.exists(f) and os.path.getsize(f)>5:
         rows=[r for p,rot,rs in sorted(json.load(open(f)),key=lambda t:t[0]) for r in rs]

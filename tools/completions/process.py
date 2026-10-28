@@ -1,13 +1,14 @@
 """process.py operator-substring -> runs applicable vendor stage readers on every fetched well of that operator (skips done outputs)."""
 import json,glob,os,re,subprocess,sys,time
 op=sys.argv[1].lower(); PY="../conv2/ocrenv/bin/python"
-W=[w for w in json.load(open("nio_rest.json")) if op in w["op"].lower() and os.path.exists(f"wells/{w['api']}/done")]
+W=[w for w in json.load(open(os.environ.get("LIST","nio_rest.json"))) if op in w["op"].lower() and os.path.exists(f"wells/{w['api']}/done")]
 def log(m): print(time.strftime("%H:%M:%S"),m,flush=True)
 for w in W:
     a=w["api"]; txt=" ".join(" ".join(json.load(open(p))) for p in glob.glob(f"wells/{a}/f3_*.json")).lower().replace(" ","")
     if not txt: log(f"{a} no reports"); continue
     todo=[]
     if "liberty" in txt or "pressuresummary" in txt: todo.append(("lib",f"lib_{a}.json"))
+    if ("liberty" in txt or "avepsi" in txt) and "avepsi" in txt: todo.append(("lib2",f"lib2_{a}.json"))     # 2025 Liberty report with a scanned pressure table
     if "element" in txt or "zonereport" in txt: todo.append(("element",f"el_{a}.json"))
     if "halliburton" in txt or "stagesummary" in txt: todo.append(("hal2",f"hal2_{a}.json"))
     if "fts" in txt or "treatmentreport" in txt: todo.append(("ftsi",f"ftsi_{a}.json"))
