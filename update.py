@@ -259,9 +259,10 @@ def build_wells(log):
     return out
 
 
-def build_rigs(wells, log):
+def rig_records(log, days=100):
+    """Drilling-rig call-in records for the last `days` days: [(county, record)], record[0] is the API, [1] the call-in date, [2] the rig."""
     today = datetime.date.today()
-    start = today - datetime.timedelta(days=60)
+    start = today - datetime.timedelta(days=days)
     body = urllib.parse.urlencode({"bmon": start.month, "bday": start.day, "byear": start.year,
                                    "emon": today.month, "eday": today.day, "eyear": today.year,
                                    "SubmitClassDate": "GoFind"}).encode()
@@ -278,6 +279,12 @@ def build_rigs(wells, log):
         rec = cells[cells.index("Well Class") + 1:] if "Well Class" in cells else cells
         idx = [n for n, x in enumerate(rec) if re.fullmatch(r"49-\d{3}-\d{5}", x)]
         recs += [(cname, rec[a:b][:13]) for a, b in zip(idx, idx[1:] + [len(rec)]) if len(rec[a:b]) >= 13]
+    return recs
+
+
+def build_rigs(wells, log, recs=None):
+    today = datetime.date.today()
+    recs = rig_records(log, 100) if recs is None else recs
 
     def norm(r):
         r = r.upper().replace("ANSCHUTZ / ", "").replace("ANSCHUTZ/", "").replace("OXY / ", "")
@@ -308,6 +315,52 @@ def build_rigs(wells, log):
     rigs.sort(key=lambda r: r["age"])
     log(f"{len(recs)} call-in records; active rigs: {[(r['rig'], r['age']) for r in rigs]}")
     return rigs
+
+
+PAD_M = 120      # wells this close to a well a rig called in on share its pad (the rig was over their surface location)
+RIG_HIST_DAYS = 100
+
+
+def annotate_rigs(wells, recs, log):
+    """rg: date a rig last reported on the pad of each well (within RIG_HIST_DAYS); hp: 1 if oil production has been reported."""
+    today = datetime.date.today()
+    byapi = {w["a"]: w for w in wells}
+    locs = {}                                   # api -> (location, latest call-in date)
+    for cname, r in recs:
+        d = datetime.datetime.strptime(r[1], "%m/%d/%Y").date()
+        if (today - d).days > RIG_HIST_DAYS:
+            continue
+        loc = byapi[r[0]]["shl"] if r[0] in byapi and byapi[r[0]].get("shl") else None
+        if r[0] not in locs or d > locs[r[0]][1]:
+            locs[r[0]] = (loc, d)
+    for api, (loc, d) in list(locs.items()):
+        if loc is None:                          # not a horizontal on the map: look the surface location up in the state well layer
+            try:
+                f = wfs("WELL", f"WellId='{api}'")
+                loc = [f[0]["geometry"]["coordinates"][0], f[0]["geometry"]["coordinates"][1]] if f else None
+            except Exception:
+                loc = None
+            locs[api] = (loc, d)
+    for w in wells:
+        w.pop("rg", None)
+    n = 0
+    for api, (loc, d) in locs.items():
+        if api in byapi and (byapi[api].get("rg") or "") < str(d):
+            byapi[api]["rg"] = str(d)
+        if not loc:
+            continue
+        for w in wells:
+            if w.get("shl") and meters(w["shl"], loc) <= PAD_M and (w.get("rg") or "") < str(d):
+                w["rg"] = str(d)
+    n = sum(1 for w in wells if w.get("rg"))
+    try:
+        P = json.load(open(PRODUCTION))
+    except Exception:
+        P = {}
+    for w in wells:
+        p = P.get(w["a"])
+        w["hp"] = 1 if p and not p.get("none") and any((v or 0) > 0 for v in p.get("o", [])) else 0
+    log(f"rig history: {len(locs)} wells with call-ins in {RIG_HIST_DAYS} days; {n} wells on those pads; {sum(w['hp'] for w in wells)} wells with production reported")
 
 
 def write_index(wells, rigs):
@@ -365,10 +418,21 @@ def push_changes(wells, rigs, log, attempts=4):
 
 def main():
     log = lambda m: print(datetime.datetime.now().strftime("%H:%M:%S"), m, flush=True)
+    if "--annotate-only" in sys.argv:    # refresh only the rig-history (rg) and production (hp) fields of the wells already in index.html
+        s = open(INDEX).read()
+        i = s.index("const D=") + 8
+        j = s.index(";\nconst GRID", i)
+        wells = json.loads(s[i:j])
+        annotate_rigs(wells, rig_records(log, RIG_HIST_DAYS), log)
+        s = s[:i] + json.dumps(wells, separators=(",", ":")) + s[j:]
+        open(INDEX, "w").write(s)
+        return
     wells = build_wells(log)
     if len(wells) < 1000:
         sys.exit(f"only {len(wells)} wells came back, expected about 1,400; leaving index.html unchanged")
-    rigs = build_rigs(wells, log)
+    recs = rig_records(log, RIG_HIST_DAYS)
+    rigs = build_rigs(wells, log, recs)
+    annotate_rigs(wells, recs, log)
     before = open(INDEX).read()
     write_index(wells, rigs)
     try:
