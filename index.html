@@ -708,7 +708,10 @@ body{font-family:"Outfit","Avenir Next",system-ui,sans-serif}
 #panel summary{font-weight:600}
 a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
 input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
-.leaflet-bar,.leaflet-bar a{border-radius:12px}
+.leaflet-bar{border-radius:12px}
+.leaflet-bar a,.leaflet-touch .leaflet-bar a{border-radius:0!important}
+.leaflet-bar a:first-child,.leaflet-touch .leaflet-bar a:first-child{border-radius:12px 12px 0 0!important}
+.leaflet-bar a:last-child,.leaflet-touch .leaflet-bar a:last-child{border-radius:0 0 12px 12px!important}
 </style></head><body>
 <div id="map"></div>
 <button type="button" id="themebtn"></button>
