@@ -723,7 +723,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 <div class="row2"><label>County <select id="ct"></select></label><label>Formation <select id="fmf"></select></label></div><label>Operator <select id="op"></select></label><div id="st" class="ms"><div>Status</div><button type="button" id="stb">All</button><div id="stm" hidden></div></div>
 <label>Highlight operator <select id="hl"></select></label><div id="leg"></div>
 <details id="disp"><summary>Display</summary><label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="bub"> Oil production bubbles at bottom hole</label><label id="bubo" hidden>Size by oil in the first <select id="bw"><option value="3">3 months</option><option value="6">6 months</option><option value="12" selected>12 months</option></select></label><div id="bubleg"></div><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="rg" checked> Active drilling rigs (inferred)</label><label><input type="checkbox" id="trl"> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label><label><input type="checkbox" id="ctyo" checked> County outlines</label></details>
-<details id="exp"><summary>Export production</summary><label>Operator <select id="xop"></select></label><label>Formation <select id="xfm"></select></label><div class="xdate"><label>From <input type="month" id="xfrom"></label><label>To <input type="month" id="xto"></label></div><div id="xinfo">loading production…</div><button class="pbtn" id="xdl" disabled>Download CSV</button><div class="plg" style="color:var(--muted);margin-top:4px">Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.</div></details>
+<details id="exp"><summary>Export production</summary><label>Format <select id="xfmt"><option value="csv">Standard CSV</option><option value="aries">Aries (.xlsx)</option></select></label><label>Operator <select id="xop"></select></label><label>Formation <select id="xfm"></select></label><div class="xdate"><label>From <input type="month" id="xfrom"></label><label>To <input type="month" id="xto"></label></div><div id="xinfo">loading production…</div><button class="pbtn" id="xdl" disabled>Download CSV</button><div class="plg" id="xnote" style="color:var(--muted);margin-top:4px"></div></details>
 <div id="note">Grid is township and range; roads and towns from OpenStreetMap (OSM roads cover Campbell County only). Well data as of <span id="asof">Oct 27, 2026</span> (updated daily). Lines run surface to bottom hole; 1077 wells have a multi-point surveyed path (thicker).</div></details>
 <div id="plot" hidden><div class="ph"><b id="ptitle"></b><span><label><input type="checkbox" id="pcum"> cumulative</label><label><input type="checkbox" id="plog" checked> log scale</label><label id="pautol"><input type="checkbox" id="pauto"> autoscale Y</label><button id="pclose" aria-label="Close plot">&times;</button></span></div><svg id="psvg" role="img" aria-label="Monthly oil, gas and water production"></svg><div id="pro"></div><div class="plg" id="plegend"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -953,7 +953,7 @@ function initExport(){
  xop.innerHTML=opts(co);xfm.innerHTML=opts(cf);
  xfrom.min=xto.min=lo;xfrom.max=xto.max=hi;
  xop.onchange=xfm.onchange=xfrom.onchange=xto.onchange=xUpdate;
- xdl.onclick=downloadBulk;xUpdate();
+ xdl.onclick=()=>xfmt.value==='aries'?downloadAries():downloadBulk();xUpdate();
 }
 function downloadBulk(){
  try{
@@ -968,6 +968,57 @@ function downloadBulk(){
   l.href=url;l.download=parts.join('_')+'.csv';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
  }catch(e){console.error(e)}
 }
+
+/*XLSX-BEGIN*/
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0}
+async function deflateRaw(b){if(typeof CompressionStream==='undefined')return null;const cs=new CompressionStream('deflate-raw'),w=cs.writable.getWriter();w.write(b);w.close();return new Uint8Array(await new Response(cs.readable).arrayBuffer())}
+async function zipFiles(files){
+ const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+ for(const f of files){const nm=enc.encode(f.name),crc=crc32(f.data);let comp=await deflateRaw(f.data),method=8;if(!comp||comp.length>=f.data.length){comp=f.data;method=0}
+  const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(8,method,true);h.setUint16(12,0x21,true);h.setUint32(14,crc,true);h.setUint32(18,comp.length,true);h.setUint32(22,f.data.length,true);h.setUint16(26,nm.length,true);
+  parts.push(new Uint8Array(h.buffer),nm,comp);
+  const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(10,method,true);c.setUint16(14,0x21,true);c.setUint32(16,crc,true);c.setUint32(20,comp.length,true);c.setUint32(24,f.data.length,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+  cen.push(new Uint8Array(c.buffer),nm);off+=30+nm.length+comp.length}
+ let cl=0;cen.forEach(x=>cl+=x.length);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cl,true);e.setUint32(16,off,true);
+ return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}
+/* one sheet: header row, then rows of [text, excel date serial (shown mm/dd/yyyy), number, number, number] */
+async function buildXlsx(head,rows){
+ const enc=new TextEncoder(),esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;'),sst=[],ix=new Map(),si=t=>{let i=ix.get(t);if(i===undefined){i=sst.length;ix.set(t,i);sst.push(t)}return i},col='ABCDE';
+ const sh=['<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="13" customWidth="1"/><col min="2" max="2" width="15" customWidth="1"/><col min="3" max="5" width="17" customWidth="1"/></cols><sheetData>'];
+ sh.push('<row r="1">'+head.map((h,j)=>`<c r="${col[j]}1" t="s"><v>${si(h)}</v></c>`).join('')+'</row>');
+ rows.forEach((r,i)=>{const n=i+2;sh.push(`<row r="${n}"><c r="A${n}" t="s"><v>${si(r[0])}</v></c><c r="B${n}" s="1"><v>${r[1]}</v></c><c r="C${n}"><v>${r[2]}</v></c><c r="D${n}"><v>${r[3]}</v></c><c r="E${n}"><v>${r[4]}</v></c></row>`)});
+ sh.push('</sheetData></worksheet>');
+ const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main',RN='http://schemas.openxmlformats.org/officeDocument/2006/relationships',PK='http://schemas.openxmlformats.org/package/2006/relationships';
+ const f=(name,txt)=>({name,data:enc.encode(txt)});
+ return zipFiles([
+  f('[Content_Types].xml',X+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>'),
+  f('_rels/.rels',X+`<Relationships xmlns="${PK}"><Relationship Id="rId1" Type="${RN}/officeDocument" Target="xl/workbook.xml"/></Relationships>`),
+  f('xl/workbook.xml',X+`<workbook xmlns="${NS}" xmlns:r="${RN}"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>`),
+  f('xl/_rels/workbook.xml.rels',X+`<Relationships xmlns="${PK}"><Relationship Id="rId1" Type="${RN}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${RN}/styles" Target="styles.xml"/><Relationship Id="rId3" Type="${RN}/sharedStrings" Target="sharedStrings.xml"/></Relationships>`),
+  f('xl/styles.xml',X+`<styleSheet xmlns="${NS}"><numFmts count="1"><numFmt numFmtId="164" formatCode="mm/dd/yyyy"/></numFmts><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`),
+  f('xl/sharedStrings.xml',X+`<sst xmlns="${NS}" count="${sst.length}" uniqueCount="${sst.length}">`+sst.map(t=>`<si><t>${esc(t)}</t></si>`).join('')+'</sst>'),
+  f('xl/worksheets/sheet1.xml',sh.join(''))])}
+/*XLSX-END*/
+async function downloadAries(){
+ try{
+  const rows=[];
+  xRows((a,key,o,g,w)=>{const dg=a.replace(/\D/g,''),api10=dg.length>10?dg.slice(0,10):dg;       /* 10 digits: no dashes, trailing zeros of a 14-digit UWI trimmed */
+   rows.push([api10,Date.UTC(+key.slice(0,4),+key.slice(5)-1,1)/864e5+25569,o,g,w])});
+  const blob=await buildXlsx(['API10','ProducingMonth','LiquidsProd_BBL','GasProd_MCF','WaterProd_BBL'],rows);
+  const clean=t=>t.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  const parts=['campbell_production'];
+  if(xop.value)parts.push(clean(xop.value));if(xfm.value)parts.push(clean(xfm.value));
+  if(xfrom.value||xto.value)parts.push((xfrom.value||'start')+'_to_'+(xto.value||'latest'));
+  if(parts.length==1)parts.push('all');
+  const url=URL.createObjectURL(blob),l=document.createElement('a');
+  l.href=url;l.download=parts.join('_')+'_aries.xlsx';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+ }catch(e){console.error(e)}
+}
+const xfmt=document.getElementById('xfmt'),xnote=document.getElementById('xnote');
+function xFormat(){const a=xfmt.value==='aries';xdl.textContent=a?'Download .xlsx':'Download CSV';
+ xnote.textContent=a?'Aries columns: API10 (10 digits, no dashes), ProducingMonth (mm/dd/yyyy, first of the month), LiquidsProd_BBL, GasProd_MCF, WaterProd_BBL. One sheet, one row per well and month. Leave a filter blank for no limit.':'Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.'}
+xfmt.onchange=xFormat;xFormat();
 if(PROD)initExport();
 </script>
 </body></html>
