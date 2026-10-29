@@ -23,6 +23,7 @@ the bottom hole, held back), **depth gap** (>1,200 ft gap in the survey inside t
 | Campbell, fourth batch (`targets_chunk3.json`, 100 wells; 4 first hit site errors and were retried) | 100 | 62 ok, 25 rejected, 5 none, 4 unreadable | **51 paths** (fx 8) | see git log |
 | Campbell, fifth batch (`targets_chunk4.json`, 100 wells; 2 first hit site errors and were retried) | 100 | 64 ok, 24 rejected, 8 none, 4 unreadable | **44 paths** (fx 8) | see git log |
 | Campbell, sixth batch (`targets_chunk5.json`, 64 wells, the last Campbell list; 6 first hit site errors and were retried) | 64 | 42 ok, 7 rejected, 7 none, 8 unreadable | **36 paths** (fx 8) | see git log |
+| Groves Fed pad, Tom's request Oct 29 (`targets_groves.json`, 2 wells already drawn from the certification form, fx 7) | 2 | 2 ok (7.4 m and 53.4 m from the header bottom hole) | **2 paths** (fx 8) | see git log |
 | Johnson, first batch (`targets_johnson1.json`, 100 wells of 106 straight-line targets; 4 first hit site errors and were retried) | 100 | 73 ok, 9 rejected, 12 none, 2 unreadable (62 exact, 13 adjusted, 2 depth-gap) | **62 paths** (fx 8) | see git log |
 | Johnson, second batch (`targets_johnson2.json`, last 6 Johnson targets) | 6 | 5 ok (2 exact, 3 adjusted), 1 rejected | **2 paths** (fx 8) | see git log |
 | Converse, batch 1 (`targets_converse1.json`, 100 wells: Continental 100) | 100 | 63 ok (52 exact, 7 adjusted, 4 depth-gap), 18 rejected, 7 none, 12 unreadable | **52 paths** (fx 8) | see git log |
