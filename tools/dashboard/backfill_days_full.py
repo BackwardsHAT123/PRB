@@ -68,12 +68,22 @@ def work(args):
     time.sleep(gap)
 
 
-for b in range(0, len(todo), bunch):
-    if state["stop"] or os.path.exists("STOP"):
+cool = 0
+b = 0
+while b < len(todo):
+    if os.path.exists("STOP"):
         log("stopping"); break
     with ThreadPoolExecutor(threads) as ex:
         list(ex.map(work, list(enumerate(todo[b:b + bunch]))))
-    log(f"bunch done, pausing {pause}s"); time.sleep(pause)
+    if state["stop"]:               # the site stopped answering (probably rate limiting): cool off, retry the same bunch, give up after 4 tries in a row
+        cool += 1
+        if cool > 4 or os.path.exists("STOP"):
+            log("giving up"); break
+        log(f"cooling off for 5 minutes (try {cool})"); time.sleep(300); state["stop"] = False; state["fails"] = 0
+        todo = [a for a in todo if need(a)]; b = 0       # skip wells finished meanwhile
+        continue
+    cool = 0
+    b += bunch; log(f"bunch done, pausing {pause}s"); time.sleep(pause)
 json.dump(P, open("data/production.json", "w"), separators=(",", ":"))
 for f in os.listdir("."):
     if (f.startswith("days_") or f.startswith("prod2_")) and f.endswith(".tmp"): os.remove(f)
