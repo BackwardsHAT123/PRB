@@ -52,13 +52,19 @@ select{padding:5px 12px;border-color:var(--border-strong)}
 input[type=search],input[type=text],input[type=month]{padding:5px 12px;border:1px solid var(--border-strong);background:var(--color-panel);color:var(--color-fg)}
 button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--color-fg);outline-offset:2px}
 .px-btn,.pbtn{border:2px solid var(--border-strong);background:transparent;color:var(--color-fg)}
-#px-maplink{background:var(--accent);border-color:transparent;color:var(--on-accent)}
 .px-title{font-weight:500}
 input[type=checkbox],input[type=radio]{accent-color:var(--accent-text)}
 .px-btn,.px .px-btn{border-radius:999px!important}
+/* TAH nav: three filled buttons (blue, so they read as buttons and not as a selected orange state), then the bold title and a grey subtitle: the same header on all three pages */
+:root{--tah-blue:#6a9ada}
+.tahnav,.px-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.tahbtn,.px-links .px-btn{display:inline-flex;align-items:center;padding:8px 18px;border:2px solid transparent;border-radius:999px;background:var(--tah-blue)!important;color:var(--on-accent,#121310)!important;font:600 15px/1.2 var(--font-anthropic-sans);text-decoration:none}
+.tahbtn:hover,.px-links .px-btn:hover{filter:brightness(1.1)}
+h1,.px-title{font:700 clamp(24px,3.4vw,30px)/1.15 var(--font-anthropic-sans)!important;letter-spacing:-.3px;margin:0 0 6px!important}
+.px-eyebrow{text-transform:none!important;letter-spacing:0!important;font-size:14px!important;margin:0 0 14px!important;color:var(--color-fg-muted)}
 </style>
 </head><body><div id="dash-root"><div class="wrap">
-<p style="margin:0 0 6px"><a href="dashboard.html">&larr; Operator and formation performance</a> &nbsp;|&nbsp; <a href="completions.html">Completion details</a> &nbsp;|&nbsp; <a href="./">Map</a></p>
+<div class="tahnav"><a class="tahbtn" href="dashboard.html">Operator and formation performance</a> <a class="tahbtn" href="completions.html">Completion details</a> <a class="tahbtn" href="./">Open the well map</a></div>
 <h1>Production comparison: Ballard and WRC Niobrara wells</h1>
 <p class="sub">Monthly production from the first month with oil. Lines are wells, coloured by operator; click a name to hide it, hover a line to read it. Volumes are WOGCC monthly reports, so time is calendar months since first oil (not producing days).</p>
 <div class="pc-ctl" id="ctl"></div>

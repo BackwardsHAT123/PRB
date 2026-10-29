@@ -39,10 +39,16 @@ select{padding:5px 12px;border-color:var(--border-strong)}
 input[type=search],input[type=text],input[type=month]{padding:5px 12px;border:1px solid var(--border-strong);background:var(--color-panel);color:var(--color-fg)}
 button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--color-fg);outline-offset:2px}
 .px-btn,.pbtn{border:2px solid var(--border-strong);background:transparent;color:var(--color-fg)}
-#px-maplink{background:var(--accent);border-color:transparent;color:var(--on-accent)}
 .px-title{font-weight:500}
 input[type=checkbox],input[type=radio]{accent-color:var(--accent-text)}
 .px-btn,.px .px-btn{border-radius:999px!important}
+/* TAH nav: three filled buttons (blue, so they read as buttons and not as a selected orange state), then the bold title and a grey subtitle: the same header on all three pages */
+:root{--tah-blue:#6a9ada}
+.tahnav,.px-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.tahbtn,.px-links .px-btn{display:inline-flex;align-items:center;padding:8px 18px;border:2px solid transparent;border-radius:999px;background:var(--tah-blue)!important;color:var(--on-accent,#121310)!important;font:600 15px/1.2 var(--font-anthropic-sans);text-decoration:none}
+.tahbtn:hover,.px-links .px-btn:hover{filter:brightness(1.1)}
+h1,.px-title{font:700 clamp(24px,3.4vw,30px)/1.15 var(--font-anthropic-sans)!important;letter-spacing:-.3px;margin:0 0 6px!important}
+.px-eyebrow{text-transform:none!important;letter-spacing:0!important;font-size:14px!important;margin:0 0 14px!important;color:var(--color-fg-muted)}
 </style>
 </head>
 <body>
@@ -154,11 +160,12 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent-text)}
 
 <div class="px" id="px">
   <header>
-    <p class="px-eyebrow">Wells with reported production · Campbell, Converse and Johnson counties, Wyoming</p>
+    <div class="px-links"><a class="px-btn" id="px-maplink" href="https://backwardshat123.github.io/PRB/" target="_blank" rel="noopener">Open the well map</a> <a class="px-btn" href="completions.html">Completion details</a> <a class="px-btn" href="production.html">Production comparison</a></div>
     <h1 class="px-title" id="px-title">PRB operator and formation performance</h1>
+    <p class="px-eyebrow">Wells with reported production · Campbell, Converse and Johnson counties, Wyoming</p>
     <p class="px-take dash-skeleton" id="px-take1">&nbsp;</p>
     <p class="px-take sub dash-skeleton" id="px-take2">&nbsp;</p>
-    <div class="px-links"><a class="px-btn" id="px-maplink" href="https://backwardshat123.github.io/PRB/" target="_blank" rel="noopener">Open the well map</a> <a class="px-btn" href="completions.html">Completion details</a> <a class="px-btn" href="production.html">Production comparison</a></div>
+    
   </header>
 
   <nav class="px-ctl" aria-label="Chart settings">
