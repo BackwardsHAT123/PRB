@@ -723,7 +723,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 <div class="row2"><label>Formation <select id="fmf"></select></label><label>County <select id="ct"></select></label></div><label>Operator <select id="op"></select></label><div id="st" class="ms"><div>Status</div><button type="button" id="stb">All</button><div id="stm" hidden></div></div>
 <label>Highlight operator <select id="hl"></select></label><div id="leg"></div>
 <details id="disp"><summary>Display</summary><label><input type="checkbox" id="pts" checked> Surface / bottom-hole points</label><label><input type="checkbox" id="bub"> Oil production bubbles at bottom hole</label><label id="bubo" hidden>Size by oil in the first <select id="bw"><option value="3">3 months</option><option value="6">6 months</option><option value="12" selected>12 months</option></select></label><div id="bubleg"></div><label><input type="checkbox" id="osm" checked> OpenStreetMap street map</label><label><input type="checkbox" id="rg" checked> Active drilling rigs (inferred)</label><label><input type="checkbox" id="trl"> Township labels</label><label><input type="checkbox" id="secs" checked> Section lines (zoom in)</label><label><input type="checkbox" id="rds" checked> Roads (simplified overlay)</label><label><input type="checkbox" id="twn" checked> Towns</label><label><input type="checkbox" id="ctyo" checked> County outlines</label></details>
-<details id="exp"><summary>Export Data</summary><label>Format <select id="xfmt"><option value="aries">Production - Excel (.xlsx)</option><option value="csv" selected>Production - Standard (.csv)</option><option value="wb4">Well Data - GeoGraphix ASCII4 (.wb4)</option></select></label><label>Operator <select id="xop"></select></label><label>Formation <select id="xfm"></select></label><div class="xdate"><label>From <input type="month" id="xfrom"></label><label>To <input type="month" id="xto"></label></div><div id="xinfo">loading production…</div><button class="pbtn" id="xdl" disabled>Download CSV</button><div class="plg" id="xnote" style="color:var(--muted);margin-top:4px"></div></details>
+<details id="exp"><summary>Export Data</summary><label>Format <select id="xfmt"><option value="aries">Production - Excel (.xlsx)</option><option value="csv" selected>Production - Standard (.csv)</option><option value="wb4">Well Data - GeoGraphix ASCII4 (.wb4)</option><option value="owx">Well Data - Landmark OWX (.asc)</option></select></label><label>Operator <select id="xop"></select></label><label>Formation <select id="xfm"></select></label><div class="xdate"><label>From <input type="month" id="xfrom"></label><label>To <input type="month" id="xto"></label></div><div id="xinfo">loading production…</div><button class="pbtn" id="xdl" disabled>Download CSV</button><div class="plg" id="xnote" style="color:var(--muted);margin-top:4px"></div></details>
 <div id="note">Grid is township and range; roads and towns from OpenStreetMap (OSM roads cover Campbell County only). Well data as of <span id="asof">Oct 27, 2026</span> (updated daily). Lines run surface to bottom hole; 1077 wells have a multi-point surveyed path (thicker).</div></details>
 <div id="plot" hidden><div class="ph"><b id="ptitle"></b><span><label><input type="checkbox" id="pcum"> cumulative</label><label><input type="checkbox" id="plog" checked> log scale</label><label id="pautol"><input type="checkbox" id="pauto"> autoscale Y</label><button id="pclose" aria-label="Close plot">&times;</button></span></div><svg id="psvg" role="img" aria-label="Monthly oil, gas and water production"></svg><div id="pro"></div><div class="plg" id="plegend"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -942,7 +942,7 @@ function xRows(cb){
  }
  return{wells,rows};
 }
-function xUpdate(){if(!PROD)return;const r=xRows();if(typeof xfmt!=='undefined'&&xfmt.value==='wb4'){const n=D.filter(d=>(!xop.value||d.oc===xop.value)&&(!xfm.value||d.r===xfm.value)).length;xinfo.textContent=n.toLocaleString('en-US')+' wells \u00b7 '+r.rows.toLocaleString('en-US')+' production rows';xdl.disabled=!n;return}xinfo.textContent=r.wells.toLocaleString('en-US')+' wells \u00b7 '+r.rows.toLocaleString('en-US')+' rows';xdl.disabled=!r.rows}
+function xUpdate(){if(!PROD)return;const r=xRows();if(typeof xfmt!=='undefined'&&(xfmt.value==='wb4'||xfmt.value==='owx')){const n=D.filter(d=>(!xop.value||d.oc===xop.value)&&(!xfm.value||d.r===xfm.value)).length;xinfo.textContent=n.toLocaleString('en-US')+' wells'+(xfmt.value==='owx'?'':' \u00b7 '+r.rows.toLocaleString('en-US')+' production rows');xdl.disabled=!n;return}xinfo.textContent=r.wells.toLocaleString('en-US')+' wells \u00b7 '+r.rows.toLocaleString('en-US')+' rows';xdl.disabled=!r.rows}
 function initExport(){
  if(!PROD||!xop)return;
  const co={},cf={};let lo='9999-99',hi='0000-00';
@@ -953,7 +953,7 @@ function initExport(){
  xop.innerHTML=opts(co);xfm.innerHTML=opts(cf);
  xfrom.min=xto.min=lo;xfrom.max=xto.max=hi;
  xop.onchange=xfm.onchange=xfrom.onchange=xto.onchange=xUpdate;
- xdl.onclick=()=>xfmt.value==='aries'?downloadAries():xfmt.value==='wb4'?downloadWb4():downloadBulk();xUpdate();
+ xdl.onclick=()=>xfmt.value==='aries'?downloadAries():xfmt.value==='wb4'?downloadWb4():xfmt.value==='owx'?downloadOwx():downloadBulk();xUpdate();
 }
 function downloadBulk(){
  try{
@@ -1076,6 +1076,62 @@ function wb4Well(d,prod,perfs,stations,keep){
  return out}
 /*WB4-END*/
 const WB4LS={};
+/*OWX-BEGIN*/
+/* Landmark OpenWorks OWX ASCII (.asc): a port of tools/landmark/export_owx.py (laid out like the Drillinginfo OWX example). Fixed-width records, CRLF line ends. */
+const OWXLEN={WELL:113,'2WELL':113,'3WELL':122,'4WELL':58,'5WELL':102,'6WELL':12,'7WELL':170,'8WELL':148,CNGR:77,COMP:101,'2COMP':46,WPERF:132,'2WPERF':80,DSV1:37,DSV6:44,DSV7:44};
+const OWXSTATUS={'Producing Oil Well':'OIL+ACTIVE','Producing Gas Well':'GAS+ACTIVE','Shut-In':'OIL+SHUT-IN','Temporarily Abandoned':'OIL+SHUT-IN','Well Spudded':'OIL+DRILLED','Subsequent Report of Abandonment':'OIL+P & A','Permanently Abandoned':'OIL+P & A','Notice of Intent to Abandon':'OIL+ACTIVE','Active Permit':'OIL+PERMITTED','Proposed (APD)':'OIL+PERMITTED','Active Injector':'OIL+INJECTOR'};
+function owxLine(typ,cols){const c=new Array(OWXLEN[typ]).fill(' '),put=(col,t)=>{t=String(t);for(let i=0;i<t.length;i++){const ch=t[i];c[col-1+i]=ch.charCodeAt(0)<128?ch:'?'}};
+ put(1,/^\d/.test(typ)?typ:typ.padEnd(6));(cols||[]).forEach(([col,t])=>put(col,t));return c.join('')}
+function owxWell(d,perfs,stations){
+ const api10=d.a.replace(/-/g,''),u14=api10+'0000',[nm,no]=wb4Split(d.n),iv=[].concat(...(perfs||[]).map(p=>p));
+ const hasSt=stations&&stations.length>0,st0=hasSt&&wb4Complete(stations)?stations.map(r=>r.slice()):[];
+ const td=hasSt?Math.trunc(Math.max(...stations.map(r=>r[0]))):(iv.length?Math.trunc(Math.max(...iv)):(d.td?Math.trunc(+String(d.td).replace(/,/g,'')):null));
+ const out=[];
+ out.push(owxLine('WELL',[[7,u14],[34,d.n||'']]));
+ out.push(owxLine('2WELL',[[7,(d.o||d.oc||'').toUpperCase().slice(0,40)],[48,nm.toUpperCase().slice(0,40)],[89,no.toUpperCase().slice(0,15)]]));
+ const c3=[];if(d.shl)c3.push([39,wb4Fixed(d.shl[1],7)],[55,wb4Fixed(d.shl[0],7)]);if(d.bhl)c3.push([97,wb4Fixed(d.bhl[1],7)],[110,wb4Fixed(d.bhl[0],7)]);
+ out.push(owxLine('3WELL',c3));
+ const c4=[[49,'H']];if(d.el)c4.push([7,'KB'],[10,wb4Num(+d.el)]);if(td)c4.push([23,td]);
+ out.push(owxLine('4WELL',c4));
+ const c5=[[7,(d.cty||'').toUpperCase()],[33,'WY'],[55,'UNITED STATES']];if(d.sd)c5.push([92,d.sd.slice(6,10)+d.sd.slice(0,2)+d.sd.slice(3,5)]);
+ out.push(owxLine('5WELL',c5));
+ out.push(owxLine('6WELL'));
+ out.push(owxLine('7WELL',[[130,OWXSTATUS[d.s]||'OIL+'+(d.s||'').toUpperCase()]]));
+ out.push(owxLine('8WELL',[[48,d.f==='Wildcat'?'WC':(d.f||'').toUpperCase()],[89,'POWDER RIVER']]));
+ const m=/^(\d+)-(\d+)([NS])-(\d+)([EW])/.exec(d.sec||'');
+ if(m)out.push(owxLine('CNGR',[[47,String(+m[2])],[55,m[3]],[58,String(+m[4])],[66,m[5]],[69,wb4Pad(+m[1],2)]]));
+ if(d.cd||iv.length){const cc=[[7,'1']];if(d.cd)cc.push([12,d.cd]);if(iv.length)cc.push([77,Math.trunc(Math.min(...iv))],[90,Math.trunc(Math.max(...iv))]);
+  out.push(owxLine('COMP',cc));out.push(owxLine('2COMP',[[7,(d.r||'').toUpperCase()]]))}
+ const seen=new Set();let k=0;
+ for(const[top,bot]of(perfs||[]).filter(p=>p.length==2&&p[0]!=p[1]).map(p=>[Math.min(...p),Math.max(...p)]).sort((a,b)=>a[0]-b[0]||a[1]-b[1])){const key=top+','+bot;if(seen.has(key))continue;seen.add(key);k++;
+  out.push(owxLine('WPERF',[[7,'1'],[12,k],[67,Math.trunc(top)],[121,Math.trunc(bot)]]));out.push(owxLine('2WPERF'))}
+ if(st0.length){let st=st0;if(st[0][0]>0)st=[[0,0,0]].concat(st);
+  out.push(owxLine('DSV1',[[7,'UWI: '+u14]]));out.push(owxLine('DSV6',[[7,'Measr. Depth'],[20,'Deviation'],[33,'Direction']]));
+  const f=v=>wb4Num(+wb4Fixed(v,2))||'0';
+  for(const[md,inc,azi]of st)out.push(owxLine('DSV7',[[7,f(md)],[20,f(inc)],[33,f(azi)]]))}
+ return out}
+function owxBuild(wells,LS,SS,label,stamp){
+ const lines=['            Well Data Export','Project             :  '+label,'Depth Mode          :  MD','Depth Unit          :  feet','Distance Unit       :  feet','Date                :  '+stamp,'    '];
+ for(const d of wells)lines.push(...owxWell(d,LS[d.a],SS[d.a]));
+ return lines.join('\r\n')+'\r\n'}
+function owxStamp(t){const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],p=n=>String(n).padStart(2,'0');
+ return D[t.getDay()]+' '+M[t.getMonth()]+' '+String(t.getDate()).padStart(2,' ')+' '+p(t.getHours())+':'+p(t.getMinutes())+':'+p(t.getSeconds())+' '+t.getFullYear()}
+/*OWX-END*/
+async function downloadOwx(){
+ try{
+  xdl.disabled=true;xdl.textContent='Preparing…';
+  if(!WB4LS.iv){const[a,b]=await Promise.all([fetch('data/lateral_state.json').then(r=>r.json()),fetch('data/survey_stations.json').then(r=>r.json())]);WB4LS.iv=a;WB4LS.st=b}
+  const wells=D.filter(d=>(!xop.value||d.oc===xop.value)&&(!xfm.value||d.r===xfm.value));
+  const label='PRB map'+(xop.value?' '+xop.value:'')+(xfm.value?' '+xfm.value:'')+' Openworks OWX';
+  const blob=new Blob([owxBuild(wells,WB4LS.iv,WB4LS.st,label,owxStamp(new Date()))],{type:'text/plain;charset=iso-8859-1'});
+  const clean=t=>t.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,''),parts=['campbell_openworks'];
+  if(xop.value)parts.push(clean(xop.value));if(xfm.value)parts.push(clean(xfm.value));
+  if(parts.length==1)parts.push('all');
+  const url=URL.createObjectURL(blob),l=document.createElement('a');
+  l.href=url;l.download=parts.join('_')+'.asc';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+ }catch(e){console.error(e);xinfo.textContent='Export failed: '+e.message}
+ finally{xFormat();xUpdate()}
+}
 async function downloadWb4(){
  try{
   xdl.disabled=true;xdl.textContent='Preparing…';
@@ -1094,8 +1150,8 @@ async function downloadWb4(){
  finally{xFormat();xUpdate()}
 }
 const xfmt=document.getElementById('xfmt'),xnote=document.getElementById('xnote');
-function xFormat(){const a=xfmt.value==='aries',g=xfmt.value==='wb4';xdl.textContent=g?'Download .WB4':a?'Download .xlsx':'Download CSV';
- xnote.textContent=g?'GeoGraphix ASCII4 for Imports > Well > GeoGraphix ASCII4 Import: for every well matching the filters (with or without production): header, legal location, completion interval, directional survey header and stations (complete surveys only), perforations (the state producing intervals) and monthly oil, gas and water with days on production. The From and To months limit the production rows. Choose an operator or formation first: the whole basin is about 60 MB.':a?'Aries columns: API10 (10 digits, no dashes), ProducingMonth (mm/dd/yyyy, first of the month), Oil (bbl), Gas (mcf), Water (bbl). One sheet, one row per well and month. Leave a filter blank for no limit.':'Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.'}
+function xFormat(){const a=xfmt.value==='aries',g=xfmt.value==='wb4',o=xfmt.value==='owx';xdl.textContent=o?'Download .asc':g?'Download .WB4':a?'Download .xlsx':'Download CSV';
+ xnote.textContent=o?'Landmark OpenWorks OWX ASCII, laid out like the Drillinginfo OWX example, for every well matching the filters: well header (name, operator, lease, surface and bottom-hole lat/lon, elevation, TD, county, spud, status, field), legal location, completion date and interval, perforations (the state producing intervals) and directional survey (complete surveys only). The elevation is the state ground level written on the KB line. Formation tops, initial potential, treatment and casing are not included. Production and the From and To months do not apply.':g?'GeoGraphix ASCII4 for Imports > Well > GeoGraphix ASCII4 Import: for every well matching the filters (with or without production): header, legal location, completion interval, directional survey header and stations (complete surveys only), perforations (the state producing intervals) and monthly oil, gas and water with days on production. The From and To months limit the production rows. Choose an operator or formation first: the whole basin is about 60 MB.':a?'Aries columns: API10 (10 digits, no dashes), ProducingMonth (mm/dd/yyyy, first of the month), Oil (bbl), Gas (mcf), Water (bbl). One sheet, one row per well and month. Leave a filter blank for no limit.':'Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.'}
 xfmt.onchange=()=>{xFormat();xUpdate()};xFormat();
 if(PROD)initExport();
 </script>
