@@ -7,20 +7,22 @@ Fixed-width records, CRLF line ends, the record name in columns 1-6 ('WELL  ', '
 left-aligned from the 1-based columns noted below. Written per well: WELL (+2..8: name, operator, lease, number, lat/lon surface and bottom hole,
 KB/elevation, TD, county, state, spud, status, field, basin), CNGR (township/range/section), COMP (+2COMP: completion date, perforated interval,
 formation), WPERF (+2WPERF: the state producing intervals), DSV1/DSV6/DSV7 (directional survey MD/inclination/azimuth, complete surveys only).
-Left out because the map has no data for them: PICK (formation tops), WTEST (initial potential), WLTRT (treatment), CASG (casing), LINR (liner).
-The state's elevation is ground level and is written on the KB line.
+WLTRT (treatment totals: stages, proppant lb, fluid bbl, fluid type) comes from the completions page data for the wells that have it.
+Left out because the map has no data for them: PICK (formation tops), WTEST (initial potential), CASG (casing), LINR (liner).
+KB comes from data/kb.json (Form 3, built by tools/completions/kb_extract.py); a well without one gets the state ground elevation with no KB label.
 """
-import argparse, json, os, re, sys, time
+import argparse, csv, json, os, re, sys, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "tools", "geographix"))
 from export_ascii4 import split_name, survey_complete, num          # same name split, survey completeness rule and number text as the GeoGraphix export
 
 LEN = {"WELL": 113, "2WELL": 113, "3WELL": 122, "4WELL": 58, "5WELL": 102, "6WELL": 12, "7WELL": 170, "8WELL": 148, "CNGR": 77, "COMP": 101, "2COMP": 46,
-       "WPERF": 132, "2WPERF": 80, "DSV1": 37, "DSV6": 44, "DSV7": 44}    # record lengths in the example
+       "WLTRT": 131, "2WLTRT": 83, "3WLTRT": 44, "WPERF": 132, "2WPERF": 80, "DSV1": 37, "DSV6": 44, "DSV7": 44}    # record lengths in the example
 STATUS = {"Producing Oil Well": "OIL+ACTIVE", "Producing Gas Well": "GAS+ACTIVE", "Shut-In": "OIL+SHUT-IN", "Temporarily Abandoned": "OIL+SHUT-IN",
           "Well Spudded": "OIL+DRILLED", "Subsequent Report of Abandonment": "OIL+P & A", "Permanently Abandoned": "OIL+P & A",
-          "Notice of Intent to Abandon": "OIL+ACTIVE", "Active Permit": "OIL+PERMITTED", "Proposed (APD)": "OIL+PERMITTED", "Active Injector": "OIL+INJECTOR"}
+          "Notice of Intent to Abandon": "OIL+ACTIVE", "Active Permit": "OIL+PERMITTED", "Proposed (APD)": "OIL+PERMITTED", "Active Injector": "WATER INJ+ACTIVE",
+          "Gas Lift": "OIL+ACTIVE", "Pumping Rods": "OIL+ACTIVE", "Suspended Operations": "OIL+SHUT-IN"}
 
 
 class Rec:
@@ -49,7 +51,16 @@ def deg(v):
     return f"{v:.7f}"
 
 
-def well_records(d, perfs, stations):
+def fluid_type(s):
+    """OpenWorks treatment fluid text from the completions page's fluid system note."""
+    s = (s or "").lower()
+    sw, cl = "slickwater" in s or "hvfr" in s, "crosslink" in s or "gel" in s or "hybrid" in s
+    if "hybrid" in s and "words" not in s: return "HYBRID CROSS"
+    if sw and cl: return "SLICKCROSSLI"
+    return "CROSSLINK" if cl else "SLICKWATER" if sw else ""
+
+
+def well_records(d, perfs, stations, kb=None, tr=None):
     api10 = d["a"].replace("-", ""); u14 = api10 + "0000"
     nm, no = split_name(d.get("n"))
     iv = [x for p in (perfs or []) for x in p]
@@ -64,7 +75,8 @@ def well_records(d, perfs, stations):
     if bh: c3["c97"], c3["c110"] = deg(bh[1]), deg(bh[0])
     out.append(line("3WELL", **c3))
     c4 = {"c49": "H"}
-    if d.get("el"): c4["c7"] = "KB"; c4["c10"] = num(float(d["el"]))
+    if kb: c4["c7"] = "KB"; c4["c10"] = num(float(kb))                  # KB from the Form 3 (data/kb.json)
+    elif d.get("el"): c4["c10"] = num(float(d["el"]))                    # none found: the state ground elevation, without the KB label
     if td: c4["c23"] = td
     out.append(line("4WELL", **c4))
     out.append(line("5WELL", c7=(d.get("cty") or "").upper(), c33="WY", c55="UNITED STATES", **({"c92": d["sd"][6:10] + d["sd"][0:2] + d["sd"][3:5]} if d.get("sd") else {})))
@@ -77,6 +89,17 @@ def well_records(d, perfs, stations):
     if d.get("cd") or iv:
         out.append(line("COMP", c7="1", **({"c12": d["cd"]} if d.get("cd") else {}), **({"c77": int(min(iv)), "c90": int(max(iv))} if iv else {})))
         out.append(line("2COMP", c7=(d.get("r") or "").upper()))
+    if tr and (tr["stages"] or tr["sand"] or tr["fluid"]):          # treatment totals from data/completions/PRB_niobrara_completions.csv
+        ft = fluid_type(tr["system"])
+        c = {"c7": "1", "c12": "2" if ft else "1", "c56": "1", "c92": (d.get("r") or "").upper()}
+        if ft: c["c43"] = ft
+        if tr["stages"]: c["c61"] = tr["stages"]
+        if iv: c["c66"], c["c79"] = int(min(iv)), int(max(iv))
+        out.append(line("WLTRT", **c))
+        c = {}
+        if tr["sand"]: c["c7"] = tr["sand"]
+        if tr["fluid"]: c["c59"], c["c72"] = tr["fluid"], "BBL"
+        out.append(line("2WLTRT", **c)); out.append(line("3WLTRT"))
     seen = []
     for top, bot in sorted((min(p), max(p)) for p in (perfs or []) if len(p) == 2 and p[0] != p[1]):
         if (top, bot) in seen: continue
@@ -92,11 +115,11 @@ def well_records(d, perfs, stations):
     return out
 
 
-def build(wells, LS, SS, label, stamp):
+def build(wells, LS, SS, label, stamp, KB=None, TR=None):
     lines = ["            Well Data Export", f"Project             :  {label}", "Depth Mode          :  MD", "Depth Unit          :  feet",
              "Distance Unit       :  feet", f"Date                :  {stamp}", "    "]
     for d in wells:
-        lines += well_records(d, LS.get(d["a"]), SS.get(d["a"]))
+        lines += well_records(d, LS.get(d["a"]), SS.get(d["a"]), (KB or {}).get(d["a"]), (TR or {}).get(d["a"].replace("-", "")))
     return "\r\n".join(lines) + "\r\n"
 
 
@@ -115,6 +138,9 @@ def main():
     D = json.loads(s[i:s.index(";\nconst GRID", i)])
     LS = json.load(open(os.path.join(ROOT, "data", "lateral_state.json")))
     SS = json.load(open(os.path.join(ROOT, "data", "survey_stations.json")))
+    KB = json.load(open(os.path.join(ROOT, "data", "kb.json")))
+    TR = {r["api"]: {"stages": r["stages"], "sand": r["sand_lb"], "fluid": r["fluid_bbl"], "system": r["fluid_system"]}
+          for r in csv.DictReader(open(os.path.join(ROOT, "data", "completions", "PRB_niobrara_completions.csv"), newline=""))}
     norm = lambda x: re.sub(r"\D", "", x)[:10]
     if a.api:
         want = {norm(x) for x in a.api}; wells = [d for d in D if norm(d["a"]) in want]
@@ -123,7 +149,7 @@ def main():
     else:
         ap.error("choose --api, --operator/--formation or --all")
     with open(a.out, "w", encoding="latin1", newline="") as fh:
-        fh.write(build(wells, LS, SS, a.label, a.stamp or stamp_now()))
+        fh.write(build(wells, LS, SS, a.label, a.stamp or stamp_now(), KB, TR))
     print(f"{len(wells)} wells -> {a.out}")
 
 

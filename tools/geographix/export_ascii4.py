@@ -7,6 +7,7 @@
 Reads index.html (wells), data/production.json (monthly oil/gas/water) and data/lateral_state.json (state producing
 intervals). The layout was worked out from a Drillinginfo export (Powder Test GeoGraphix ASCII4.WB4): fixed-width records,
 CRLF line ends, a two-letter record type in columns 1-2 and the 14-digit UWI in columns 15-28. See tools/geographix/ASCII4_FORMAT.md.
+KB elevation (WH col 246) comes from data/kb.json, built from the Form 3 reports by tools/completions/kb_extract.py.
 Written records: WH (well header), B0 (legal), CP (completion), SD (survey header), ST (survey stations, from data/survey_stations.json),
 PF (perforations, from the state producing intervals), PT (production). The other record types (FT tops, MC casing, IT/IP initial
 potential) are left out; their section comments are kept.
@@ -73,10 +74,10 @@ def survey_complete(st):
     return bool(f) and f[0][0] <= 3000 and f[0][1] <= 5 and all(not (y[0] - x[0] > 600 and max(x[1], y[1]) > 10) for x, y in zip(f, f[1:]))
 
 
-STATUS = {"Producing Oil Well": "OIL+ACTIVE", "Producing Gas Well": "GAS+ACTIVE"}
+STATUS = {"Producing Oil Well": "OIL+ACTIVE", "Producing Gas Well": "GAS+ACTIVE", "Active Injector": "WATER INJ+ACTIVE"}
 
 
-def well_records(d, prod, perfs, stations=None):
+def well_records(d, prod, perfs, stations=None, kb=None):
     api = d["a"]; u14 = api.replace("-", "") + "0000"; api10 = api.replace("-", "")
     out = ["## ****************** NEW WELLHEADER ******************"]
     nm, no = split_name(d.get("n"))
@@ -88,7 +89,9 @@ def well_records(d, prod, perfs, stations=None):
     if d.get("shl"):
         r.put(151, f"{d['shl'][1]:.6f}"); r.put(160, f"{d['shl'][0]:.6f}")
     r.put(201, STATUS.get(d.get("s"), (d.get("s") or "").upper()))
-    r.put(228, "GAS" if d.get("s") == "Producing Gas Well" else "OIL")
+    r.put(228, "GAS" if d.get("s") == "Producing Gas Well" else "WATER" if d.get("s") == "Active Injector" else "OIL")
+    if kb:
+        r.putr(246, num(float(kb)))                           # KB from the Form 3 (data/kb.json), where one was found
     if d.get("el"):
         r.putr(262, num(float(d["el"])))                      # state elevation is ground level (matches the sample's GL, not KB)
     if td:
@@ -109,7 +112,7 @@ def well_records(d, prod, perfs, stations=None):
     if iv:
         c = Rec("CP"); c.put(15, u14); c.put(44, "1"); c.put(57, d.get("cd") or "")
         f = (d.get("r") or "").upper()
-        c.put(81, f); c.putr(96, int(min(iv))); c.putr(106, int(max(iv))); c.put(121, f); c.put(141, f)
+        c.put(81, f); c.putr(96, int(min(iv))); c.putr(106, int(max(iv))); c.put(121, f); c.put(141, f[:6])        # the last formation field is 6 wide (cols 141-146)
         out.append(str(c))
     out.append(f"## Formation Table Records (FT) for {u14} :")
     out.append(f"## Survey Dir Table Records (SD) for {u14} :")
@@ -159,6 +162,7 @@ def main():
     P = json.load(open(os.path.join(ROOT, "data", "production.json")))
     LS = json.load(open(os.path.join(ROOT, "data", "lateral_state.json")))
     SS = json.load(open(os.path.join(ROOT, "data", "survey_stations.json")))
+    KB = json.load(open(os.path.join(ROOT, "data", "kb.json")))
     norm = lambda x: re.sub(r"\D", "", x)[:10]
     if a.api:
         want = {norm(x) for x in a.api}; wells = [d for d in D if norm(d["a"]) in want]
@@ -168,7 +172,7 @@ def main():
         ap.error("choose --api, --operator/--formation or --all")
     lines = ["## ASCII4 exported from PRB map", "## Exported As EN:", "## Well Records:"]
     for d in wells:
-        lines += well_records(d, P.get(d["a"]), LS.get(d["a"]), SS.get(d["a"]))
+        lines += well_records(d, P.get(d["a"]), LS.get(d["a"]), SS.get(d["a"]), KB.get(d["a"]))
     with open(a.out, "w", encoding="latin1", newline="") as fh:
         fh.write("\r\n".join(lines) + "\r\n")
     print(f"{len(wells)} wells ({sum(1 for d in wells if d['a'] in SS and survey_complete(SS[d['a']]))} with survey stations, {sum(1 for d in wells if d['a'] in SS and not survey_complete(SS[d['a']]))} partial surveys skipped, {sum(1 for d in wells if LS.get(d['a']))} with perforations), {len(lines)} lines -> {a.out}")
