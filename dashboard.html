@@ -5,15 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PRB operator and formation performance</title>
 <meta name="description" content="Oil and water performance of Powder River Basin horizontal wells, by operator and formation.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Newsreader:wght@400;500&display=swap">
 <style>
-:root{--color-bg:#f7f8f6;--color-panel:#ffffff;--color-fg:#1c2421;--color-fg-muted:#5d6a63;--color-border-line:#d9dfda;--color-ok:#1d7a4a;--color-warn:#a8741a;--color-bad:#b3382c;
---cds-radius:8px;--cds-pad-xs:4px;--cds-pad-sm:8px;--cds-pad-md:12px;--cds-pad-lg:16px;--cds-pad-xl:24px;--cds-gap-xs:4px;--cds-gap-sm:8px;--cds-gap-md:16px;--cds-gap-lg:24px;
+/* TAH design system (tokens from the TAH design artifact): warm charcoal ground, one orange accent, Outfit for UI, Newsreader as the serif */
+:root{--color-bg:#f2eee8;--color-panel:#fbf9f5;--color-fg:#121310;--color-fg-muted:#5a574e;--color-border-line:#d9d3c8;--color-ok:#38763a;--color-warn:#8a5f10;--color-bad:#b3263d;
+--accent:#ed7437;--on-accent:#121310;--accent-text:#a8420f;--hairline:#d9d3c8;--border-strong:#8d887b;--success:#38763a;--danger:#b3263d;
+--cds-radius:12px;--cds-pad-xs:4px;--cds-pad-sm:8px;--cds-pad-md:12px;--cds-pad-lg:16px;--cds-pad-xl:24px;--cds-gap-xs:4px;--cds-gap-sm:8px;--cds-gap-md:16px;--cds-gap-lg:24px;
 --cds-font-size-caption:12px;--cds-font-size-body:14px;--cds-font-size-heading:16px;--cds-font-size-title:22px;--cds-font-weight-medium:500;
---cds-chart-muted:#9aa59e;--cds-chart-status-critical:#c0392b;--cds-chart-grid:#e3e8e4;--cds-chart-axis:#8b968f;--cds-chart-reference:#7d8982;
---cds-surface-popover:#ffffff;--cds-border:#c9d1cb;--cds-shadow-popover:0 4px 14px rgba(0,0,0,.14);--cds-text-secondary:#5d6a63;--cds-dur-slow:.3s;
---font-anthropic-sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-anthropic-serif:"Iowan Old Style","Palatino Linotype",Georgia,serif}
-@media (prefers-color-scheme:dark){:root{--color-bg:#141a17;--color-panel:#1d2521;--color-fg:#e7ece8;--color-fg-muted:#9aa89f;--color-border-line:#33403a;--color-ok:#5fc08c;--color-warn:#d9a441;--color-bad:#ee7a6d;
---cds-chart-muted:#6d7a73;--cds-chart-status-critical:#e5675a;--cds-chart-grid:#2b3630;--cds-chart-axis:#6f7d75;--cds-chart-reference:#8c9a92;--cds-surface-popover:#222c27;--cds-border:#3a4841;--cds-shadow-popover:0 4px 14px rgba(0,0,0,.5);--cds-text-secondary:#9aa89f;color-scheme:dark}}
+--cds-chart-muted:#a39d8f;--cds-chart-status-critical:#b3263d;--cds-chart-grid:#e0d9cc;--cds-chart-axis:#8d887b;--cds-chart-reference:#6f6a5f;
+--cds-surface-popover:#fbf9f5;--cds-border:#8d887b;--cds-shadow-popover:none;--cds-text-secondary:#5a574e;--cds-dur-slow:.3s;
+--font-anthropic-sans:"Outfit","Avenir Next",system-ui,sans-serif;--font-anthropic-serif:"Newsreader",Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root{--color-bg:#262524;--color-panel:#1c1a17;--color-fg:#f2eee8;--color-fg-muted:#b3b2ae;--color-border-line:#3a3733;--color-ok:#79bc76;--color-warn:#eaa945;--color-bad:#ea6275;
+--accent-text:#ed7437;--hairline:#3a3733;--border-strong:#8a877d;--success:#79bc76;--danger:#ea6275;
+--cds-chart-muted:#77746a;--cds-chart-status-critical:#ea6275;--cds-chart-grid:#3a3733;--cds-chart-axis:#8a877d;--cds-chart-reference:#a29f95;--cds-surface-popover:#1c1a17;--cds-border:#8a877d;--cds-text-secondary:#b3b2ae;color-scheme:dark}}
 html{background:var(--color-bg)}
 body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var(--font-anthropic-sans)}
 #dash-root{padding:20px clamp(14px,3vw,32px) 0}
@@ -24,6 +28,20 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 .site-foot a{color:inherit}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style id="tah-brand">
+/* TAH: links are accent-text, interactive things are pills, no shadows (depth comes from surface-raised against surface and a hairline edge) */
+a{color:var(--accent-text)}
+*{box-shadow:none!important}
+h1,h2,h3{font-family:var(--font-anthropic-sans);letter-spacing:-.2px}h1{font-weight:700}h2{font-weight:600}
+.kpi,.card{border-radius:12px;border-color:var(--hairline)}
+select,button,.px-btn,.pbtn,input[type=search],input[type=text],input[type=month]{border-radius:999px;font-family:inherit}
+select{padding:5px 12px;border-color:var(--border-strong)}
+input[type=search],input[type=text],input[type=month]{padding:5px 12px;border:1px solid var(--border-strong);background:var(--color-panel);color:var(--color-fg)}
+button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--color-fg);outline-offset:2px}
+.px-btn,.pbtn{border:2px solid var(--border-strong);background:transparent;color:var(--color-fg)}
+#px-maplink{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.px-title{font-weight:500}
+</style>
 </head>
 <body>
 <div id="dash-root">

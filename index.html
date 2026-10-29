@@ -1,9 +1,10 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Campbell, Converse &amp; Johnson County Horizontals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Newsreader:wght@400;500&display=swap">
 <style>
 /* Full-bleed map with one floating control panel; township grid replaces tiles because the viewer blocks image hosts */
-:root{--bg:#eef0ee;--grid:#b8c0b8;--panel:#fbfcfb;--fg:#1d2420;--muted:#5b665f;--line:#cfd6cf;--accent:#2b6a4f;--ptfill:#ffffff;--ptline:#1d2420;--road:#9aa39b;--roadmajor:#6f7a71;--town:#1d2420;--halo:#fbfcfb}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161b18;--grid:#34403a;--panel:#212823;--fg:#e6ebe7;--muted:#98a59c;--line:#37433b;--accent:#7cc3a0;--ptfill:#161b18;--ptline:#e6ebe7;--road:#4a574e;--roadmajor:#6c7d71;--town:#e6ebe7;--halo:#161b18;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#161b18;--grid:#34403a;--panel:#212823;--fg:#e6ebe7;--muted:#98a59c;--line:#37433b;--accent:#7cc3a0;--ptfill:#161b18;--ptline:#e6ebe7;--road:#4a574e;--roadmajor:#6c7d71;--town:#e6ebe7;--halo:#161b18;color-scheme:dark}
+:root{--bg:#f2eee8;--grid:#c9c2b4;--panel:#fbf9f5;--fg:#121310;--muted:#5a574e;--line:#d9d3c8;--bstrong:#8d887b;--accent:#a8420f;--brand:#ed7437;--onbrand:#121310;--ptfill:#fbf9f5;--ptline:#121310;--road:#a39d8f;--roadmajor:#7d776b;--town:#121310;--halo:#fbf9f5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#262524;--grid:#3a3733;--panel:#1c1a17;--fg:#f2eee8;--muted:#b3b2ae;--line:#3a3733;--bstrong:#8a877d;--accent:#ed7437;--ptfill:#262524;--ptline:#f2eee8;--road:#4d4a44;--roadmajor:#77736a;--town:#f2eee8;--halo:#262524;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#262524;--grid:#3a3733;--panel:#1c1a17;--fg:#f2eee8;--muted:#b3b2ae;--line:#3a3733;--bstrong:#8a877d;--accent:#ed7437;--ptfill:#262524;--ptline:#f2eee8;--road:#4d4a44;--roadmajor:#77736a;--town:#f2eee8;--halo:#262524;color-scheme:dark}
 html,body{height:100%}body{background:var(--bg);color:var(--fg);font:13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;position:relative;overflow:hidden}
 #map{position:absolute;inset:0;background:var(--bg)}
 #panel{position:absolute;z-index:1000;top:16px;right:16px;width:min(270px,calc(100% - 32px));max-height:calc(100% - 32px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px #0003;padding:10px 12px}
@@ -694,6 +695,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
 #wres div{padding:5px 10px;cursor:pointer;border-bottom:1px solid var(--line)}#wres div:last-child{border-bottom:0}
 #wres div.on,#wres div:hover{background:var(--line)}#wres small{display:block;color:var(--muted)}#wres .none{cursor:default;color:var(--muted)}
 @media (max-width:700px){#wsearch{left:10px;right:10px;top:auto;bottom:30px;width:auto}#wres{top:auto;bottom:100%;margin:0 0 3px}#themebtn{top:auto;bottom:76px}}
+/* TAH: Outfit for UI, interactive things are pills, no shadows (depth = panel against ground plus a hairline edge), orange only for the primary action */
+body{font-family:"Outfit","Avenir Next",system-ui,sans-serif}
+*{box-shadow:none!important}
+#panel,#plot,#wres,#opm{border-radius:12px;border-color:var(--line)}
+#panel select,#panel .ms button,#panel .pbtn,#wsearch input,.pbtn{border-radius:999px;border-color:var(--bstrong)}
+#panel select,#panel .ms button{padding-left:12px;padding-right:12px}
+#stm{border-radius:12px;border-color:var(--bstrong)}
+#themebtn{border-radius:50%;border-color:var(--bstrong);color:var(--fg)}
+#wsearch input{padding-left:14px}
+#xdl{background:var(--brand);color:var(--onbrand);border-color:transparent}
+#panel summary{font-weight:600}
+a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.leaflet-bar,.leaflet-bar a{border-radius:12px}
 </style></head><body>
 <div id="map"></div>
 <button type="button" id="themebtn"></button>
