@@ -25,13 +25,24 @@ body{margin:0;background:var(--color-bg);color:var(--color-fg);font:14px/1.4 var
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin-bottom:12px}h2{font-size:15px;margin:0 0 8px}
 table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{padding:5px 7px;border-bottom:1px solid var(--color-border-line);text-align:right;white-space:nowrap}th:first-child,td:first-child,th.l,td.l{text-align:left}
 th{cursor:pointer;color:var(--color-fg-muted);font-weight:500;position:sticky;top:0;background:var(--color-panel)}.scroll{overflow:auto;max-height:520px}
+.ctl{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:8px;padding:8px 12px;margin:0 0 12px;box-shadow:0 2px 8px #0002}
+.ctl .cg{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ctl .cl{color:var(--color-fg-muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.ctl .ctn{margin-left:auto;color:var(--color-fg-muted);font-size:12.5px;font-variant-numeric:tabular-nums}.ctl .ctb{font:inherit;font-size:12px;padding:3px 9px;border:1px solid var(--color-border-line);border-radius:6px;background:var(--color-bg);color:var(--color-fg);cursor:pointer}
+#opd{position:relative}#opd summary{cursor:pointer;list-style:none;border:1px solid var(--color-border-line);border-radius:6px;padding:4px 10px;background:var(--color-bg);min-width:150px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}#opd summary::-webkit-details-marker{display:none}#opd summary::after{content:' \25BE';float:right;margin-left:8px}
+#opm{position:absolute;left:0;top:calc(100% + 4px);z-index:40;width:290px;max-width:calc(100vw - 40px);background:var(--cds-surface-popover);border:1px solid var(--cds-border);border-radius:8px;box-shadow:var(--cds-shadow-popover);padding:8px}
+#opm input[type=search]{width:100%;box-sizing:border-box;padding:5px 8px;font:inherit;background:var(--color-bg);color:var(--color-fg);border:1px solid var(--color-border-line);border-radius:6px}.opb{display:flex;gap:6px;margin:6px 0}.opb button{font:inherit;font-size:12px;padding:2px 9px;border:1px solid var(--color-border-line);border-radius:6px;background:var(--color-bg);color:var(--color-fg);cursor:pointer}
+#opl{max-height:min(320px,50vh);overflow:auto}#opl label{display:flex;align-items:center;gap:6px;padding:3px 2px;font-size:13px;cursor:pointer}#opl label span{color:var(--color-fg-muted);margin-left:auto;font-size:12px;font-variant-numeric:tabular-nums}
 .na{color:var(--color-fg-muted)}.flag{color:var(--color-warn)}select{font:inherit;padding:4px;background:var(--color-panel);color:var(--color-fg);border:1px solid var(--color-border-line);border-radius:6px}
 .grid2>*{min-width:0}.gt th,.gt td{white-space:normal;padding:5px 6px}.gt th{position:static}.gt td:first-child{max-width:150px}svg{max-width:100%;height:auto}.note{color:var(--color-fg-muted);font-size:12px;margin:6px 0}svg text{fill:var(--cds-chart-axis);font-size:11px}
 </style><script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script></head><body><div id="dash-root"><div class="wrap">
 <p style="margin:0 0 6px"><a href="dashboard.html">&larr; Operator and formation performance</a> &nbsp;|&nbsp; <a href="production.html">Production comparison</a> &nbsp;|&nbsp; <a href="./">Map</a></p>
 <h1>Completion details: wells by operator</h1>
 <p class="sub" id="subt"></p>
-<p style="margin:0 0 12px"><label style="font-size:13px"><input type="checkbox" id="more" checked> Include wells beyond each operator's top 5 <span id="mo"></span></label> <span style="font-size:13px;margin-left:14px">Formation <span id="fmsel"></span></span></p>
+<div class="ctl" id="ctl" role="group" aria-label="Filters">
+<div class="cg"><span class="cl">Operator</span><details id="opd"><summary id="ops">All operators</summary><div id="opm"><input type="search" id="opq" placeholder="Find an operator" aria-label="Find an operator"><div class="opb"><button type="button" id="opall">All</button><button type="button" id="opnone">Clear</button></div><div id="opl"></div></div></details></div>
+<div class="cg"><span class="cl">Formation</span><span id="fmsel"></span></div>
+<label class="cg" style="font-size:13px"><input type="checkbox" id="more" checked> Wells beyond each operator's top 5 <span id="mo"></span></label>
+<span id="ctn" class="ctn"></span><button type="button" id="ctr" class="ctb" hidden>Reset filters</button></div>
 <div class="kpis" id="kpis"></div>
 <div class="grid2"><div class="card"><h2>Sand per lateral foot, by operator (median, lb/ft)</h2><div id="c1"></div></div>
 <div class="card"><h2>Stages and stage spacing</h2><div id="c2"></div></div></div>
@@ -130,10 +141,22 @@ function readNow(){const el=document.getElementById('read');if(W.length==D.wells
  const A=W.filter(w=>!w.flag),B=A.filter(w=>w.yr>=2022),L=[['ppf','sand per foot'],['fpf','fluid per foot'],['slen','stage length'],['stages','stage count'],['rate','average rate'],['isip','ISIP'],['fg','frac gradient'],['yr','completion year']];
  const f=(x)=>x?x.r.toFixed(2)+' (n='+x.n+')':'too few wells';
  el.innerHTML='<p>Rank correlation of each factor with oil per 1,000 ft, for the wells now shown (flagged records removed):</p><table class="gt"><tr><th>Factor</th><th>All wells</th><th>2022 and later</th></tr>'+L.map(([k,n])=>'<tr><td>'+n+'</td><td>'+f(rr(A,k))+'</td><td>'+f(rr(B,k))+'</td></tr>').join('')+'</table><p class="note">Wells beyond the top 5 include weaker producers, so the picture is less biased toward good wells than the top-5 view, but many of the added wells have only Form 3 totals (no rate, pressure or ISIP), so those columns rest on far fewer wells. Location and operator are not controlled for. Treat these as pointers, not proof of cause. Untick the box above for the top-5 write-up.</p>'}
-function setSet(){document.getElementById('mo').textContent='(added operator by operator, so far: '+[...new Set(ALL.filter(w=>w.grp=='more').map(w=>w.op))].join(', ')+')';W=document.getElementById('more').checked?ALL:ALL.filter(w=>w.grp!='more');const fmc=[...document.querySelectorAll('#fmsel input')].filter(i=>i.checked).map(i=>i.value);if(fmc.length)W=W.filter(w=>fmc.includes(w.fm));prep();
+function setSet(){document.getElementById('mo').textContent='(added operator by operator, so far: '+[...new Set(ALL.filter(w=>w.grp=='more').map(w=>w.op))].join(', ')+')';W=document.getElementById('more').checked?ALL:ALL.filter(w=>w.grp!='more');const fmc=[...document.querySelectorAll('#fmsel input')].filter(i=>i.checked).map(i=>i.value);if(fmc.length)W=W.filter(w=>fmc.includes(w.fm));if(opSel.size)W=W.filter(w=>opSel.has(w.op));prep();ctlInfo();
  const nop=new Set(W.map(w=>w.op)).size;document.getElementById('subt').textContent=(W.length==ALL.length&&ALL.length>D.wells.filter(w=>w.grp!='more').length?W.length+' wells across '+nop+' operators: the top 5 per operator by first-12-month oil, plus every other well fetched so far for the operators listed below.':'Top 5 wells per operator by first-12-month oil ('+W.length+' wells).')+' Source: WOGCC Treatments table and Form 3 attachments. Blank = not filed.';
  kp();covf();fillSel();tbl();draw();drivers();readNow()}
 (function(){const c=d3.rollups(ALL,a=>a.length,w=>w.fm).sort((a,b)=>b[1]-a[1]),s=document.getElementById('fmsel');s.innerHTML=c.map(([k,n])=>'<label style="margin-left:8px"><input type="checkbox" value="'+k+'" checked style="margin-right:3px">'+k+' ('+n+')</label>').join('');if(c.length<2)s.parentNode.style.display='none';s.onchange=e=>{if(!s.querySelector('input:checked'))e.target.checked=true;setSet()}})();
-document.getElementById('more').onchange=setSet;if(!ALL.some(w=>w.grp=='more'))document.getElementById('more').parentNode.parentNode.style.display='none';
+
+/* ---- control bar: operator filter (empty selection = every operator) ---- */
+const opSel=new Set();
+function ctlInfo(){const n=opSel.size,sm=document.getElementById('ops');sm.textContent=!n?'All operators':n==1?[...opSel][0]:n+' operators';
+ const fm=[...document.querySelectorAll('#fmsel input')],fa=fm.some(i=>!i.checked),mo=document.getElementById('more');
+ document.getElementById('ctn').textContent=W.length+' of '+ALL.length+' wells';document.getElementById('ctr').hidden=!(n||fa||!mo.checked)}
+(function(){const c=d3.rollups(ALL,a=>a.length,w=>w.op).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])),l=document.getElementById('opl'),q=document.getElementById('opq');
+ function build(){const v=q.value.trim().toLowerCase();l.innerHTML=c.filter(([k])=>!v||k.toLowerCase().includes(v)).map(([k,n])=>'<label><input type="checkbox" value="'+k.replace(/"/g,'&quot;')+'"'+(opSel.has(k)?' checked':'')+'>'+k+'<span>'+n+'</span></label>').join('')||'<div class="na" style="padding:4px">No operator matches</div>'}
+ build();q.oninput=build;l.onchange=e=>{const t=e.target;if(t.type!='checkbox')return;t.checked?opSel.add(t.value):opSel.delete(t.value);setSet()};
+ document.getElementById('opall').onclick=()=>{opSel.clear();build();setSet()};document.getElementById('opnone').onclick=()=>{opSel.clear();q.value='';build();setSet()};
+ document.getElementById('ctr').onclick=()=>{opSel.clear();q.value='';build();document.querySelectorAll('#fmsel input').forEach(i=>i.checked=true);document.getElementById('more').checked=true;setSet()};
+ document.addEventListener('click',e=>{const d=document.getElementById('opd');if(d.open&&!d.contains(e.target))d.open=false});document.addEventListener('keydown',e=>{if(e.key=='Escape')document.getElementById('opd').open=false})})();
+document.getElementById('more').onchange=setSet;if(!ALL.some(w=>w.grp=='more'))document.getElementById('more').parentNode.style.display='none';
 setSet();addEventListener('resize',draw);matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
 </script></body></html>
