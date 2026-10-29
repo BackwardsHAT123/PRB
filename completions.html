@@ -77,7 +77,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent-text)}
 <div class="grid2" id="sc" style="margin-top:8px"></div>
 <div class="grid2" id="gr"></div>
 <div class="card" style="margin-top:8px"><h2 style="font-size:14px">Reading it</h2><div id="read" style="font-size:13px"></div></div></div>
-<div class="card"><h2>Wells</h2><p class="note" style="margin:0 0 8px">Click a column header to sort the table by that column. Click it again to reverse the order.</p><div class="scroll" id="tbl"></div><p class="note"><span class="flag">&#9873;</span> = value looks suspect in the state record (sand per foot above 4,000 lb/ft or fluid implausible). Vendor is as filed; Element is a frac-reporting firm and may not be the pump company.</p></div>
+<div class="card"><h2>Wells</h2><p class="note" style="margin:0 0 8px">Click a column header to sort the table by that column. Click it again to reverse the order.</p>
+<p class="note" style="margin:0 0 8px"><b>*</b> next to a Rate, Avg psi, ISIP or Frac grad value: it is the average of the per-stage values read from the vendor's stage table (scanned reports, read by OCR). No asterisk: it comes from the vendor's whole-job summary instead (for ISIP and frac gradient, the mean of the initial and final values).</p><div class="scroll" id="tbl"></div><p class="note"><span class="flag">&#9873;</span> = value looks suspect in the state record (sand per foot above 4,000 lb/ft or fluid implausible). Vendor is as filed; Element is a frac-reporting firm and may not be the pump company.</p></div>
 <p class="note" style="margin:12px 2px 0">Download the raw data (CSV, all wells, whatever the box above is set to): <a href="data/completions/PRB_niobrara_completions.csv" download>well-level completion details</a> &middot; <a href="data/completions/PRB_niobrara_stage_level.csv" download>stage-level treating data</a>. Values read from scanned reports by OCR; see the notes above.</p>
 </div></div>
 <script>
