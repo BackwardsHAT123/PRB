@@ -1005,7 +1005,7 @@ async function downloadAries(){
   const rows=[];
   xRows((a,key,o,g,w)=>{const dg=a.replace(/\D/g,''),api10=dg.length>10?dg.slice(0,10):dg;       /* 10 digits: no dashes, trailing zeros of a 14-digit UWI trimmed */
    rows.push([api10,Date.UTC(+key.slice(0,4),+key.slice(5)-1,1)/864e5+25569,o,g,w])});
-  const blob=await buildXlsx(['API10','ProducingMonth','LiquidsProd_BBL','GasProd_MCF','WaterProd_BBL'],rows);
+  const blob=await buildXlsx(['API10','ProducingMonth','Oil','Gas','Water'],rows);
   const clean=t=>t.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
   const parts=['campbell_production'];
   if(xop.value)parts.push(clean(xop.value));if(xfm.value)parts.push(clean(xfm.value));
@@ -1017,7 +1017,7 @@ async function downloadAries(){
 }
 const xfmt=document.getElementById('xfmt'),xnote=document.getElementById('xnote');
 function xFormat(){const a=xfmt.value==='aries';xdl.textContent=a?'Download .xlsx':'Download CSV';
- xnote.textContent=a?'Aries columns: API10 (10 digits, no dashes), ProducingMonth (mm/dd/yyyy, first of the month), LiquidsProd_BBL, GasProd_MCF, WaterProd_BBL. One sheet, one row per well and month. Leave a filter blank for no limit.':'Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.'}
+ xnote.textContent=a?'Aries columns: API10 (10 digits, no dashes), ProducingMonth (mm/dd/yyyy, first of the month), Oil (bbl), Gas (mcf), Water (bbl). One sheet, one row per well and month. Leave a filter blank for no limit.':'Columns: API (no dashes), Date, Oil (bbl), Gas (mcf), Water (bbl). Leave a filter blank for no limit.'}
 xfmt.onchange=xFormat;xFormat();
 if(PROD)initExport();
 </script>
