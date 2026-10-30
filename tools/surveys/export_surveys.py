@@ -3,7 +3,7 @@
     python3 tools/surveys/export_surveys.py --operator Ballard --formation Turner -o ballard_turner_surveys.csv
     python3 tools/surveys/export_surveys.py --all -o prb_surveys.csv
 
-One row per station: UWI (API10, no dashes), well name, MD, inclination, azimuth (as filed) and, for COMPLETE surveys only, TVD and north/east offsets from the
+One row per station: UWI (14 digits: API10 plus 0000, no dashes), well name, MD, inclination, azimuth (as filed) and, for COMPLETE surveys only, TVD and north/east offsets from the
 surface location (minimum curvature, true north). Complete uses the same rule as the GeoGraphix and OpenWorks exports (survey_complete): a table that starts near the
 surface and has no big gaps once the well is past 10 degrees. Partial surveys (for example lateral-only tables) are included with Complete = N and no TVD/offsets,
 so nothing is hidden; a complete survey that starts below the surface gets a tie-in row at MD 0 (0 inclination, 0 azimuth).
@@ -29,10 +29,10 @@ def fx(v):
 def well_rows(d, stations):
     if not stations:
         return []
-    api10 = d["a"].replace("-", ""); nm = q(d.get("n"))
+    uwi = d["a"].replace("-", "") + "0000"; nm = q(d.get("n"))
     if survey_complete(stations):
-        return [",".join([api10, nm, fx(md), fx(inc), fx(azi), fx(tvd), fx(n), fx(e), "Y"]) for md, tvd, inc, azi, n, e in station_rows(stations)]
-    return [",".join([api10, nm, fx(md), fx(inc), fx(azi), "", "", "", "N"]) for md, inc, azi in stations]
+        return [",".join([uwi, nm, fx(md), fx(inc), fx(azi), fx(tvd), fx(n), fx(e), "Y"]) for md, tvd, inc, azi, n, e in station_rows(stations)]
+    return [",".join([uwi, nm, fx(md), fx(inc), fx(azi), "", "", "", "N"]) for md, inc, azi in stations]
 
 
 def build(wells, SS):
