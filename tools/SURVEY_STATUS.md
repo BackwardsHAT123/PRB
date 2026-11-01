@@ -1,6 +1,6 @@
 # PRB map: directional-survey reconciliation — status and to-do
 
-Last updated: Oct 26, 2026 (Converse survey reading stopped after batch 6). Repo: https://github.com/BackwardsHAT123/PRB (map = `index.html`, path fixes = `data/overrides.json`).
+Last updated: Nov 1, 2026 (monthly update; Converse survey reading stopped after batch 6). Repo: https://github.com/BackwardsHAT123/PRB (map = `index.html`, path fixes = `data/overrides.json`).
 
 ## What this is
 Wells on the map that only show a straight line from surface hole (SHL) to bottom hole (BHL) get a real lateral path
@@ -36,6 +36,7 @@ the bottom hole, held back), **depth gap** (>1,200 ft gap in the survey inside t
 | Sister Fed, Tethys and Chaos Fed wells, Johnson (`tools/survey_work/targets_chs.json`, 12 straight-line wells at Tom's request, Oct 27, 2026) | 12 | 6 ok (all exact), 6 none (permits, spudded or abandoned wells with no survey) | **6 paths** (fx 8) | see git log |
 | Anschutz Pokes Fed permits, Johnson (10 wells, T46N R77W sec 16 to 28; `tools/survey_work/pokes_apd.py`, results in `pokes_apd_plats.json`, Oct 27, 2026) | 10 | state GIS permit tracks ended about 9 km from the true bottom hole | **10 paths** (fx 6 with a note): surface hole, landing point and bottom hole from the survey plat on page 11 of each APD; `49-019-42214` surface hole moved 174 m to the plat | see git log |
 | Converse T36N R71W (`targets_3671.json`, 156 wells) | 6 of 156 | 4 ok, 1 unreadable, 1 none | none yet | — |
+| Monthly update 2026-11 (`tools/survey_work/survey_out_monthly.jsonl`, 100 newest untried Campbell/Johnson straight-line wells; Converse excluded) | 100 | 63 ok (49 exact, 6 adjusted, 8 depth-gap), 10 rejected, 19 none, 8 unreadable | **49 paths** (fx 8); held lists in `survey_held_2026-11.json` | see git log |
 
 Of the ok wells in the sixth batch (`targets_chunk5.json`): 36 applied, 4 held as "adjusted", 2 held for depth gaps (`49-005-61785`, `77703`); lists in `survey_held_chunk5.json`.
 
@@ -51,14 +52,14 @@ Applied paths were checked: each starts exactly at the header SHL, ends within 5
 
 Johnson: 64 more paths from filed directional surveys (fx 8), all 106 Johnson targets run; depth-gap wells held: `49-019-29897`, `30388`; lists in `survey_held_johnson1.json`. The Johnson target lists are `targets_johnson1.json` (100) and `targets_johnson2.json` (6, done); results go to `survey_out_johnson.jsonl`.
 
-Paths on the map now by source (Campbell): 441 from filed certification forms (fx 7), 268 from filed directional surveys (fx 8), 12 from operator design surveys (fx 6). Of 1,406 Campbell wells, about 553 still show a straight line.
+Paths on the map now by source (Campbell): 437 from filed certification forms (fx 7), 321 from filed directional surveys (fx 8), 12 from operator design surveys (fx 6). Of 1,402 Campbell wells, about 524 still show a straight line (Nov 1, 2026).
 
 ## LEFT TO DO
 
 1. **Campbell survey batches: all five target lists (`targets_chunk1.json` to `5`) are done.** The target lists only held wells with a straight line and a header bottom hole when they were made, so a new list could be built for any wells added or still unresolved — `tools/survey_work/targets_chunk2.json` … `targets_chunk5.json` ( operators Ballard, EOG, Devon, Peak Powder River; only wells that still had a straight line and a header bottom hole when the lists were made).
    The second batch (100 wells) took about 70 minutes, so each further 100 is roughly an hour to an hour and a half.
 2. **Converse: survey reading stopped (decision Oct 26, 2026).** Batches 1 to 6 (600 Continental wells, `tools/survey_work/targets_converse1.json` to `6`) were read and 312 exact paths applied. The remaining Converse lists (`targets_converse7.json` to `18`, about 1,100 wells, plus T36N R71W `targets_3671.json`, 150 wells left) were not run and are not planned. The monthly update no longer reads Converse surveys; Converse wells still get new-well, state-track and production updates. The state site (pipeline.wyo.gov) blocked the reader after roughly 200 to 300 wells in a few hours, even at one request per 10 seconds; resting overnight cleared it. If this is revisited, run one chunk at a time with long rests.
-3. **Decide on the held results from the second to sixth Campbell batches** (counts as of the last apply run): 68 "adjusted" paths (Campbell and Johnson) (shifted to end on the header BHL) and 26 depth-gap paths. The first round also held its adjusted ones back. They can be applied with the "include adjusted" option (fx 9) if you want them.
+3. **Decide on the held results from the second to sixth Campbell batches** (counts as of the last apply run): 74 "adjusted" paths (Campbell and Johnson, incl. 6 from the Nov 2026 monthly run) (shifted to end on the header BHL) and 34 depth-gap paths (incl. 8 from the Nov 2026 run). The first round also held its adjusted ones back. They can be applied with the "include adjusted" option (fx 9) if you want them.
 4. **94 rejected + 18 unreadable wells from the second to sixth Campbell batches** have not been investigated (misread OCR, or the survey really does not match the header bottom hole). IDs are in `tools/survey_work/survey_out.jsonl` (status `rejected` / `unreadable`).
 5. **Johnson wells outside the two target lists and Converse wells**: Johnson's 106 straight-line targets were read (64 paths applied). Wells with a multi-point state track already use it; wells with a straight state track show a straight line.
 6. Optional: apply script `tools/apply_surveys.py` was written for the earlier session's folder layout (`prb/index.html`, `prb/data/overrides.json`) and for Campbell only. For the second batch I applied results with an inline script on a fresh clone of the repo (same rules: status ok, not adjusted, not depth-gap, well still a straight line, then write `ln`, `fx` 8 and `surv` into the page data and `data/overrides.json`). It would be worth tidying that into the tools folder, and making it work for Converse.
