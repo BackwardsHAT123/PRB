@@ -687,6 +687,16 @@ svg.leaflet-image-layer.leaflet-interactive path {
 #themebtn,#wsearch{position:absolute;z-index:1000;font:inherit}
 #themebtn{left:10px;top:88px;width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg);font-size:18px;line-height:1;cursor:pointer;box-shadow:0 1px 6px #0003}
 #themebtn:hover{background:var(--line)}
+#newbtn{position:absolute;z-index:1000;left:10px;top:130px;width:34px;height:34px;padding:0;border:1px solid var(--bstrong);border-radius:50%;background:var(--panel);color:var(--fg);font:inherit;font-size:11px;font-weight:700;line-height:1;cursor:pointer}
+#newbtn:hover{background:var(--line)}
+#newpop{position:fixed;inset:0;z-index:2000;background:#0006;display:flex;align-items:center;justify-content:center;padding:16px}#newpop[hidden]{display:none}
+#newpop .np{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:12px;width:min(920px,100%);max-height:min(80vh,640px);display:flex;flex-direction:column}
+#newpop .nh{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+#newpop .nh button{border:0;background:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
+#npb{overflow:auto;padding:4px 16px 14px;font-size:13px}#npb h4{margin:14px 0 6px;font-size:13px}
+#npb table{border-collapse:collapse;width:100%}#npb th{position:sticky;top:0;background:var(--panel);text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--bstrong)}
+#npb th,#npb td{padding:5px 10px 5px 0;white-space:nowrap}#npb td{border-bottom:1px solid var(--line)}#npb tr.go{cursor:pointer}#npb tr.go:hover td{background:var(--line)}
+#npb .nn{color:var(--muted);padding:10px 0}
 #wsearch{left:56px;top:10px;width:min(300px,calc(100% - 360px))}
 #wsearch input{width:100%;box-sizing:border-box;padding:7px 28px 7px 10px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;font:inherit;box-shadow:0 1px 6px #0003}
 #wsearch input:focus{outline:2px solid var(--accent);outline-offset:0}
@@ -694,7 +704,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 #wres{position:absolute;left:0;right:0;top:100%;margin-top:3px;max-height:min(320px,50vh);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px #0004}
 #wres div{padding:5px 10px;cursor:pointer;border-bottom:1px solid var(--line)}#wres div:last-child{border-bottom:0}
 #wres div.on,#wres div:hover{background:var(--line)}#wres small{display:block;color:var(--muted)}#wres .none{cursor:default;color:var(--muted)}
-@media (max-width:700px){#wsearch{left:10px;right:10px;top:auto;bottom:30px;width:auto}#wres{top:auto;bottom:100%;margin:0 0 3px}#themebtn{top:auto;bottom:76px}}
+@media (max-width:700px){#wsearch{left:10px;right:10px;top:auto;bottom:30px;width:auto}#wres{top:auto;bottom:100%;margin:0 0 3px}#themebtn{top:auto;bottom:76px}#newbtn{top:auto;bottom:118px}}
 /* TAH: Outfit for UI, interactive things are pills, no shadows (depth = panel against ground plus a hairline edge), orange only for the primary action */
 body{font-family:"Outfit","Avenir Next",system-ui,sans-serif}
 *{box-shadow:none!important}
@@ -715,6 +725,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 </style></head><body>
 <div id="map"></div>
 <button type="button" id="themebtn"></button>
+<button type="button" id="newbtn" title="Wells added to the map in the latest updates" aria-label="Wells added to the map in the latest updates">New</button>
+<div id="newpop" hidden role="dialog" aria-modal="true" aria-label="New wells"><div class="np"><div class="nh"><b id="npt">Wells added to the map</b><button type="button" id="npx" aria-label="Close">&times;</button></div><div id="npb"></div></div></div>
 <div id="wsearch"><input id="wq" type="search" placeholder="Find a well: part of a name or API" autocomplete="off" aria-label="Find a well by part of its name or API number"><button type="button" id="wsx" aria-label="Clear search" hidden>&times;</button><div id="wres" hidden role="listbox"></div></div>
 <details id="panel" open><summary>PRB WY horizontals<br><small>API ≥ 49-005-35840 (Campbell), 49-009-28220 (Converse), 49-019-29600 (Johnson) · WOGCC data</small></summary>
 <div id="count"></div>
@@ -802,6 +814,18 @@ if(op.value&&d.oc!=op.value||st.sel.length&&!st.sel.includes(d.sg)||ct.value&&d.
 const ll=(d.ln&&d.ln.length>1?d.ln:[d.shl]).map(x=>[x[1],x[0]]);map.fitBounds(L.latLngBounds(ll),{padding:[70,70],maxZoom:14});
 L.popup({autoPan:true}).setLatLng([d.shl[1],d.shl[0]]).setContent(pop(d)).openOn(map)}
 goWell();addEventListener('hashchange',goWell);
+/* ---- new wells report: wells added to / dropped from the map, from data/new_wells.json (written by update.py) ---- */
+(function(){L.DomEvent.disableClickPropagation(newbtn);let data=null;
+const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fd=d=>{const t=new Date(d+'T12:00:00');return isNaN(t)?d:t.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})};
+function tbl(rows,go){return '<table><thead><tr><th>Added</th><th>Well</th><th>Operator</th><th>Status</th><th>Formation</th><th>County</th><th>Sec-Twn-Rng</th></tr></thead><tbody>'+rows.map(r=>`<tr${go?` class="go" data-a="${esc(r.a)}" title="Show on the map"`:''}><td>${fd(r.d)}</td><td>${esc(r.n)}<br><small style="color:var(--muted)">${esc(r.a)}</small></td><td>${esc(r.o)}</td><td>${esc(r.s)}</td><td>${esc(r.r||r.f)}</td><td>${esc(r.cty)}</td><td>${esc(r.sec)}</td></tr>`).join('')+'</tbody></table>'}
+function draw(){const cut=Date.now()-45*864e5,L_=(data&&data.log||[]).filter(r=>new Date(r.d+'T12:00:00')>=cut).sort((a,b)=>b.d.localeCompare(a.d)||a.n.localeCompare(b.n));
+const ad=L_.filter(r=>r.t=='add'),rm=L_.filter(r=>r.t=='rem'),on=new Set(D.map(w=>w.a));
+npb.innerHTML=(ad.length?`<h4>Added to the map (${ad.length}), last 45 days</h4>`+tbl(ad,true):'<div class="nn">No wells were added in the last 45 days.</div>')+(rm.length?`<h4>Dropped from the map (${rm.length}): cancelled, withdrawn or no longer in the state layer</h4>`+tbl(rm,false).replace('<th>Added</th>','<th>Dropped</th>'):'');
+npb.querySelectorAll('tr.go').forEach(tr=>tr.onclick=()=>{const a=tr.dataset.a;if(!on.has(a))return;newpop.hidden=true;if(location.hash=='#'+a)goWell();else location.hash=a})}
+newbtn.onclick=()=>{newpop.hidden=false;npb.innerHTML='<div class="nn">Loading...</div>';fetch('data/new_wells.json',{cache:'no-cache'}).then(r=>r.ok?r.json():Promise.reject()).then(j=>{data=j;draw()}).catch(()=>{npb.innerHTML='<div class="nn">The new wells list could not be loaded.</div>'})};
+npx.onclick=()=>{newpop.hidden=true};newpop.onclick=e=>{if(e.target===newpop)newpop.hidden=true};
+document.addEventListener('keydown',e=>{if(e.key=='Escape'&&!newpop.hidden)newpop.hidden=true})})();
 /* ---- well search: part of a name or API number ---- */
 (function(){const q=wq,res=wres,clr=wsx;let hits=[],cur=-1;
 L.DomEvent.disableClickPropagation(wsearch);L.DomEvent.disableScrollPropagation(wsearch);L.DomEvent.disableClickPropagation(themebtn);

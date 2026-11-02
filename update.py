@@ -20,6 +20,7 @@ HEADERS = os.path.join(ROOT, "data", "headers.json")
 OVERRIDES = os.path.join(ROOT, "data", "overrides.json")
 PROPOSED = os.path.join(ROOT, "data", "proposed.json")
 PRODUCTION = os.path.join(ROOT, "data", "production.json")
+NEWWELLS = os.path.join(ROOT, "data", "new_wells.json")
 WFS = "https://dataexplorer.wogcc.wyo.gov/geoserver/wfs"
 ED = "https://dataexplorer.wogcc.wyo.gov/ED.aspx?KeyName=PKey&KeyValue={}&KeyType=Integer&DetailXML=WellDetails.xml"
 DRILL = "https://pipeline.wyo.gov/drillactivityByCallIn.cfm"
@@ -364,6 +365,25 @@ def annotate_rigs(wells, recs, log):
     log(f"rig history: {len(locs)} wells with call-ins in {RIG_HIST_DAYS} days; {n} wells on those pads; {sum(w['hp'] for w in wells)} wells with production reported")
 
 
+def new_well_entries(old_wells, wells):
+    """Wells that appeared on or dropped off the map since the last run, as log rows for the New button (data/new_wells.json)."""
+    today = datetime.date.today().isoformat()
+    old = {w["a"]: w for w in old_wells}
+    new = {w["a"]: w for w in wells}
+    row = lambda w, t: {"d": today, "t": t, "a": w["a"], "n": " ".join((w.get("n") or "").split()), "o": w.get("oc") or w.get("o"),
+                        "s": w.get("s"), "f": w.get("f"), "r": w.get("r"), "cty": w.get("cty"), "sec": w.get("sec")}
+    return [row(new[a], "add") for a in sorted(new) if a not in old] + [row(old[a], "rem") for a in sorted(old) if a not in new]
+
+
+def record_new_wells(entries):
+    """Add today's rows to the log; safe to run twice (a push retry re-applies them)."""
+    log = json.load(open(NEWWELLS))["log"] if os.path.exists(NEWWELLS) else []
+    have = {(r["d"], r["t"], r["a"]) for r in log}
+    log += [e for e in entries if (e["d"], e["t"], e["a"]) not in have]
+    cutoff = (datetime.date.today() - datetime.timedelta(days=400)).isoformat()
+    json.dump({"log": [r for r in log if r["d"] >= cutoff]}, open(NEWWELLS, "w"), indent=0)
+
+
 def write_index(wells, rigs):
     s = open(INDEX).read()
     i = s.index("const D=") + 8
@@ -382,11 +402,14 @@ def _git(*a, check=True):
     return subprocess.run(["git", *a], cwd=ROOT, check=check, capture_output=True, text=True)
 
 
+NEW_ENTRIES = []
+
+
 def push_changes(wells, rigs, log, attempts=4):
     """Commit and push. If someone else pushed while this run was working (it takes about 5 minutes), take their version
     of everything, re-apply today's well data, header cache and production on top of it, and push again."""
     for n in range(attempts):
-        _git("add", "index.html", "data/headers.json", "data/production.json")
+        _git("add", "index.html", "data/headers.json", "data/production.json", "data/new_wells.json")
         if _git("diff", "--cached", "--quiet", check=False).returncode == 0:
             log("nothing to commit")
             return
@@ -414,6 +437,7 @@ def push_changes(wells, rigs, log, attempts=4):
                         if ov[w["a"]].get(k):
                             w[k] = ov[w["a"]][k]
         write_index(wells, rigs)
+        record_new_wells(NEW_ENTRIES)
     sys.exit("could not push after several attempts")
 
 
@@ -435,6 +459,13 @@ def main():
     rigs = build_rigs(wells, log, recs)
     annotate_rigs(wells, recs, log)
     before = open(INDEX).read()
+    try:        # wells added to or dropped from the map since the last run, for the New button
+        i = before.index("const D=") + 8
+        NEW_ENTRIES.extend(new_well_entries(json.loads(before[i:before.index(";\nconst GRID", i)]), wells))
+        record_new_wells(NEW_ENTRIES)
+        log(f"new-well log: {sum(e['t'] == 'add' for e in NEW_ENTRIES)} added, {sum(e['t'] == 'rem' for e in NEW_ENTRIES)} dropped")
+    except Exception as e:
+        log(f"new-well log failed: {e}")
     write_index(wells, rigs)
     try:
         hdr = json.load(open(HEADERS))
@@ -444,7 +475,7 @@ def main():
         log(f'production refresh failed: {e}')
     changed = open(INDEX).read() != before
     if not changed:   # production or header data can change without the page itself changing
-        st = subprocess.run(["git", "status", "--porcelain", "data/production.json", "data/headers.json"], cwd=ROOT, capture_output=True, text=True)
+        st = subprocess.run(["git", "status", "--porcelain", "data/production.json", "data/headers.json", "data/new_wells.json"], cwd=ROOT, capture_output=True, text=True)
         changed = bool(st.stdout.strip())
     log("index.html " + ("updated" if changed else "unchanged"))
     if "--push" in sys.argv and changed:

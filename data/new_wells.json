@@ -1,0 +1,124 @@
+{
+"log": [
+{
+"d": "2026-11-01",
+"t": "add",
+"a": "49-005-80042",
+"n": "REPUBLIC 4571-332821-1TH",
+"o": "EMEP II",
+"s": "Active Permit",
+"f": "HILIGHT",
+"r": "Turner",
+"cty": "Campbell",
+"sec": "05-44N-71W"
+},
+{
+"d": "2026-11-01",
+"t": "add",
+"a": "49-009-48661",
+"n": "JAMES LUND FED 3570-22-N11H",
+"o": "Oxy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "34-35N-70W"
+},
+{
+"d": "2026-11-01",
+"t": "add",
+"a": "49-009-48682",
+"n": "JAMES LUND FED 3570-22-N9H",
+"o": "Oxy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "34-35N-70W"
+},
+{
+"d": "2026-11-01",
+"t": "add",
+"a": "49-009-49624",
+"n": "EH FED UNIVERSE E 3569-1-T1H",
+"o": "Oxy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Turner",
+"cty": "Converse",
+"sec": "13-35N-69W"
+},
+{
+"d": "2026-11-01",
+"t": "add",
+"a": "49-009-50737",
+"n": "EH FED UNIVERSE E 3569-1-N7H",
+"o": "Oxy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "13-35N-69W"
+},
+{
+"d": "2026-11-01",
+"t": "add",
+"a": "49-009-50738",
+"n": "EH FED UNIVERSE E 3569-1-N9H",
+"o": "Oxy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "13-35N-69W"
+},
+{
+"d": "2026-11-01",
+"t": "rem",
+"a": "49-005-79152",
+"n": "CORK 3001-01H",
+"o": "EOG",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Campbell",
+"sec": "19-41N-72W"
+},
+{
+"d": "2026-11-01",
+"t": "rem",
+"a": "49-005-79154",
+"n": "CORK 3006-02H",
+"o": "EOG",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Campbell",
+"sec": "19-41N-72W"
+},
+{
+"d": "2026-11-01",
+"t": "rem",
+"a": "49-005-79155",
+"n": "CORK 3006-03H",
+"o": "EOG",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Campbell",
+"sec": "19-41N-72W"
+},
+{
+"d": "2026-11-01",
+"t": "rem",
+"a": "49-005-79156",
+"n": "CORK 3006-04H",
+"o": "EOG",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Campbell",
+"sec": "19-41N-72W"
+}
+]
+}
