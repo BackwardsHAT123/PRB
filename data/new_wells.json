@@ -119,6 +119,66 @@
 "r": "Niobrara",
 "cty": "Campbell",
 "sec": "19-41N-72W"
+},
+{
+"d": "2026-11-02",
+"t": "add",
+"a": "49-005-80163",
+"n": "REPUBLIC 4571-332821-2PH",
+"o": "EMEP II",
+"s": "Active Permit",
+"f": "HILIGHT",
+"r": "Parkman",
+"cty": "Campbell",
+"sec": "05-44N-71W"
+},
+{
+"d": "2026-11-02",
+"t": "add",
+"a": "49-005-80164",
+"n": "REPUBLIC 4571-332821-2SH",
+"o": "EMEP II",
+"s": "Active Permit",
+"f": null,
+"r": "Unknown",
+"cty": "Campbell",
+"sec": "-"
+},
+{
+"d": "2026-11-02",
+"t": "add",
+"a": "49-009-50739",
+"n": "EH FED UNIVERSE E 3569-1-N5H",
+"o": "Oxy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "13-35N-69W"
+},
+{
+"d": "2026-11-02",
+"t": "add",
+"a": "49-009-50937",
+"n": "CDU Buckhorn Fed 21-333870-2XTH",
+"o": "Devon",
+"s": "Active Permit",
+"f": null,
+"r": "Unknown",
+"cty": "Converse",
+"sec": "-"
+},
+{
+"d": "2026-11-02",
+"t": "add",
+"a": "49-019-42093",
+"n": "Oredigger Fed 4577-4-5-1W NH",
+"o": "Anschutz",
+"s": "Active Permit",
+"f": null,
+"r": "Unknown",
+"cty": "Johnson",
+"sec": "-"
 }
 ]
 }
