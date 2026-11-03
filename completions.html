@@ -76,18 +76,19 @@ h1,.px-title{font:700 clamp(24px,3.4vw,30px)/1.15 var(--font-anthropic-sans)!imp
 <div class="card"><h2>Sand sizes (wells filing them)</h2><div id="c4"></div></div></div>
 <div class="card" style="margin-bottom:12px"><h2>Data coverage by operator</h2><div class="scroll" id="cov"></div>
 <p class="note">Rate, pressure, ISIP and frac gradient exist only where the operator attached a frac vendor's job summary or per-stage report. Values computed from stage tables are marked in the well table.</p></div>
-<div class="card" style="margin-bottom:12px"><h2>Wells with stage-level data, by operator and formation</h2><div class="scroll" id="stgcov"></div>
+<div class="card" style="margin-bottom:12px"><h2># of wells with stage-level data, by operator &amp; formation</h2><div class="scroll" id="stgcov"></div>
 <p class="note">Each cell is wells with a stage table / wells on the page, for the operators and formations selected above. A stage table is a per-stage row set (pressure, rate, fluid or sand by stage) read from the operator's or vendor's report; wells without one have Form 3 totals only. The shaded fill shows the share with stage data.</p></div>
 <div class="card" style="margin-bottom:12px"><h2 id="sth">Stage-level treating data</h2>
 <select id="sel"></select><div class="grid2" style="margin-top:8px"><div id="s1"></div><div id="s2"></div></div><div class="note" id="snote"></div></div>
+<div class="card" style="margin-bottom:12px"><h2>Wells</h2><p class="note" style="margin:0 0 8px">Click a column header to sort the table by that column. Click it again to reverse the order.</p>
+<p class="note" style="margin:0 0 8px"><b>*</b> next to a Rate, Avg psi, ISIP or Frac grad value: it is the average of the per-stage values read from the vendor's stage table (scanned reports, read by OCR). No asterisk: it comes from the vendor's whole-job summary instead (for ISIP and frac gradient, the mean of the initial and final values).</p><div class="scroll" id="tbl"></div><p class="note"><span class="flag">&#9873;</span> = value looks suspect in the state record (sand per foot above 4,000 lb/ft or fluid implausible). Vendor is as filed; Element is a frac-reporting firm and may not be the pump company.</p></div>
+
 <div class="card" style="margin-bottom:12px"><h2>What is driving oil? (first 12 months, bbl per 1,000 ft of lateral)</h2>
 <label style="font-size:12px"><input type="checkbox" id="v22" checked> 2022 and later wells only (removes the old low-sand wells that dominate the all-wells picture)</label>
 <div id="lg" style="margin-top:8px;font-size:12px;color:var(--color-fg-muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>
 <div class="grid2" id="sc" style="margin-top:8px"></div>
 <div class="grid2" id="gr"></div>
 <div class="card" style="margin-top:8px"><h2 style="font-size:14px">Reading it</h2><div id="read" style="font-size:13px"></div></div></div>
-<div class="card"><h2>Wells</h2><p class="note" style="margin:0 0 8px">Click a column header to sort the table by that column. Click it again to reverse the order.</p>
-<p class="note" style="margin:0 0 8px"><b>*</b> next to a Rate, Avg psi, ISIP or Frac grad value: it is the average of the per-stage values read from the vendor's stage table (scanned reports, read by OCR). No asterisk: it comes from the vendor's whole-job summary instead (for ISIP and frac gradient, the mean of the initial and final values).</p><div class="scroll" id="tbl"></div><p class="note"><span class="flag">&#9873;</span> = value looks suspect in the state record (sand per foot above 4,000 lb/ft or fluid implausible). Vendor is as filed; Element is a frac-reporting firm and may not be the pump company.</p></div>
 <p class="note" style="margin:12px 2px 0">Download the raw data (CSV, all wells, whatever the box above is set to): <a href="data/completions/PRB_niobrara_completions.csv" download>well-level completion details</a> &middot; <a href="data/completions/PRB_niobrara_stage_level.csv" download>stage-level treating data</a>. Values read from scanned reports by OCR; see the notes above.</p>
 </div></div>
 <script>
