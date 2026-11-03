@@ -137,13 +137,29 @@ let sk='op',sd=1;function tbl(){const rows=W.slice().sort((a,b)=>{const x=a[sk],
  document.querySelectorAll('#tbl th').forEach(th=>th.onclick=()=>{const q=th.dataset.k;sd=sk==q?-sd:1;sk=q;tbl()});
  document.querySelectorAll('#tbl tr.clk').forEach(tr=>tr.onclick=()=>{if(![...sel.options].some(o=>o.value==tr.dataset.api))return;sel.value=tr.dataset.api;drawStage();{const h=document.getElementById('sth'),b=document.querySelector('.ctl');scrollTo(0,h.getBoundingClientRect().top+scrollY-(b?b.offsetHeight:0)-12)}})}
 const sel=document.getElementById('sel');function fillSel(){const cur=sel.value;sel.innerHTML='';Object.keys(D.stages).forEach(a=>{const w=W.find(x=>x.api==a);if(!w)return;sel.add(new Option(w.name+' ('+w.op+') - '+D.stages[a].length+(w.stages?' of '+w.stages:'')+' stages read, '+D.src[a],a))});if([...sel.options].some(o=>o.value==cur))sel.value=cur;document.getElementById('sth').textContent='Stage-level treating data ('+sel.options.length+' wells)'}sel.onchange=drawStage;
+const STG=[];
+function stageTip(r){const L=[['ISIP',r.isip,f0,' psi'],['Avg pressure',r.press,f0,' psi'],['Max pressure',r.maxpress,f0,' psi'],['Avg rate',r.rate,f1,' bpm'],['Fluid',r.fluid,f0,' bbl'],['Sand',r.prop,f0,' lb']].filter(x=>x[1]!=null);
+ return '<b>Stage '+r.n+'</b>'+L.map(x=>'<div style="display:flex;justify-content:space-between;gap:14px"><span style="color:var(--color-fg-muted)">'+x[0]+'</span><span>'+x[2](x[1])+x[3]+'</span></div>').join('')}
+function hoverSetup(el,s,x,y,rows,keys,cl,w,h,m){el.style.position='relative';
+ const g=s.append('g').style('display','none').style('pointer-events','none'),ln=g.append('line').attr('y1',m.t).attr('y2',h-m.b).attr('stroke','var(--color-fg)').attr('stroke-width',1).attr('stroke-dasharray','3 3'),
+  dots=keys.map((k,i)=>g.append('circle').attr('r',3.5).attr('fill',cl[i]).attr('stroke','var(--color-panel)').attr('stroke-width',1)),tip=document.createElement('div');
+ tip.style.cssText='position:absolute;display:none;pointer-events:none;z-index:5;font-size:12px;line-height:1.45;padding:6px 8px;border:1px solid var(--hairline);border-radius:6px;background:var(--color-panel);color:var(--color-fg);white-space:nowrap';el.appendChild(tip);
+ const c={show(n,withTip){const r=rows.find(q=>q.n==n);if(!r)return;const px=x(n);g.style('display',null);ln.attr('x1',px).attr('x2',px);
+   keys.forEach((k,i)=>r[k]!=null?dots[i].style('display',null).attr('cx',px).attr('cy',y(r[k])):dots[i].style('display','none'));s.selectAll('rect.bar').attr('fill-opacity',b=>b.n==n?.95:.55);
+   if(withTip){tip.innerHTML=stageTip(r);tip.style.display='block';const tw=tip.offsetWidth;tip.style.left=Math.max(0,px+12+tw>w?px-12-tw:px+12)+'px';tip.style.top=((el.firstElementChild?el.firstElementChild.offsetHeight:0)+m.t+4)+'px'}else tip.style.display='none'},
+  hide(){g.style('display','none');tip.style.display='none';s.selectAll('rect.bar').attr('fill-opacity',.55)}};
+ STG.push(c);
+ s.append('rect').attr('x',m.l).attr('y',m.t).attr('width',w-m.l-m.r).attr('height',h-m.t-m.b).attr('fill','transparent').style('cursor','crosshair')
+  .on('pointermove',e=>{const xv=x.invert(d3.pointer(e)[0]);let best=rows[0];for(const q of rows)if(Math.abs(q.n-xv)<Math.abs(best.n-xv))best=q;STG.forEach(o=>o.show(best.n,o===c))})
+  .on('pointerleave',()=>STG.forEach(o=>o.hide()))}
 function line(id,rows,keys,cl,title,fmt,bar){const el=document.getElementById(id);el.innerHTML='<div style="font-size:12px;color:var(--color-fg-muted)">'+title+'</div>';const w=Math.max(el.clientWidth,300),h=190,m={l:44,r:10,t:8,b:22};
  const ex=d3.extent(rows,r=>r.n);const x=d3.scaleLinear(bar?[ex[0]-.7,ex[1]+.7]:ex,[m.l,w-m.r]);const all=keys.flatMap(k=>rows.map(r=>r[k])).filter(v=>v!=null);const y=d3.scaleLinear([bar?0:d3.min(all)*.97,d3.max(all)*1.03],[h-m.b,m.t]);
  const s=d3.select(el).append('svg').attr('width',w).attr('height',h).attr('viewBox','0 0 '+w+' '+h);s.append('g').attr('transform','translate(0,'+(h-m.b)+')').call(d3.axisBottom(x).ticks(8));s.append('g').attr('transform','translate('+m.l+',0)').call(d3.axisLeft(y).ticks(5).tickFormat(fmt));
- if(bar){const bw=Math.max(1.5,(w-m.l-m.r)/rows.length*.7);s.selectAll('rect.bar').data(rows.filter(r=>r[bar]!=null)).join('rect').attr('class','bar').attr('x',r=>x(r.n)-bw/2).attr('width',bw).attr('y',r=>y(r[bar])).attr('height',r=>y(0)-y(r[bar])).attr('fill',cl[keys.indexOf(bar)]).attr('fill-opacity',.55).append('title').text(r=>'Stage '+r.n+': '+fmt(r[bar]))}
+ if(bar){const bw=Math.max(1.5,(w-m.l-m.r)/rows.length*.7);s.selectAll('rect.bar').data(rows.filter(r=>r[bar]!=null)).join('rect').attr('class','bar').attr('x',r=>x(r.n)-bw/2).attr('width',bw).attr('y',r=>y(r[bar])).attr('height',r=>y(0)-y(r[bar])).attr('fill',cl[keys.indexOf(bar)]).attr('fill-opacity',.55)}
  keys.forEach((k,i)=>k!==bar&&s.append('path').datum(rows.filter(r=>r[k]!=null)).attr('fill','none').attr('stroke',cl[i]).attr('stroke-width',1.8).attr('d',d3.line().x(r=>x(r.n)).y(r=>y(r[k]))));
- keys.forEach((k,i)=>s.append('text').attr('x',m.l+8+i*90).attr('y',m.t+10).style('fill',cl[i]).text(k))}
-function drawStage(){const a=sel.value,r=D.stages[a];if(!r)return;const has=k=>r.some(x=>x[k]!=null);
+ keys.forEach((k,i)=>s.append('text').attr('x',m.l+8+i*90).attr('y',m.t+10).style('fill',cl[i]).text(k));
+ hoverSetup(el,s,x,y,rows,keys,cl,w,h,m)}
+function drawStage(){const a=sel.value,r=D.stages[a];if(!r)return;STG.length=0;const has=k=>r.some(x=>x[k]!=null);
  const pk=['isip','press','maxpress'].filter(has),pc={isip:'#1b6ca8',press:'#d4731a',maxpress:'#a8741a'};
  const names={isip:'ISIP',press:'avg pressure',maxpress:'max pressure'};
  line('s1',r,pk,pk.map(k=>pc[k]),'Pressure by stage, psi ('+pk.map(k=>names[k]+(k=='isip'?' bars':' line')).join(', ')+')',d3.format(','),has('isip')?'isip':null);
