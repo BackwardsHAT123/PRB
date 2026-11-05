@@ -40371,14 +40371,10 @@
    [
     -105.6031,
     43.6436
-   ],
-   [
-    -105.59887,
-    43.66191
    ]
   ],
-  "fx": 17,
-  "note": "Path: state-reported directional track to date (3,300 to 3,900 ft, well still being drilled), carried straight on to the header bottom hole"
+  "fx": 2,
+  "note": "Path: state-reported directional track to date (the well is still being drilled), drawn only as far as drilled; not extended to the header bottom hole"
  },
  "49-005-79741": {
   "ln": [
@@ -40633,14 +40629,10 @@
    [
     -105.6001,
     43.6437
-   ],
-   [
-    -105.58877,
-    43.66192
    ]
   ],
-  "fx": 17,
-  "note": "Path: state-reported directional track to date (3,300 to 3,900 ft, well still being drilled), carried straight on to the header bottom hole"
+  "fx": 2,
+  "note": "Path: state-reported directional track to date (the well is still being drilled), drawn only as far as drilled; not extended to the header bottom hole"
  },
  "49-005-79742": {
   "ln": [
@@ -40891,13 +40883,9 @@
    [
     -105.6043,
     43.6383
-   ],
-   [
-    -105.60229,
-    43.64381
    ]
   ],
-  "fx": 17,
-  "note": "Path: state-reported directional track to date (3,300 to 3,900 ft, well still being drilled), carried straight on to the header bottom hole"
+  "fx": 2,
+  "note": "Path: state-reported directional track to date (the well is still being drilled), drawn only as far as drilled; not extended to the header bottom hole"
  }
 }
