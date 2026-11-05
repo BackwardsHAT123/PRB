@@ -179,6 +179,138 @@
 "r": "Unknown",
 "cty": "Johnson",
 "sec": "-"
+},
+{
+"d": "2026-11-05",
+"t": "add",
+"a": "49-009-50940",
+"n": "BIGHORN PEAK 3974-21-28-1SH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Shannon",
+"cty": "Converse",
+"sec": "16-39N-74W"
+},
+{
+"d": "2026-11-05",
+"t": "add",
+"a": "49-009-50942",
+"n": "BIGHORN PEAK 3974-21-28-2NH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "16-39N-74W"
+},
+{
+"d": "2026-11-05",
+"t": "add",
+"a": "49-009-50944",
+"n": "BIGHORN PEAK 3974-21-28-2SH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Shannon",
+"cty": "Converse",
+"sec": "16-39N-74W"
+},
+{
+"d": "2026-11-05",
+"t": "add",
+"a": "49-009-50945",
+"n": "BIGHORN PEAK 3974-21-28-3NH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "16-39N-74W"
+},
+{
+"d": "2026-11-05",
+"t": "add",
+"a": "49-009-50946",
+"n": "Campbell Fed 3775-0618 R1MH",
+"o": "Continental",
+"s": "Active Permit",
+"f": null,
+"r": "Unknown",
+"cty": "Converse",
+"sec": "-"
+},
+{
+"d": "2026-11-05",
+"t": "add",
+"a": "49-009-50947",
+"n": "Frozen Lakes 3974-13-12-1-2NH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": null,
+"r": "Unknown",
+"cty": "Converse",
+"sec": "-"
+},
+{
+"d": "2026-11-05",
+"t": "add",
+"a": "49-009-50948",
+"n": "Mount Filmore 3974-24-25-36-2NH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "13-39N-74W"
+},
+{
+"d": "2026-11-05",
+"t": "add",
+"a": "49-009-50949",
+"n": "Mount Filmore 3974-24-25-36-3NH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "13-39N-74W"
+},
+{
+"d": "2026-11-05",
+"t": "add",
+"a": "49-009-50950",
+"n": "Frozen Lakes 3974-13-12-1-3NH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": null,
+"r": "Unknown",
+"cty": "Converse",
+"sec": "-"
+},
+{
+"d": "2026-11-05",
+"t": "rem",
+"a": "49-019-42575",
+"n": "Caterpillar Fed 4777-30-19-3W MH",
+"o": "Anschutz",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Mowry",
+"cty": "Johnson",
+"sec": "30-47N-77W"
+},
+{
+"d": "2026-11-05",
+"t": "rem",
+"a": "49-019-42576",
+"n": "Caterpillar Fed 4777-30-18-2 NBH",
+"o": "Anschutz",
+"s": "Active Permit",
+"f": null,
+"r": "Unknown",
+"cty": "Johnson",
+"sec": "-"
 }
 ]
 }
