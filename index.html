@@ -724,7 +724,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 .leaflet-bar a:last-child,.leaflet-touch .leaflet-bar a:last-child{border-radius:0 0 12px 12px!important}
 </style></head><body>
 <div id="map"></div>
-<button type="button" id="qqbtn" title="Quarter-quarter lines" aria-label="Quarter-quarter lines">¼</button><div id="qqpop" hidden><div class="qqb"><button type="button" class="pbtn" id="qqs">Click a section</button><button type="button" class="pbtn" id="qqc">Click corners</button><button type="button" class="pbtn" id="qqn" hidden>Next section</button><button type="button" class="pbtn" id="qqx">Clear all</button></div><div id="qqm" class="plg" style="color:var(--muted);margin-top:4px">Draws the 4x4 quarter-quarter grid (light red dashes) for a section.</div></div>
+<button type="button" id="qqbtn" title="Quarter-quarter lines" aria-label="Quarter-quarter lines">¼</button><div id="qqpop" hidden><div class="qqb"><button type="button" class="pbtn" id="qqs">Pick section</button><button type="button" class="pbtn" id="qqn" hidden>Next section</button><button type="button" class="pbtn" id="qqx">Clear all</button></div><div id="qqm" class="plg" style="color:var(--muted);margin-top:4px">Draws the 4x4 quarter-quarter grid (light red dashes) for a section.</div></div>
 <button type="button" id="pudbtn" title="PUD lanes and sticks" aria-label="PUD lanes and sticks">PUD</button><div id="pudpop" hidden><label>Formation <select id="pudfm"></select></label><div class="row2"><label>Sticks per mile <input type="number" id="pudsp" value="4" min="0.5" step="0.5"></label><label>Setback (ft) <input type="number" id="pudsb" value="330" min="0" step="10"></label></div><div class="qqb"><button type="button" class="pbtn" id="pudgo">Draw lane</button><button type="button" class="pbtn" id="pudn" hidden>Next lane</button><button type="button" class="pbtn" id="pudundo">Undo last</button><button type="button" class="pbtn" id="pudx">Clear all</button><button type="button" class="pbtn" id="pudcsv">Export CSV</button></div><div id="pudm" class="plg" style="color:var(--muted);margin-top:4px">Pick a formation, sticks per mile and setback, then Draw lane. Sticks run along the long side.</div></div>
 <button type="button" id="themebtn"></button>
 <button type="button" id="newbtn" title="Wells added to the map in the latest updates" aria-label="Wells added to the map in the latest updates">New</button>
@@ -869,19 +869,19 @@ const m=p[bi],a=p[(bi+1)%3],b=p[(bi+2)%3];return order([a,m,b,[a[0]+b[0]-m[0],a[
 function draw(q,into){const [A,B,C,D]=q,ll=p=>U(p),o={color:QC,weight:1.5,dashArray:'6 5',interactive:false,pane:'overlayPane'};
 L.polygon(q.map(ll),{color:QC,weight:1,opacity:.7,fill:false,interactive:false}).addTo(into);
 for(let k=1;k<4;k++){const t=k/4;L.polyline([ll(lerp(A,B,t)),ll(lerp(D,C,t))],o).addTo(into);L.polyline([ll(lerp(B,C,t)),ll(lerp(A,D,t))],o).addTo(into)}}
-function setMode(m){mode=mode===m?null:m;pts=[];tmp.clearLayers();cur=null;qqs.classList.toggle('on',mode==='sec');qqc.classList.toggle('on',mode==='cor');qqn.hidden=mode!=='cor';map.getContainer().style.cursor=mode?'crosshair':'';
-msg(mode==='sec'?'Click inside a section.':mode==='cor'?'Click 3 corners (a 4th is optional).':'Draws the 4x4 quarter-quarter grid (light red dashes) for a section.')}
-qqs.onclick=()=>{window.PUD&&PUD.off();setMode('sec')};qqc.onclick=()=>{window.PUD&&PUD.off();setMode('cor')};qqn.onclick=()=>{pts=[];tmp.clearLayers();cur=null;msg('Click 3 corners of the next section.')};
+function setMode(m){mode=mode===m?null:m;pts=[];tmp.clearLayers();cur=null;qqs.classList.toggle('on',mode==='sec');qqn.hidden=true;map.getContainer().style.cursor=mode?'crosshair':'';
+msg(mode==='sec'?'Click inside a section. If it has no outline (or you Shift-click), click 3 corners instead.':'Draws the 4x4 quarter-quarter grid (light red dashes) for a section.')}
+qqs.onclick=()=>{window.PUD&&PUD.off();setMode('sec')};qqn.onclick=()=>{pts=[];tmp.clearLayers();cur=null;qqn.hidden=true;msg('Click inside the next section.')};
 qqx.onclick=()=>{grp.clearLayers();tmp.clearLayers();pts=[];cur=null;msg('Cleared.')};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mode)setMode(mode)});
 window.QQ={P,U,quad3,order,off:()=>{if(mode)setMode(mode)}};
 map.on('popupopen',()=>{if(mode)map.closePopup()});
 map.on('click',e=>{if(!mode)return;
-if(mode==='sec'){const r=findSec(e.latlng);if(!r){msg('No section outline here. Use Click corners.');return}const ring=r[7].slice(0,-1);draw(corners(ring),grp);msg('Section '+r[0]+' drawn. Click another, or Clear all.');return}
+if(!pts.length&&!cur&&!(e.originalEvent&&e.originalEvent.shiftKey)){const r=findSec(e.latlng);if(r){draw(corners(r[7].slice(0,-1)),grp);msg('Section '+r[0]+' drawn. Click another, or Clear all.');return}}
 if(pts.length>=4)return;pts.push(P([e.latlng.lat,e.latlng.lng]));L.circleMarker(e.latlng,{radius:4,color:QC,fillColor:QC,fillOpacity:1,interactive:false}).addTo(tmp);
-if(pts.length<3){msg('Corner '+pts.length+' of 3 set.');return}
+qqn.hidden=false;if(pts.length<3){msg('No section outline here (or Shift-click): corner '+pts.length+' of 3 set.');return}
 if(cur){grp.removeLayer(cur)}const g=L.layerGroup();draw(pts.length===3?quad3(pts):order(pts),g);g.addTo(grp);cur=g;
-msg(pts.length===3?'Drawn from 3 corners. Click a 4th to refine, or Next section.':'Drawn from 4 corners. Click Next section for another.');if(pts.length===4){tmp.clearLayers();cur=null;pts=[]}})})();
+msg(pts.length===3?'Drawn from 3 corners. Click a 4th to refine, or Next section.':'Drawn from 4 corners. Click Next section for another.');if(pts.length===4){tmp.clearLayers();cur=null;pts=[];qqn.hidden=true}})})();
 /* PUD lane tool: click 3-4 corners of a lane; equally spaced sticks run across its short side, set back from the lane's long edges */
 (()=>{const Q=window.QQ,FT=364567,lerp=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t],dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])*FT;
 function fcols(){const c={};D.forEach(d=>c[d.r]=(c[d.r]||0)+1);const ks=Object.keys(c).sort((a,b)=>c[b]-c[a]),FIX={'Turner':'#2ca02c','Parkman':'#ff7f0e','Niobrara':'#ff69b4','Mowry':'#8b4513'},pool=PAL.filter(x=>!['#3cb44b','#f58231','#f032e6','#9a6324','#e6194b'].includes(x));let n=0;const m={};ks.forEach(v=>{m[v]=FIX[v]||(v=='Unknown'?'#999':(n<pool.length-1?pool[n++]:'#999'))});return{ks,m}}
