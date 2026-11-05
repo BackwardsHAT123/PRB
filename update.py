@@ -32,6 +32,7 @@ COUNTIES = [("49-005-", MIN_API, "Campbell"), ("49-009-", "49-009-28220", "Conve
 # generous (south, north, west, east) box per county; a surface location outside it is bad coordinates, so the well is held back
 COUNTY_BOX = {"Campbell": (43.15, 45.05, -106.45, -104.85), "Converse": (42.65, 43.65, -106.15, -104.8), "Johnson": (43.25, 44.75, -107.1, -105.85)}    # Johnson: API 49-019-29600 and up is spud 2010 onward
 RIG_DAYS = 14                   # a rig is "active" if it reported casing work this recently
+PERMIT_SUFFIX = {"MH": "Mowry", "NH": "Niobrara", "TH": "Turner", "SH": "Sussex", "PH": "Parkman"}
 DROP_FORMATIONS = {"Big George", "Anderson", "Minnelusa", "Teckla"}
 FORMATION_MERGE = {"Frontier-Turner": "Turner", "Niobrara-Turner": "Niobrara"}
 OUTLIER_M = 1500                # drop track vertices farther than this from the SHL-BHL line
@@ -196,6 +197,8 @@ def build_wells(log):
             continue
         form = (d.get("Producing Reservoir") or d.get("Completed Reservoir") or "Unknown").title()
         form = FORMATION_MERGE.get(form, form)
+        if form == "Unknown" and (d.get("Well Status") or w["properties"].get("WellStatus")) == "Active Permit":   # permit with no reported formation: well-name suffix (Tom, Nov 5 2026)
+            form = PERMIT_SUFFIX.get((d.get("Well Name and Number") or "").strip()[-2:].upper(), form)
         if form in DROP_FORMATIONS:
             dropped += 1
             continue
