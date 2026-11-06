@@ -40499,5 +40499,59 @@
   ],
   "fx": 4,
   "note": "Path held as drawn on Nov 5, 2026 at Tom's request: the state's directional track for this well is scaled incorrectly, so the daily update must not replace it. Release when Tom says so."
+ },
+ "49-005-62754": {
+  "ln": [
+   [
+    -105.53307,
+    43.60705
+   ],
+   [
+    -105.533065,
+    43.607069
+   ],
+   [
+    -105.533048,
+    43.607127
+   ],
+   [
+    -105.533021,
+    43.60722
+   ],
+   [
+    -105.532985,
+    43.607349
+   ],
+   [
+    -105.532939,
+    43.607508
+   ],
+   [
+    -105.532886,
+    43.607694
+   ],
+   [
+    -105.532827,
+    43.607903
+   ],
+   [
+    -105.532762,
+    43.608129
+   ],
+   [
+    -105.532694,
+    43.608367
+   ],
+   [
+    -105.532625,
+    43.60861
+   ],
+   [
+    -105.529406,
+    43.619891
+   ]
+  ],
+  "fx": 6,
+  "note": "Planned path, not a drilled survey: operator design survey section details (KOP 6,913 ft, landing point 7,818 ft MD, PBHL 11,998 ft MD / 7,449 ft TVD), supplied by Tom; build interpolated at 10 deg/100 ft"
  }
 }

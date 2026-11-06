@@ -37,6 +37,7 @@ the bottom hole, held back), **depth gap** (>1,200 ft gap in the survey inside t
 | Anschutz Pokes Fed permits, Johnson (10 wells, T46N R77W sec 16 to 28; `tools/survey_work/pokes_apd.py`, results in `pokes_apd_plats.json`, Oct 27, 2026) | 10 | state GIS permit tracks ended about 9 km from the true bottom hole | **10 paths** (fx 6 with a note): surface hole, landing point and bottom hole from the survey plat on page 11 of each APD; `49-019-42214` surface hole moved 174 m to the plat | see git log |
 | Converse T36N R71W (`targets_3671.json`, 156 wells) | 6 of 156 | 4 ok, 1 unreadable, 1 none | none yet | — |
 | Monthly update 2026-11 (`tools/survey_work/survey_out_monthly.jsonl`, 100 newest untried Campbell/Johnson straight-line wells; Converse excluded) | 100 | 63 ok (49 exact, 6 adjusted, 8 depth-gap), 10 rejected, 19 none, 8 unreadable | **49 paths** (fx 8); held lists in `survey_held_2026-11.json` | see git log |
+| Ballard re-check Nov 6, 2026 (6 unreadable/none wells re-run: same results) + Dilts Fed 34-17 PH `49-005-62754` from the operator design section details Tom supplied (KOP, LP, PBHL; 32 m from header BHL) | 6 | no change | **1 path** (fx 6 with note) | see git log |
 
 Of the ok wells in the sixth batch (`targets_chunk5.json`): 36 applied, 4 held as "adjusted", 2 held for depth gaps (`49-005-61785`, `77703`); lists in `survey_held_chunk5.json`.
 
