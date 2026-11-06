@@ -311,6 +311,90 @@
 "r": "Unknown",
 "cty": "Johnson",
 "sec": "-"
+},
+{
+"d": "2026-11-06",
+"t": "add",
+"a": "49-009-50616",
+"n": "DENALI 0124-05H",
+"o": "EOG",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "36-41N-74W"
+},
+{
+"d": "2026-11-06",
+"t": "add",
+"a": "49-009-50617",
+"n": "DENALI 0124-04H",
+"o": "EOG",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "36-41N-74W"
+},
+{
+"d": "2026-11-06",
+"t": "add",
+"a": "49-009-50618",
+"n": "DENALI 0124-03H",
+"o": "EOG",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "36-41N-74W"
+},
+{
+"d": "2026-11-06",
+"t": "add",
+"a": "49-009-50619",
+"n": "DENALI 0124-02H",
+"o": "EOG",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "36-41N-74W"
+},
+{
+"d": "2026-11-06",
+"t": "add",
+"a": "49-009-50620",
+"n": "DENALI 0223-01H",
+"o": "EOG",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "36-41N-74W"
+},
+{
+"d": "2026-11-06",
+"t": "rem",
+"a": "49-005-78280",
+"n": "LIZZY FED 4271-33-4-15 MH",
+"o": "Anschutz",
+"s": "Active Permit",
+"f": "CROSSBOW",
+"r": "Mowry",
+"cty": "Campbell",
+"sec": "33-42N-71W"
+},
+{
+"d": "2026-11-06",
+"t": "rem",
+"a": "49-005-78283",
+"n": "LIZZY FED 4271-33-4-16 MH",
+"o": "Anschutz",
+"s": "Active Permit",
+"f": "CROSSBOW",
+"r": "Mowry",
+"cty": "Campbell",
+"sec": "33-42N-71W"
 }
 ]
 }
