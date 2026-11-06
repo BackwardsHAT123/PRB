@@ -39,6 +39,7 @@ the bottom hole, held back), **depth gap** (>1,200 ft gap in the survey inside t
 | Monthly update 2026-11 (`tools/survey_work/survey_out_monthly.jsonl`, 100 newest untried Campbell/Johnson straight-line wells; Converse excluded) | 100 | 63 ok (49 exact, 6 adjusted, 8 depth-gap), 10 rejected, 19 none, 8 unreadable | **49 paths** (fx 8); held lists in `survey_held_2026-11.json` | see git log |
 | Ballard re-check Nov 6, 2026 (6 unreadable/none wells re-run: same results) + Dilts Fed 34-17 PH `49-005-62754` from the operator design section details Tom supplied (KOP, LP, PBHL; 32 m from header BHL) | 6 | no change | **1 path** (fx 6 with note) | see git log |
 | Ballard re-check 2 (Nov 6, 2026): 17 shifted + 15 rejected wells re-read | 32 | rejected ones unchanged (survey cut short, OCR gaps, or lateral-only survey) | **12 paths** (fx 9, shifted to header BHL); 3 depth-gap held (`61924`, `64952`, `67768`); 2 shifted wells stay straight (path is a straight line) | see git log |
+| Shifted ("adjusted") paths, all operators, Nov 6, 2026 (Tom approved) | 137 | 92 applied; 35 held for depth gaps in the curve, 10 stay straight (path is a straight line) | **92 paths** (fx 9, shifted to header BHL) | see git log |
 
 Of the ok wells in the sixth batch (`targets_chunk5.json`): 36 applied, 4 held as "adjusted", 2 held for depth gaps (`49-005-61785`, `77703`); lists in `survey_held_chunk5.json`.
 
