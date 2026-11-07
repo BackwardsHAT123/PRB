@@ -47256,5 +47256,153 @@
    -105.80282,
    43.50156
   ]
+ },
+ "49-009-49969": {
+  "ln": [
+   [
+    -105.320932,
+    43.475055
+   ],
+   [
+    -105.321559,
+    43.479935
+   ],
+   [
+    -105.323829,
+    43.480045
+   ],
+   [
+    -105.362433,
+    43.480059
+   ]
+  ],
+  "fx": 6,
+  "note": "Planned path, not a drilled survey: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.320932,
+   43.475055
+  ],
+  "bhl": [
+   -105.362433,
+   43.480059
+  ]
+ },
+ "49-009-49971": {
+  "ln": [
+   [
+    -105.320968,
+    43.475104
+   ],
+   [
+    -105.321588,
+    43.476961
+   ],
+   [
+    -105.32386,
+    43.476951
+   ],
+   [
+    -105.362369,
+    43.476782
+   ]
+  ],
+  "fx": 6,
+  "note": "Planned path, not a drilled survey: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.320968,
+   43.475104
+  ],
+  "bhl": [
+   -105.362369,
+   43.476782
+  ]
+ },
+ "49-005-78217": {
+  "ln": [
+   [
+    -105.404595,
+    43.564618
+   ],
+   [
+    -105.406767,
+    43.536558
+   ]
+  ],
+  "fx": 10,
+  "note": "Planned location, not a drilled path: surface hole and bottom hole from the NAD83 coordinates in the state APD; line was 8 m long",
+  "shl": [
+   -105.404595,
+   43.564618
+  ],
+  "bhl": [
+   -105.406767,
+   43.536558
+  ]
+ },
+ "49-009-49922": {
+  "ln": [
+   [
+    -105.198504,
+    43.20346
+   ],
+   [
+    -105.198745,
+    43.23586
+   ]
+  ],
+  "fx": 10,
+  "note": "Planned location, not a drilled path: surface hole and bottom hole from the NAD83 coordinates in the state APD; map had no header bottom hole and its drawn end was 439 m from the APD bottom hole",
+  "shl": [
+   -105.198504,
+   43.20346
+  ],
+  "bhl": [
+   -105.198745,
+   43.23586
+  ]
+ },
+ "49-009-49923": {
+  "ln": [
+   [
+    -105.198504,
+    43.203378
+   ],
+   [
+    -105.198745,
+    43.23586
+   ]
+  ],
+  "fx": 10,
+  "note": "Planned location, not a drilled path: surface hole and bottom hole from the NAD83 coordinates in the state APD; map had no header bottom hole and its drawn end was 794 m from the APD bottom hole",
+  "shl": [
+   -105.198504,
+   43.203378
+  ],
+  "bhl": [
+   -105.198745,
+   43.23586
+  ]
+ },
+ "49-009-50602": {
+  "ln": [
+   [
+    -105.749736,
+    43.011252
+   ],
+   [
+    -105.752964,
+    42.98318
+   ]
+  ],
+  "fx": 10,
+  "note": "Planned location, not a drilled path: surface hole and bottom hole from the NAD83 coordinates in the state APD; map had no line",
+  "shl": [
+   -105.749736,
+   43.011252
+  ],
+  "bhl": [
+   -105.752964,
+   42.98318
+  ]
  }
 }
