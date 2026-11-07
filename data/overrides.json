@@ -47234,5 +47234,27 @@
    -105.405317,
    43.497831
   ]
+ },
+ "49-009-33482": {
+  "ln": [
+   [
+    -105.79087,
+    43.47462
+   ],
+   [
+    -105.80282,
+    43.50156
+   ]
+  ],
+  "fx": 10,
+  "note": "Permitted location, not a drilled path: surface hole and bottom hole moved to the NAD83 coordinates in the state APD (Sec 31-T41N-R74W; the map had it in Sec 1-T40N-R75W, 1.4 km away)",
+  "shl": [
+   -105.79087,
+   43.47462
+  ],
+  "bhl": [
+   -105.80282,
+   43.50156
+  ]
  }
 }

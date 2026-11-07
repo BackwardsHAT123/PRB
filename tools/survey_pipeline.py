@@ -22,6 +22,7 @@ ZIP = "https://pipeline.wyo.gov/whatups/whatupDirDownLoad.cfm?napi={k}"
 GAP = 3.0           # seconds between state requests, across all workers
 SCALE = 2.0
 MAX_PAGES = 90
+TILE, OVER = 1800, 200      # OCR tile height and overlap in pixels
 
 
 def curl(url, tmp, binary=True):
@@ -62,8 +63,19 @@ def ocr_stations(pdf_bytes, ocr):
     pages = []
     for i in range(min(len(pdf), MAX_PAGES)):
         img = np.array(pdf[i].render(scale=SCALE).to_pil().convert("RGB"))
-        res, _ = ocr(img)
-        pages.append([[[[float(x) for x in p] for p in b], t, float(c)] for b, t, c in (res or [])])
+        H = img.shape[0]; boxes = []; y0 = 0
+        while True:                    # very tall strip scans (7,000+ pt) crash the OCR engine, so read in overlapping tiles
+            y1 = min(H, y0 + TILE)
+            res, _ = ocr(img[y0:y1])
+            for b, t, c in (res or []):
+                pts = [[float(x), float(y) + y0] for x, y in b]; cy = sum(p[1] for p in pts) / 4
+                if (y0 > 0 and cy < y0 + OVER // 2) or (y1 < H and cy > y1 - OVER // 2):
+                    continue           # margins that overlap a neighbouring tile are read in that tile
+                boxes.append([pts, t, float(c)])
+            if y1 >= H:
+                break
+            y0 = y1 - OVER
+        pages.append(boxes)
     return screen(extract2(pages)), len(pdf)
 
 
