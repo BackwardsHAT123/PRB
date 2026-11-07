@@ -46628,5 +46628,611 @@
    ]
   ],
   "fx": 8
+ },
+ "49-005-77741": {
+  "ln": [
+   [
+    -105.629227,
+    43.56395
+   ],
+   [
+    -105.634419,
+    43.561736
+   ],
+   [
+    -105.634577,
+    43.533167
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.629227,
+   43.56395
+  ],
+  "bhl": [
+   -105.634577,
+   43.533167
+  ]
+ },
+ "49-005-77742": {
+  "ln": [
+   [
+    -105.629133,
+    43.56395
+   ],
+   [
+    -105.630268,
+    43.561751
+   ],
+   [
+    -105.630429,
+    43.533187
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.629133,
+   43.56395
+  ],
+  "bhl": [
+   -105.630429,
+   43.533187
+  ]
+ },
+ "49-005-78424": {
+  "ln": [
+   [
+    -105.40639,
+    43.650257
+   ],
+   [
+    -105.408538,
+    43.651107
+   ],
+   [
+    -105.408023,
+    43.679181
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.40639,
+   43.650257
+  ],
+  "bhl": [
+   -105.408023,
+   43.679181
+  ]
+ },
+ "49-005-78462": {
+  "ln": [
+   [
+    -105.337021,
+    43.548077
+   ],
+   [
+    -105.334947,
+    43.520124
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.337021,
+   43.548077
+  ],
+  "bhl": [
+   -105.334947,
+   43.520124
+  ]
+ },
+ "49-005-78517": {
+  "ln": [
+   [
+    -106.000519,
+    44.142333
+   ],
+   [
+    -106.0049,
+    44.169269
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -106.000519,
+   44.142333
+  ],
+  "bhl": [
+   -106.0049,
+   44.169269
+  ]
+ },
+ "49-005-79269": {
+  "ln": [
+   [
+    -105.41715,
+    43.528068
+   ],
+   [
+    -105.422483,
+    43.527517
+   ],
+   [
+    -105.422526,
+    43.525862
+   ],
+   [
+    -105.423263,
+    43.497825
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83); surface hole moved 378 m to the plat location",
+  "shl": [
+   -105.41715,
+   43.528068
+  ],
+  "bhl": [
+   -105.423263,
+   43.497825
+  ]
+ },
+ "49-005-79272": {
+  "ln": [
+   [
+    -105.417086,
+    43.528097
+   ],
+   [
+    -105.417084,
+    43.527646
+   ],
+   [
+    -105.416927,
+    43.525995
+   ],
+   [
+    -105.41746,
+    43.497827
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83); surface hole moved 369 m to the plat location",
+  "shl": [
+   -105.417086,
+   43.528097
+  ],
+  "bhl": [
+   -105.41746,
+   43.497827
+  ]
+ },
+ "49-005-80077": {
+  "ln": [
+   [
+    -105.960392,
+    43.912175
+   ],
+   [
+    -105.957668,
+    43.952864
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.960392,
+   43.912175
+  ],
+  "bhl": [
+   -105.957668,
+   43.952864
+  ]
+ },
+ "49-005-80078": {
+  "ln": [
+   [
+    -105.961423,
+    43.912378
+   ],
+   [
+    -105.965811,
+    43.952856
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.961423,
+   43.912378
+  ],
+  "bhl": [
+   -105.965811,
+   43.952856
+  ]
+ },
+ "49-005-80082": {
+  "ln": [
+   [
+    -105.960463,
+    43.912195
+   ],
+   [
+    -105.964444,
+    43.952856
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.960463,
+   43.912195
+  ],
+  "bhl": [
+   -105.964444,
+   43.952856
+  ]
+ },
+ "49-009-32999": {
+  "ln": [
+   [
+    -105.408216,
+    43.101178
+   ],
+   [
+    -105.411677,
+    43.072824
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.408216,
+   43.101178
+  ],
+  "bhl": [
+   -105.411677,
+   43.072824
+  ]
+ },
+ "49-009-49492": {
+  "ln": [
+   [
+    -105.348823,
+    43.103904
+   ],
+   [
+    -105.348696,
+    43.130872
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.348823,
+   43.103904
+  ],
+  "bhl": [
+   -105.348696,
+   43.130872
+  ]
+ },
+ "49-009-49493": {
+  "ln": [
+   [
+    -105.348879,
+    43.10394
+   ],
+   [
+    -105.350528,
+    43.10138
+   ],
+   [
+    -105.351672,
+    43.072759
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -105.348879,
+   43.10394
+  ],
+  "bhl": [
+   -105.351672,
+   43.072759
+  ]
+ },
+ "49-019-42095": {
+  "ln": [
+   [
+    -106.126199,
+    43.895365
+   ],
+   [
+    -106.124947,
+    43.894511
+   ],
+   [
+    -106.124979,
+    43.892857
+   ],
+   [
+    -106.124941,
+    43.86492
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -106.126199,
+   43.895365
+  ],
+  "bhl": [
+   -106.124941,
+   43.86492
+  ]
+ },
+ "49-019-42096": {
+  "ln": [
+   [
+    -106.126463,
+    43.895474
+   ],
+   [
+    -106.128474,
+    43.894478
+   ],
+   [
+    -106.128289,
+    43.892829
+   ],
+   [
+    -106.127822,
+    43.864894
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -106.126463,
+   43.895474
+  ],
+  "bhl": [
+   -106.127822,
+   43.864894
+  ]
+ },
+ "49-019-42097": {
+  "ln": [
+   [
+    -106.126133,
+    43.895338
+   ],
+   [
+    -106.123354,
+    43.894524
+   ],
+   [
+    -106.123243,
+    43.892871
+   ],
+   [
+    -106.122818,
+    43.864939
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -106.126133,
+   43.895338
+  ],
+  "bhl": [
+   -106.122818,
+   43.864939
+  ]
+ },
+ "49-019-42098": {
+  "ln": [
+   [
+    -106.126265,
+    43.892321
+   ],
+   [
+    -106.122583,
+    43.893974
+   ],
+   [
+    -106.123186,
+    43.921907
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83); surface hole moved 343 m to the plat location",
+  "shl": [
+   -106.126265,
+   43.892321
+  ],
+  "bhl": [
+   -106.123186,
+   43.921907
+  ]
+ },
+ "49-019-42100": {
+  "ln": [
+   [
+    -106.126397,
+    43.895447
+   ],
+   [
+    -106.12569,
+    43.921882
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -106.126397,
+   43.895447
+  ],
+  "bhl": [
+   -106.12569,
+   43.921882
+  ]
+ },
+ "49-019-42102": {
+  "ln": [
+   [
+    -106.125672,
+    43.895368
+   ],
+   [
+    -106.125478,
+    43.894507
+   ],
+   [
+    -106.125469,
+    43.892853
+   ],
+   [
+    -106.12532,
+    43.864917
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -106.125672,
+   43.895368
+  ],
+  "bhl": [
+   -106.12532,
+   43.864917
+  ]
+ },
+ "49-019-42609": {
+  "ln": [
+   [
+    -106.186947,
+    44.057115
+   ],
+   [
+    -106.194003,
+    44.054368
+   ],
+   [
+    -106.193992,
+    44.052713
+   ],
+   [
+    -106.193765,
+    44.017294
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -106.186947,
+   44.057115
+  ],
+  "bhl": [
+   -106.193765,
+   44.017294
+  ]
+ },
+ "49-019-42611": {
+  "ln": [
+   [
+    -106.187426,
+    44.057339
+   ],
+   [
+    -106.194384,
+    44.054366
+   ],
+   [
+    -106.194373,
+    44.052712
+   ],
+   [
+    -106.194145,
+    44.017284
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83)",
+  "shl": [
+   -106.187426,
+   44.057339
+  ],
+  "bhl": [
+   -106.194145,
+   44.017284
+  ]
+ },
+ "49-005-79270": {
+  "ln": [
+   [
+    -105.417022,
+    43.528126
+   ],
+   [
+    -105.41109,
+    43.527674
+   ],
+   [
+    -105.411092,
+    43.526019
+   ],
+   [
+    -105.411119,
+    43.497829
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83); surface hole moved 369 m to the plat location",
+  "shl": [
+   -105.417022,
+   43.528126
+  ],
+  "bhl": [
+   -105.411119,
+   43.497829
+  ]
+ },
+ "49-005-79271": {
+  "ln": [
+   [
+    -105.416957,
+    43.528155
+   ],
+   [
+    -105.407152,
+    43.527642
+   ],
+   [
+    -105.406612,
+    43.526035
+   ],
+   [
+    -105.405317,
+    43.497831
+   ]
+  ],
+  "fx": 6,
+  "note": "Permitted location, not a drilled path: surface hole, kick-off/landing point and bottom hole from the survey plat in the state APD (NAD83); surface hole moved 365 m to the plat location",
+  "shl": [
+   -105.416957,
+   43.528155
+  ],
+  "bhl": [
+   -105.405317,
+   43.497831
+  ]
  }
 }
