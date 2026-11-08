@@ -1,0 +1,3 @@
+{"api": "49-005-56127", "name": "SLPU 14-4H", "when": "2026-11-07", "miss_m": 1397.8, "ref": "mag-", "disp_ft": 4686, "stations": 27, "last_md": 7375.0, "max_gap": 1650, "src": "ocr:whatupDir:369:1p", "tried": 1, "warp": false, "status": "rejected"}
+{"api": "49-005-56631", "name": "SLPU FED 14-19H", "when": "2026-11-07", "status": "unreadable"}
+{"api": "49-005-56628", "name": "SLPU FED 12-19H", "when": "2026-11-07", "miss_m": 611.7, "ref": "mag+", "disp_ft": 4447, "stations": 77, "last_md": 11667.0, "max_gap": 159, "src": "ocr:whatupDir:1502:9p", "tried": 2, "warp": false, "status": "rejected"}
