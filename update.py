@@ -21,6 +21,8 @@ OVERRIDES = os.path.join(ROOT, "data", "overrides.json")
 PROPOSED = os.path.join(ROOT, "data", "proposed.json")
 PRODUCTION = os.path.join(ROOT, "data", "production.json")
 NEWWELLS = os.path.join(ROOT, "data", "new_wells.json")
+REVIEW = os.path.join(ROOT, "data", "review_queue.json")
+HELD = []                       # state wells that did not make the map this run, with the reason (see write_review_queue)
 WFS = "https://dataexplorer.wogcc.wyo.gov/geoserver/wfs"
 ED = "https://dataexplorer.wogcc.wyo.gov/ED.aspx?KeyName=PKey&KeyValue={}&KeyType=Integer&DetailXML=WellDetails.xml"
 DRILL = "https://pipeline.wyo.gov/drillactivityByCallIn.cfm"
@@ -194,6 +196,7 @@ def build_wells(log):
         k = w["properties"]["PKey"]
         d = cache.get(k)
         if not d:
+            HELD.append({"a": w["properties"].get("WellId"), "n": w["properties"].get("WellName"), "why": "no header page", "cty": county[k]})
             continue
         form = (d.get("Producing Reservoir") or d.get("Completed Reservoir") or "Unknown").title()
         form = FORMATION_MERGE.get(form, form)
@@ -209,6 +212,7 @@ def build_wells(log):
         s0, n0, w0, e0 = COUNTY_BOX[county[k]]
         if not (s0 < shl[1] < n0 and w0 < shl[0] < e0):   # outside its county: bad coordinates, hold the well back
             fixed.append(d["API Number"] + " (skipped: surface hole outside " + county[k] + ")")
+            HELD.append({"a": d["API Number"], "n": d.get("Well Name and Number"), "o": d.get("Operator"), "why": "surface hole outside " + county[k], "cty": county[k]})
             continue
         try:
             bhl = [float(d["BHL Longitude (NAD83)"]), float(d["BHL Latitude (NAD83)"])]
@@ -262,6 +266,18 @@ def build_wells(log):
     out.sort(key=lambda r: r["a"])
     log(f"{len(out)} wells on map ({dropped} dropped by formation); tracks auto-cleaned: {fixed or 'none'}")
     return out
+
+
+def write_review_queue(log):
+    """Wells the state lists as horizontal that are NOT on the map for a reason worth a look (no header, bad coordinates).
+    Wells dropped by formation are expected and not listed. `first_seen` is kept so you can see how long each has waited."""
+    old = {r["a"]: r for r in (json.load(open(REVIEW))["wells"] if os.path.exists(REVIEW) else [])}
+    today = datetime.date.today().isoformat()
+    rows = [dict(h, first_seen=old.get(h["a"], {}).get("first_seen", today)) for h in HELD if h.get("a")]
+    rows.sort(key=lambda r: r["a"])
+    json.dump({"updated": today, "wells": rows}, open(REVIEW, "w"), indent=0)
+    new = [r["a"] for r in rows if r["first_seen"] == today]
+    log(f"review queue: {len(rows)} wells held back ({len(new)} new today){': ' + ', '.join(new[:8]) if new else ''}")
 
 
 def rig_records(log, days=100):
@@ -412,7 +428,7 @@ def push_changes(wells, rigs, log, attempts=4):
     """Commit and push. If someone else pushed while this run was working (it takes about 5 minutes), take their version
     of everything, re-apply today's well data, header cache and production on top of it, and push again."""
     for n in range(attempts):
-        _git("add", "index.html", "data/headers.json", "data/production.json", "data/new_wells.json")
+        _git("add", "index.html", "data/headers.json", "data/production.json", "data/new_wells.json", "data/review_queue.json")
         if _git("diff", "--cached", "--quiet", check=False).returncode == 0:
             log("nothing to commit")
             return
@@ -455,7 +471,9 @@ def main():
         s = s[:i] + json.dumps(wells, separators=(",", ":")) + s[j:]
         open(INDEX, "w").write(s)
         return
+    HELD.clear()
     wells = build_wells(log)
+    write_review_queue(log)
     if len(wells) < 1000:
         sys.exit(f"only {len(wells)} wells came back, expected about 1,400; leaving index.html unchanged")
     recs = rig_records(log, RIG_HIST_DAYS)
@@ -492,7 +510,7 @@ def main():
         log(f'production refresh failed: {e}')
     changed = open(INDEX).read() != before
     if not changed:   # production or header data can change without the page itself changing
-        st = subprocess.run(["git", "status", "--porcelain", "data/production.json", "data/headers.json", "data/new_wells.json"], cwd=ROOT, capture_output=True, text=True)
+        st = subprocess.run(["git", "status", "--porcelain", "data/production.json", "data/headers.json", "data/new_wells.json", "data/review_queue.json"], cwd=ROOT, capture_output=True, text=True)
         changed = bool(st.stdout.strip())
     log("index.html " + ("updated" if changed else "unchanged"))
     if "--push" in sys.argv and changed:

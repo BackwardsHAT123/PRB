@@ -7,11 +7,11 @@ Coverage comes from the wells in index.html: fx 7 = filed certification form, 8/
 6 = operator design / permit plat, 10-16 = point fixes, 0 = state track or straight line.
 Review state per well is stored in data/survey_review.json:
     applied  = a survey path is on the map (fx 8, 9, 17)
-    tried    = the reader has been run on the well (it is in survey_summary.json) but no survey path was applied
+    tried    = the reader has been run on the well (it appears in any tools/survey_work/survey_out*.jsonl; `result` is its last outcome) but no survey path was applied
     untried  = still on a straight line / state track and never read   <- the to-do list
 `first_seen` is kept from the previous run, so a new "untried" well shows how long it has waited.
 """
-import collections, datetime, json, os
+import collections, datetime, glob, json, os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SURVEYED = {8, 9, 17}
@@ -36,11 +36,25 @@ def source(w):
     return "straight"
 
 
+def reader_results():
+    """api -> latest reader result ('ok', 'rejected', 'none', 'unreadable', ...) from every tools/survey_work/survey_out*.jsonl."""
+    res, when = {}, {}
+    for f in sorted(glob.glob(os.path.join(ROOT, "tools", "survey_work", "survey_out*.jsonl"))):
+        for line in open(f):
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            a = r.get("api")
+            if a and str(r.get("when", "")) >= when.get(a, ""):
+                res[a], when[a] = r.get("status"), str(r.get("when", ""))
+    return res
+
+
 def main():
     wells = load_wells()
     today = datetime.date.today().isoformat()
-    sf = os.path.join(ROOT, "data", "survey_summary.json")
-    tried = set(json.load(open(sf))) if os.path.exists(sf) else set()
+    tried = reader_results()
     rf = os.path.join(ROOT, "data", "survey_review.json")
     old = json.load(open(rf)) if os.path.exists(rf) else {}
     rev = {}
@@ -48,7 +62,7 @@ def main():
         a = w["a"]
         st = "applied" if w.get("fx", 0) in SURVEYED else "tried" if a in tried else "untried"
         prev = old.get(a, {})
-        rev[a] = {"status": st, "since": prev.get("since") if prev.get("status") == st else today,
+        rev[a] = {"status": st, "result": tried.get(a), "since": prev.get("since") if prev.get("status") == st else today,
                   "first_seen": prev.get("first_seen", today)}
     json.dump(rev, open(rf, "w"), separators=(",", ":"), sort_keys=True)
 

@@ -134,3 +134,8 @@ Stored in `data/overrides.json` with a note shown in the popup; fx codes: 10 sur
 | 9-township slant wells applied (Nov 9, 2026, Tom approved) | 2 | `49-005-62352` and `49-005-78137` applied (fx 9); slant design (path drifts out, then laterals back); `49-005-77723` left as straight line (garbage first row, 6,139 ft gap) | **2 paths** | see git log |
 
 - Dashboard lateral for 49-005-62352 set to 4,572 ft via lateral_override.json (heel MD 11,888 to last MD 16,460; the whole-path length of 5,948 ft included the slant drift). Only that well, bench and curve aggregates changed.
+
+## Rebuilding the OCR environment
+The reader's Python environment (Python 3.13) lives outside the repo at `PRB_work/conv2/ocrenv`. To rebuild it anywhere:
+
+    python3 -m venv ocrenv && ocrenv/bin/pip install -r tools/requirements-ocr.txt

@@ -108,17 +108,17 @@
 
 ## Never read (straight line or state track, not permits)
 
-1121 wells; largest groups:
+369 wells; largest groups:
 
-* Converse / Continental: 162
-* Converse / Devon: 153
-* Converse / Oxy: 109
-* Converse / Anschutz: 82
-* Campbell / Citation: 68
-* Converse / EOG: 61
-* Converse / WRC Energy: 49
-* Johnson / Anschutz: 49
-* Converse / 1876 Resources: 48
-* Campbell / EOG: 47
-* Converse / Sage Butte: 38
-* Campbell / Anschutz: 33
+* Converse / Continental: 50
+* Converse / Devon: 50
+* Converse / Oxy: 39
+* Johnson / Anschutz: 39
+* Converse / 1876 Resources: 34
+* Converse / Anschutz: 27
+* Converse / WRC Energy: 26
+* Campbell / Anschutz: 25
+* Campbell / EMEP II: 12
+* Campbell / Ballard Petroleum: 10
+* Converse / Sage Butte: 10
+* Converse / EOG: 7
