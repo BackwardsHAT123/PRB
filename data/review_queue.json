@@ -1,13 +1,4 @@
 {
 "updated": "2026-11-09",
-"wells": [
-{
-"a": "49-019-42209",
-"n": "Pokes Fed 4677-16-28-13E NH",
-"o": "ANSCHUTZ EXPLORATION CORPORATION",
-"why": "surface hole outside Johnson",
-"cty": "Johnson",
-"first_seen": "2026-11-09"
-}
-]
+"wells": []
 }
