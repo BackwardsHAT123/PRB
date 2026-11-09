@@ -4,5 +4,6 @@
  "49-005-61878": {"len": 4287, "note": "ARBALEST 443-19H: state producing interval and perfs 7,758 to 12,045 ft MD; map bottom hole is wrong"},
  "49-005-62015": {"len": 4143, "note": "CASTLE 3-21TH: state perforations 9,638 to 13,781 ft MD; map bottom hole is wrong"},
  "49-005-62891": {"len": 4430, "note": "CASTLE 12-11TH: state perforations 9,310 to 13,740 ft MD; map bottom hole is wrong"},
- "49-005-35842": {"len": 955, "note": "IBERLIN RANCH 33-3H: open hole 11,441 to 12,396 ft MD (the first horizontal, short); the map path includes the run from the surface location"}
+ "49-005-35842": {"len": 955, "note": "IBERLIN RANCH 33-3H: open hole 11,441 to 12,396 ft MD (the first horizontal, short); the map path includes the run from the surface location"},
+ "49-005-62352": {"len": 4572, "note": "heel MD 11,888 to last MD 16,460 from filed survey (slant well; map path includes drift)"}
 }
