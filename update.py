@@ -469,6 +469,20 @@ def main():
         log(f"new-well log: {sum(e['t'] == 'add' for e in NEW_ENTRIES)} added, {sum(e['t'] == 'rem' for e in NEW_ENTRIES)} dropped")
     except Exception as e:
         log(f"new-well log failed: {e}")
+    try:        # sanity checks: errors stop the run before anything is written or pushed
+        sys.path.insert(0, os.path.join(ROOT, "tools"))
+        import validate
+        try:
+            old_n = len(json.loads(before[i:before.index(";\nconst GRID", i)]))
+        except Exception:
+            old_n = None
+        errs, warns = validate.validate(wells, old_n, json.load(open(PRODUCTION)) if os.path.exists(PRODUCTION) else None)
+        for m in warns:
+            log("validate warning: " + m)
+        if errs:
+            sys.exit("validation failed, index.html left unchanged:\n  " + "\n  ".join(errs))
+    except ImportError:
+        log("tools/validate.py missing; skipping checks")
     write_index(wells, rigs)
     try:
         hdr = json.load(open(HEADERS))

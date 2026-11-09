@@ -2,6 +2,9 @@
 
 Last updated: Nov 1, 2026 (monthly update; Converse survey reading stopped after batch 6). Repo: https://github.com/BackwardsHAT123/PRB (map = `index.html`, path fixes = `data/overrides.json`).
 
+> Computed coverage by county/operator and the never-read list: `tools/SURVEY_COVERAGE.md` (regenerate with `python3 tools/survey_coverage.py`; per-well state in `data/survey_review.json`). Sanity checks before every push: `tools/validate.py`.
+
+
 ## What this is
 Wells on the map that only show a straight line from surface hole (SHL) to bottom hole (BHL) get a real lateral path
 by reading the operator's filed directional survey from the WOGCC site (text files, or scanned PDFs read by OCR),
