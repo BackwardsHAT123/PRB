@@ -1,16 +1,16 @@
 # PRB survey coverage (generated 2026-11-09 by tools/survey_coverage.py)
 
-3817 wells on the map. Do not edit by hand; narrative history is in SURVEY_STATUS.md.
+3824 wells on the map. Do not edit by hand; narrative history is in SURVEY_STATUS.md.
 
 ## All wells by source
 
 | Source | Wells | Share |
 |---|---|---|
-| survey | 1931 | 51% |
+| survey | 1931 | 50% |
 | cert form | 215 | 6% |
-| design/plat | 48 | 1% |
-| state track | 644 | 17% |
-| straight | 979 | 26% |
+| design/plat | 49 | 1% |
+| state track | 649 | 17% |
+| straight | 980 | 26% |
 
 ## ?
 
@@ -26,7 +26,7 @@
 | Anschutz | 22 | 83 | 10 | 44 | 8 | 167 | 13% |
 | Ballard Petroleum | 119 | 1 | 9 | 14 | 20 | 163 | 73% |
 | Devon | 86 | 0 | 0 | 9 | 58 | 153 | 56% |
-| EMEP II | 84 | 0 | 0 | 16 | 20 | 120 | 70% |
+| EMEP II | 84 | 0 | 0 | 21 | 20 | 125 | 67% |
 | Peak Powder River | 84 | 2 | 0 | 0 | 28 | 114 | 74% |
 | Citation | 11 | 0 | 0 | 0 | 68 | 79 | 14% |
 | WRC Energy | 6 | 1 | 0 | 15 | 4 | 26 | 23% |
@@ -56,7 +56,7 @@
 
 | Operator | survey | cert form | design/plat | state track | straight | total | % surveyed |
 |---|---|---|---|---|---|---|---|
-| Continental | 423 | 0 | 0 | 73 | 213 | 709 | 60% |
+| Continental | 423 | 0 | 0 | 73 | 214 | 710 | 60% |
 | Devon | 187 | 0 | 0 | 69 | 105 | 361 | 52% |
 | Anschutz | 157 | 0 | 5 | 35 | 60 | 257 | 61% |
 | Oxy | 88 | 0 | 0 | 60 | 81 | 229 | 38% |
@@ -88,7 +88,7 @@
 
 | Operator | survey | cert form | design/plat | state track | straight | total | % surveyed |
 |---|---|---|---|---|---|---|---|
-| Anschutz | 39 | 0 | 18 | 82 | 21 | 160 | 24% |
+| Anschutz | 39 | 0 | 19 | 82 | 21 | 161 | 24% |
 | EOG | 15 | 0 | 0 | 0 | 4 | 19 | 79% |
 | WRC Energy | 11 | 0 | 0 | 2 | 0 | 13 | 85% |
 | Atx Energy Partners | 8 | 0 | 0 | 0 | 5 | 13 | 62% |
@@ -108,9 +108,9 @@
 
 ## Never read (straight line or state track, not permits)
 
-369 wells; largest groups:
+370 wells; largest groups:
 
-* Converse / Continental: 50
+* Converse / Continental: 51
 * Converse / Devon: 50
 * Converse / Oxy: 39
 * Johnson / Anschutz: 39

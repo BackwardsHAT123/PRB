@@ -273,7 +273,8 @@ def write_review_queue(log):
     Wells dropped by formation are expected and not listed. `first_seen` is kept so you can see how long each has waited."""
     old = {r["a"]: r for r in (json.load(open(REVIEW))["wells"] if os.path.exists(REVIEW) else [])}
     today = datetime.date.today().isoformat()
-    rows = [dict(h, first_seen=old.get(h["a"], {}).get("first_seen", today)) for h in HELD if h.get("a")]
+    prop = {p["a"] for p in json.load(open(PROPOSED))} if os.path.exists(PROPOSED) else set()   # already placed by hand from an APD plat
+    rows = [dict(h, first_seen=old.get(h["a"], {}).get("first_seen", today)) for h in HELD if h.get("a") and h["a"] not in prop]
     rows.sort(key=lambda r: r["a"])
     json.dump({"updated": today, "wells": rows}, open(REVIEW, "w"), indent=0)
     new = [r["a"] for r in rows if r["first_seen"] == today]

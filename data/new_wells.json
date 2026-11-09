@@ -395,6 +395,78 @@
 "r": "Mowry",
 "cty": "Campbell",
 "sec": "33-42N-71W"
+},
+{
+"d": "2026-11-09",
+"t": "add",
+"a": "49-005-80228",
+"n": "SIXSEVEN 4471-6-7-1PH",
+"o": "EMEP II",
+"s": "Active Permit",
+"f": "HILIGHT",
+"r": "Parkman",
+"cty": "Campbell",
+"sec": "18-44N-71W"
+},
+{
+"d": "2026-11-09",
+"t": "add",
+"a": "49-005-80229",
+"n": "SIXSEVEN 4471-6-7-1TH",
+"o": "EMEP II",
+"s": "Active Permit",
+"f": "HILIGHT",
+"r": "Turner",
+"cty": "Campbell",
+"sec": "18-44N-71W"
+},
+{
+"d": "2026-11-09",
+"t": "add",
+"a": "49-005-80230",
+"n": "SIXSEVEN 4471-6-7-2PH",
+"o": "EMEP II",
+"s": "Active Permit",
+"f": "HILIGHT",
+"r": "Parkman",
+"cty": "Campbell",
+"sec": "18-44N-71W"
+},
+{
+"d": "2026-11-09",
+"t": "add",
+"a": "49-005-80231",
+"n": "SIXSEVEN 4471-6-7-2TH",
+"o": "EMEP II",
+"s": "Active Permit",
+"f": "HILIGHT",
+"r": "Turner",
+"cty": "Campbell",
+"sec": "18-44N-71W"
+},
+{
+"d": "2026-11-09",
+"t": "add",
+"a": "49-005-80232",
+"n": "SIXSEVEN 4471-6-7-3PH",
+"o": "EMEP II",
+"s": "Active Permit",
+"f": "HILIGHT",
+"r": "Parkman",
+"cty": "Campbell",
+"sec": "18-44N-71W"
+},
+{
+"d": "2026-11-09",
+"t": "add",
+"a": "49-009-48501",
+"n": "Spearhead Fed 4075-2314 1SH",
+"o": "Continental",
+"s": "Producing Oil Well",
+"f": "Wildcat",
+"r": "Shannon",
+"cty": "Converse",
+"sec": "23-40N-75W"
 }
 ]
 }
