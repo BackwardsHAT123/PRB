@@ -310,9 +310,9 @@
   btn.onclick = () => { pop.hidden = !pop.hidden; btn.classList.toggle('on', !pop.hidden); };
 
   const S = { data: null, grid: null, proj: null, fms: new Set(), range: null, pts: [] };
-  map.createPane('gridpane').style.zIndex = 345; map.createPane('gridlines').style.zIndex = 405; map.createPane('gridpts').style.zIndex = 410;
+  map.createPane('gridpane').style.zIndex = 345;
   map.getPane('gridpane').style.pointerEvents = 'none';
-  const lineR = L.canvas({ pane: 'gridlines' }), ptR = L.canvas({ pane: 'gridpts' });
+  /* Everything interactive below is drawn in the map's own canvas renderer (overlay pane), so clicks on the horizontal wells still reach them */
   const cv = document.createElement('canvas'); cv.style.position = 'absolute'; cv.style.left = cv.style.top = '0'; map.getPane('gridpane').appendChild(cv);
   const contourGrp = L.layerGroup().addTo(map), ptGrp = L.layerGroup().addTo(map); let boxLayer = null;
 
@@ -445,16 +445,16 @@
       C.contours(S.grid, C.contourLevels(lo, hi, st)).forEach(c => {
         const segs = c.segs.map(s => { const a = S.proj.inv(s[0], s[1]), b = S.proj.inv(s[2], s[3]); return [[a[1], a[0]], [b[1], b[0]]]; });
         const bold = nb > 0 && Math.round(c.level / st) % nb === 0;
-        L.polyline(segs, { renderer: lineR, pane: 'gridlines', color: col, weight: bold ? 2.8 : 1.2, opacity: bold ? 1 : 0.85, interactive: true }).bindTooltip(String(c.level), { sticky: true }).addTo(contourGrp);
+        L.polyline(segs, { color: col, weight: bold ? 2.8 : 1.2, opacity: bold ? 1 : 0.85, interactive: false }).addTo(contourGrp);
         if (lab) C.labelSpots(C.chainSegments(c.segs), 14 * S.grid.dx, 4 * S.grid.dx).forEach(sp => {
           const ll = S.proj.inv(sp.x, sp.y), deg = (-sp.angle * 180 / Math.PI).toFixed(1);
-          L.marker([ll[1], ll[0]], { interactive: false, keyboard: false, pane: 'gridlines', icon: L.divIcon({ className: 'gridclab' + (bold ? ' b' : ''), iconSize: [0, 0], html: '<span style="display:inline-block;transform:translate(-50%,-50%) rotate(' + deg + 'deg)">' + fmtL(c.level) + '</span>' }) }).addTo(contourGrp);
+          L.marker([ll[1], ll[0]], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'gridclab' + (bold ? ' b' : ''), iconSize: [0, 0], html: '<span style="display:inline-block;transform:translate(-50%,-50%) rotate(' + deg + 'deg)">' + fmtL(c.level) + '</span>' }) }).addTo(contourGrp);
         });
       });
     }
     if ($('g_pts').checked) S.pts.forEach(p => {
       const c = cm((p.z - lo) / (hi - lo));
-      L.circleMarker([p.lat, p.lon], { renderer: ptR, pane: 'gridpts', radius: 4, weight: 1, color: isDark() ? '#fff' : '#000', fillColor: 'rgb(' + c.join(',') + ')', fillOpacity: 1 })
+      L.circleMarker([p.lat, p.lon], { radius: 4, weight: 1, color: isDark() ? '#fff' : '#000', fillColor: 'rgb(' + c.join(',') + ')', fillOpacity: 1 })
         .bindTooltip((p.id ? p.id + '<br>' : '') + (p.f ? p.f + '<br>' : '') + $('g_var').value + ': ' + p.z).addTo(ptGrp);
     });
     if ($('g_box').checked && S.ext) boxLayer = L.rectangle([[S.ext.s, S.ext.w], [S.ext.n, S.ext.e]], { color: '#e67e22', weight: 1.5, dashArray: '5 4', fill: false, interactive: false }).addTo(map);
@@ -495,8 +495,7 @@
   try { const sv = JSON.parse(localStorage.getItem(KEY) || 'null'); if (sv && sv.text) loadText(sv.text, sv.name); } catch (e) { }
 
   /* permanent layer: vertical wells whose logs were read (public state data only: location, name, API, operator, spud year, TD, formation) */
-  map.createPane('gridverts').style.zIndex = 408;
-  const vertR = L.canvas({ pane: 'gridverts' }), vertGrp = L.layerGroup(); let vertLoaded = false;
+  const vertGrp = L.layerGroup(); let vertLoaded = false;
   function vertToggle() {
     if ($('g_vert').checked) { vertGrp.addTo(map); if (!vertLoaded) vertLoad(); } else map.removeLayer(vertGrp);
   }
@@ -504,7 +503,7 @@
     vertLoaded = true;
     fetch('data/vertical_wells.json').then(r => r.json()).then(list => {
       const dk = isDark();
-      list.forEach(w => L.circleMarker([w.ll[1], w.ll[0]], { renderer: vertR, pane: 'gridverts', radius: 3.5, weight: 1, color: dk ? '#fff' : '#fff', fillColor: dk ? '#c9c9c9' : '#3b3b3b', fillOpacity: 1 })
+      list.forEach(w => L.circleMarker([w.ll[1], w.ll[0]], { radius: 3.5, weight: 1, color: dk ? '#fff' : '#fff', fillColor: dk ? '#c9c9c9' : '#3b3b3b', fillOpacity: 1 })
         .bindPopup('<b>' + (w.n || '') + '</b><br>' + w.a + '<br>' + (w.o || '') + '<br>' + [w.y ? 'spud ' + w.y : '', w.td ? 'TD ' + w.td.toLocaleString() + ' ft' : '', w.f || ''].filter(Boolean).join(' · ') + '<br><i>vertical well, induction log reviewed</i>').addTo(vertGrp));
       $('g_vn').textContent = '(' + list.length + ')';
     }).catch(() => { vertLoaded = false; $('g_vn').textContent = '(not available)'; });
