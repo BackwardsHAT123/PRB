@@ -44,7 +44,10 @@ def botform(path):
     for _ in range(n):
         r = f.read(rl)
         g = lambda k: r[off[k][0]:off[k][0] + off[k][1]].decode("latin-1").strip() if k in off else ""
-        res[g("APINO")] = g("BOTFORM")
+        try:
+            c = float(g("APINO")); res[str(int(round(c)))] = g("BOTFORM")   # APINO is county-code*100000 + well number, e.g. 905472 = 49-009-05472
+        except ValueError:
+            pass
     return res
 
 
@@ -72,7 +75,7 @@ out = []
 for api in apis:
     g = by[api]; ll = loc.get(api)
     d = {"API": api, "Well_Name": g[0]["Well_Name"], "Operator": g[0]["Operator"], "Spud_Year": g[0]["Spud_Year"], "TD_ft": g[0]["State_TD"],
-         "Lat": round(ll[1], 6) if ll else "", "Lon": round(ll[0], 6) if ll else "", "Formation": bf.get(api.replace("-", "") + "0000", bf.get(api, ""))}
+         "Lat": round(ll[1], 6) if ll else "", "Lon": round(ll[0], 6) if ll else "", "Formation": bf.get(str(int(api[3:6]) * 100000 + int(api[7:])), "")}
     for col, conf in (("KB_ft", "KB_conf"), ("Bottom_Logged_ft", "BLI_conf"), ("Time_Since_Circ_hrs", "CIRC_conf"), ("Max_Temp_F", "TEMP_conf")):
         v, c = best(g, col, conf); d[col] = v; d[conf] = c
     d["Temp_Source"] = next((r["Temp_Source"] for r in g if r["Max_Temp_F"] == d["Max_Temp_F"] and r.get("Temp_Source")), "")
