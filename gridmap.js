@@ -178,6 +178,44 @@
     return out;
   }
 
+  /* join marching-squares segments into polylines (endpoints matched to the nearest metre) */
+  function chainSegments(segs) {
+    const key = (x, y) => Math.round(x) + ',' + Math.round(y), ends = new Map();
+    segs.forEach((s, i) => { [key(s[0], s[1]), key(s[2], s[3])].forEach(k => { const l = ends.get(k); l ? l.push(i) : ends.set(k, [i]); }); });
+    const used = new Uint8Array(segs.length), out = [];
+    const nextFrom = (k) => { const l = ends.get(k); if (l) for (const i of l) if (!used[i]) return i; return -1; };
+    for (let i = 0; i < segs.length; i++) {
+      if (used[i]) continue; used[i] = 1;
+      const chain = [[segs[i][0], segs[i][1]], [segs[i][2], segs[i][3]]];
+      for (let dir = 0; dir < 2; dir++) {
+        for (;;) {
+          const end = dir ? chain[0] : chain[chain.length - 1], j = nextFrom(key(end[0], end[1]));
+          if (j < 0) break; used[j] = 1; const s = segs[j];
+          const far = key(s[0], s[1]) === key(end[0], end[1]) ? [s[2], s[3]] : [s[0], s[1]];
+          dir ? chain.unshift(far) : chain.push(far);
+        }
+      }
+      out.push(chain);
+    }
+    return out;
+  }
+  /* label positions along chains: {x,y,angle(rad, along the line, upright)}; one near the middle of short lines, more on long ones */
+  function labelSpots(chains, spacing, minLen) {
+    const spots = [];
+    chains.forEach(ch => {
+      const cum = [0]; for (let i = 1; i < ch.length; i++) cum.push(cum[i - 1] + Math.hypot(ch[i][0] - ch[i - 1][0], ch[i][1] - ch[i - 1][1]));
+      const len = cum[cum.length - 1]; if (len < minLen) return;
+      const n = Math.max(1, Math.floor(len / spacing));
+      for (let k = 0; k < n; k++) {
+        const at = (k + 0.5) * len / n; let i = 1; while (i < cum.length - 1 && cum[i] < at) i++;
+        const a = ch[Math.max(0, i - 2)], b = ch[Math.min(ch.length - 1, i + 1)], f = (at - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+        let ang = Math.atan2(b[1] - a[1], b[0] - a[0]); if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI;
+        spots.push({ x: ch[i - 1][0] + (ch[i][0] - ch[i - 1][0]) * f, y: ch[i - 1][1] + (ch[i][1] - ch[i - 1][1]) * f, angle: ang });
+      }
+    });
+    return spots;
+  }
+
   /* ---------- colour maps ---------- */
   const STOPS = {
     viridis: ['#440154', '#472d7b', '#3b528b', '#2c728e', '#21908d', '#27ad81', '#5cc863', '#aadc32', '#fde725'],
@@ -201,7 +239,7 @@
   }
 
   return { MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, idw, tps, gridPoints, gridStats, sampleGrid,
-    niceStep, contourLevels, contours, colormap, PALETTES: Object.keys(STOPS) };
+    niceStep, contourLevels, contours, chainSegments, labelSpots, colormap, PALETTES: Object.keys(STOPS) };
 });
 
 /* ====================================================================== UI ====================================================================== */
@@ -220,6 +258,7 @@
 #gridpop .row2{display:flex;gap:6px}#gridpop .row2 label{flex:1 1 0;min-width:0}
 #gridpop .fmlist{max-height:92px;overflow:auto;border:1px solid var(--line);border-radius:4px;padding:2px 4px;background:var(--bg)}
 #gridpop .fmlist label{margin:0}#gridpop .msg{margin:4px 0 0;opacity:.75}#gridpop .err{color:#c0392b;opacity:1}
+.gridclab{background:none;border:0;font:600 11px/1 system-ui,sans-serif;color:var(--fg);white-space:nowrap;text-align:center;text-shadow:0 0 3px var(--panel),0 0 3px var(--panel),0 0 2px var(--panel);pointer-events:none}
 #gridlegend{position:absolute;z-index:900;left:50%;transform:translateX(-50%);top:10px;padding:6px 8px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;font-size:11px;box-shadow:0 1px 6px #0003}
 #gridlegend[hidden]{display:none}#gridlegend canvas{display:block;width:200px;height:12px}#gridlegend .tk{position:relative;height:14px;margin-top:2px}
 #gridlegend .tk span{position:absolute;transform:translateX(-50%);white-space:nowrap}
@@ -259,6 +298,7 @@
 <label class="ck"><input type="checkbox" id="g_fill" class="disp" checked> Show filled grid</label>
 <label class="ck"><input type="checkbox" id="g_cont" class="disp"> Contours</label>
 <label>Contour interval <input type="text" id="g_cint" class="disp" placeholder="auto"></label>
+<label class="ck"><input type="checkbox" id="g_clab" class="disp" checked> Contour labels</label>
 <label class="ck"><input type="checkbox" id="g_pts" class="disp" checked> Show points</label>
 <label class="ck"><input type="checkbox" id="g_box" class="disp"> Show extent box</label>
 <div class="msg" id="g_msg"></div>
@@ -400,9 +440,14 @@
     paint();
     if (S.grid && $('g_cont').checked) {
       const st = +$('g_cint').value > 0 ? +$('g_cint').value : C.niceStep(hi - lo, 10), col = isDark() ? '#f2f2f2' : '#222';
+      const lab = $('g_clab').checked, fmtL = v => (+v.toPrecision(6)).toString();
       C.contours(S.grid, C.contourLevels(lo, hi, st)).forEach(c => {
         const segs = c.segs.map(s => { const a = S.proj.inv(s[0], s[1]), b = S.proj.inv(s[2], s[3]); return [[a[1], a[0]], [b[1], b[0]]]; });
         L.polyline(segs, { renderer: lineR, pane: 'gridlines', color: col, weight: 1.2, opacity: 0.85, interactive: true }).bindTooltip(String(c.level), { sticky: true }).addTo(contourGrp);
+        if (lab) C.labelSpots(C.chainSegments(c.segs), 14 * S.grid.dx, 4 * S.grid.dx).forEach(sp => {
+          const ll = S.proj.inv(sp.x, sp.y), deg = (-sp.angle * 180 / Math.PI).toFixed(1);
+          L.marker([ll[1], ll[0]], { interactive: false, keyboard: false, pane: 'gridlines', icon: L.divIcon({ className: 'gridclab', iconSize: [0, 0], html: '<span style="display:inline-block;transform:translate(-50%,-50%) rotate(' + deg + 'deg)">' + fmtL(c.level) + '</span>' }) }).addTo(contourGrp);
+        });
       });
     }
     if ($('g_pts').checked) S.pts.forEach(p => {

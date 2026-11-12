@@ -31,6 +31,14 @@ g = C.makeGrid(ext, 0.5 * C.MI, proj); C.gridPoints(g, pts, { method: 'spline', 
 const cs = C.contours(g, [100]); let cerr = 0; cs[0].segs.forEach(s => { cerr = Math.max(cerr, Math.abs(100 + 0.01 * s[0] + 0.02 * s[1] - 100), Math.abs(0.01 * s[2] + 0.02 * s[3])); });
 ok(cs.length === 1 && cs[0].segs.length > 20 && cerr < 1, 'contour segments lie on level (' + cs[0].segs.length + ' segs, err ' + cerr.toFixed(3) + ')');
 
+// contour chaining + label spots
+const chains = C.chainSegments(cs[0].segs); const nseg = chains.reduce((t, c) => t + c.length - 1, 0);
+ok(nseg === cs[0].segs.length && chains.length <= 3, 'chainSegments keeps every segment (' + chains.length + ' chain(s), ' + nseg + ' segs)');
+const spots = C.labelSpots(chains, 14 * g.dx, 4 * g.dx);
+ok(spots.length >= 1 && spots.every(p => Math.abs(p.angle) <= Math.PI / 2 + 1e-9 && isFinite(p.x) && isFinite(p.y)), 'labelSpots upright angles (' + spots.length + ' spots)');
+const sp = spots[0]; ok(Math.abs(100 + 0.01 * sp.x + 0.02 * sp.y - 100) < 1, 'label sits on the contour');
+ok(C.labelSpots([[[0, 0], [10, 0]]], 1000, 100).length === 0, 'short lines get no label');
+
 // sample
 const zs = C.sampleGrid(g, 0, 0); ok(Math.abs(zs - 100) < 0.5, 'sampleGrid at origin = ' + zs.toFixed(3));
 ok(isNaN(C.sampleGrid(g, 1e6, 0)), 'sample outside is NaN');
