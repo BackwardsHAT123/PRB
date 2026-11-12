@@ -301,6 +301,7 @@
 <label class="ck"><input type="checkbox" id="g_clab" class="disp" checked> Contour labels</label>
 <label>Bold every Nth line (0 = off) <input type="number" id="g_cbold" class="disp" value="5" min="0" max="50" step="1"></label>
 <label class="ck"><input type="checkbox" id="g_pts" class="disp"> Show points</label>
+<label class="ck"><input type="checkbox" id="g_wlab" class="disp" checked> Show well values (when grid shown)</label>
 <label class="ck"><input type="checkbox" id="g_box" class="disp"> Show extent box</label>
 <div class="msg" id="g_msg"></div>
 <div class="row2"><button type="button" class="pbtn" id="g_go">Update</button><button type="button" class="pbtn" id="g_exp">Export grid CSV</button><button type="button" class="pbtn" id="g_clear">Clear</button></div>`;
@@ -456,6 +457,10 @@
       const c = cm((p.z - lo) / (hi - lo));
       L.circleMarker([p.lat, p.lon], { radius: 4, weight: 1, color: isDark() ? '#fff' : '#000', fillColor: 'rgb(' + c.join(',') + ')', fillOpacity: 1 })
         .bindTooltip((p.id ? p.id + '<br>' : '') + (p.f ? p.f + '<br>' : '') + $('g_var').value + ': ' + p.z).addTo(ptGrp);
+    });
+    if ($('g_wlab').checked && $('g_fill').checked && S.grid) S.pts.forEach(p => {
+      L.marker([p.lat, p.lon], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'gridclab', iconSize: [0, 0],
+        html: '<span style="display:inline-block;transform:translate(8px,-50%)">' + (+(+p.z).toPrecision(5)) + '</span>' }) }).addTo(ptGrp);
     });
     if ($('g_box').checked && S.ext) boxLayer = L.rectangle([[S.ext.s, S.ext.w], [S.ext.n, S.ext.e]], { color: '#e67e22', weight: 1.5, dashArray: '5 4', fill: false, interactive: false }).addTo(map);
     if ($('g_fill').checked && S.grid) legend(lo, hi, cm); else leg.hidden = true;
