@@ -1,6 +1,6 @@
 """Build an importable points CSV (for the GRID button on the map) from the vertical-well header readings.
 
-    python3 tools/export_points.py [--readings ../header_readings.csv] [--out ../vertical_points.csv] [--dbf wells.dbf]
+    python3 tools/export_points.py [--readings ../header_readings.csv ../campbell_headers/header_readings.csv] [--out ../vertical_points.csv] [--dbf wells.dbf]
 
 * one row per well (API); when a well has several logs the HIGH-confidence value wins, else the first non-blank one
 * Lat/Lon come from the state WOGCC GeoServer WFS (batched, ~25 wells per request - gentle on the server)
@@ -12,7 +12,7 @@ import argparse, csv, json, os, struct, subprocess, time, urllib.parse, urllib.r
 WFS = "https://dataexplorer.wogcc.wyo.gov/geoserver/wfs"
 ap = argparse.ArgumentParser()
 here = os.path.dirname(os.path.abspath(__file__))
-ap.add_argument("--readings", default=os.path.join(here, "..", "..", "header_readings.csv"))
+ap.add_argument("--readings", nargs="+", default=[os.path.join(here, "..", "..", "header_readings.csv"), os.path.join(here, "..", "..", "campbell_headers", "header_readings.csv")], help="one or more header_readings.csv files (Converse, Campbell, ...)")
 ap.add_argument("--out", default=os.path.join(here, "..", "..", "vertical_points.csv"))
 ap.add_argument("--dbf", default="")
 a = ap.parse_args()
@@ -51,7 +51,7 @@ def botform(path):
     return res
 
 
-rows = list(csv.DictReader(open(a.readings)))
+rows = [r for p in a.readings if os.path.exists(p) for r in csv.DictReader(open(p))]
 by = {}
 for r in rows: by.setdefault(r["API"], []).append(r)
 apis = sorted(by)
