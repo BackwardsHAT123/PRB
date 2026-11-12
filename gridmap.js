@@ -278,18 +278,42 @@
   function msg(t, err) { const m = $('g_msg'); m.textContent = t || ''; m.className = 'msg' + (err ? ' err' : ''); }
   function fillSelect(sel, opts, val, blank) { sel.innerHTML = ''; if (blank) sel.add(new Option('(none)', '')); opts.forEach(o => sel.add(new Option(o, o))); if (val != null && [...sel.options].some(o => o.value === val)) sel.value = val; }
 
+  /* well locations the map already knows, by API: the vertical-wells layer plus the horizontals in D */
+  let locPromise = null;
+  function wellLocations() {
+    if (!locPromise) locPromise = fetch('data/vertical_wells.json').then(r => r.json()).catch(() => []).then(list => {
+      const m = new Map();
+      if (typeof D !== 'undefined') D.forEach(w => { if (w.a && w.shl) m.set(w.a, { lon: w.shl[0], lat: w.shl[1], f: w.r || '' }); });
+      list.forEach(w => m.set(w.a, { lon: w.ll[0], lat: w.ll[1], f: w.f || '' }));
+      return m;
+    });
+    return locPromise;
+  }
   function loadText(text, name) {
     const d = C.parseCSV(text); if (!d.rows.length) { msg('No rows found in that file', true); return; }
-    const dc = C.detectColumns(d.headers); S.data = d; S.name = name;
+    const dc = C.detectColumns(d.headers), apiCol = d.headers.find(h => /^api/i.test(h));
+    const hasXY = dc.lat && dc.lon && d.rows.some(r => !isNaN(C.num(r[dc.lat])) && !isNaN(C.num(r[dc.lon])));
+    if (hasXY || !apiCol) return finishLoad(d, dc, name, text, '');
+    msg('No lat/lon columns: matching wells by ' + apiCol + ' to the wells on the map...');
+    wellLocations().then(m => {
+      let hit = 0; const addFm = !dc.fm;
+      d.rows.forEach(r => { const w = m.get(r[apiCol]); r.Lat = w ? String(w.lat) : ''; r.Lon = w ? String(w.lon) : ''; if (addFm) r.Formation = w ? w.f : ''; if (w) hit++; });
+      d.headers = d.headers.concat(['Lat', 'Lon']).concat(addFm ? ['Formation'] : []);
+      dc.lat = 'Lat'; dc.lon = 'Lon'; if (addFm) dc.fm = 'Formation';
+      finishLoad(d, dc, name, text, hit + ' of ' + d.rows.length + ' rows matched to a well on the map by API');
+    });
+  }
+  function finishLoad(d, dc, name, text, note) {
+    S.data = d; S.name = name;
     fillSelect($('g_lat'), d.headers, dc.lat); fillSelect($('g_lon'), d.headers, dc.lon); fillSelect($('g_fmc'), d.headers, dc.fm, true);
     S.label = dc.label; refreshVars(); refreshFms(true);
-    $('g_info').textContent = name + ': ' + d.rows.length + ' rows';
+    $('g_info').textContent = name + ': ' + d.rows.length + ' rows' + (note ? ' (' + note + ')' : '');
     try { localStorage.setItem(KEY, JSON.stringify({ text, name })); } catch (e) { }
     rebuild();
   }
   function refreshVars() {
     const skip = [$('g_lat').value, $('g_lon').value, $('g_fmc').value], keep = $('g_var').value;
-    const nc = C.numericColumns(S.data.rows, S.data.headers, skip.concat(S.data.headers.filter(h => /name|^api|^id$/i.test(h))));
+    const nc = C.numericColumns(S.data.rows, S.data.headers, skip.concat(S.data.headers.filter(h => /name|^api|^id$|log_?id/i.test(h))));
     const pref = nc.find(h => /temp/i.test(h)) || nc[0];
     fillSelect($('g_var'), nc, nc.includes(keep) ? keep : pref);
   }
