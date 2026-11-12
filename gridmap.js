@@ -220,10 +220,10 @@
 #gridpop .row2{display:flex;gap:6px}#gridpop .row2 label{flex:1 1 0;min-width:0}
 #gridpop .fmlist{max-height:92px;overflow:auto;border:1px solid var(--line);border-radius:4px;padding:2px 4px;background:var(--bg)}
 #gridpop .fmlist label{margin:0}#gridpop .msg{margin:4px 0 0;opacity:.75}#gridpop .err{color:#c0392b;opacity:1}
-#gridlegend{position:absolute;z-index:900;right:10px;bottom:30px;padding:6px 8px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;font-size:11px;box-shadow:0 1px 6px #0003}
+#gridlegend{position:absolute;z-index:900;left:50%;transform:translateX(-50%);top:10px;padding:6px 8px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;font-size:11px;box-shadow:0 1px 6px #0003}
 #gridlegend[hidden]{display:none}#gridlegend canvas{display:block;width:200px;height:12px}#gridlegend .tk{position:relative;height:14px;margin-top:2px}
 #gridlegend .tk span{position:absolute;transform:translateX(-50%);white-space:nowrap}
-@media (max-width:700px){#gridbtn{top:auto;bottom:244px}#gridpop{top:auto;bottom:244px;max-height:55%}#gridlegend{bottom:130px}}`;
+@media (max-width:700px){#gridbtn{top:auto;bottom:244px}#gridpop{top:auto;bottom:244px;max-height:55%}#gridlegend{top:auto;bottom:130px;left:10px;transform:none}}`;
   document.head.appendChild(css);
 
   const host = map.getContainer().parentNode;
@@ -288,7 +288,7 @@
   }
   function refreshVars() {
     const skip = [$('g_lat').value, $('g_lon').value, $('g_fmc').value], keep = $('g_var').value;
-    const nc = C.numericColumns(S.data.rows, S.data.headers, skip);
+    const nc = C.numericColumns(S.data.rows, S.data.headers, skip.concat(S.data.headers.filter(h => /name|^api|^id$/i.test(h))));
     const pref = nc.find(h => /temp/i.test(h)) || nc[0];
     fillSelect($('g_var'), nc, nc.includes(keep) ? keep : pref);
   }
