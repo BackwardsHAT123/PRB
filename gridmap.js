@@ -509,7 +509,7 @@
     fetch('data/vertical_wells.json').then(r => r.json()).then(list => {
       const dk = isDark();
       list.forEach(w => L.circleMarker([w.ll[1], w.ll[0]], { radius: 3.5, weight: 1, color: dk ? '#fff' : '#fff', fillColor: dk ? '#c9c9c9' : '#3b3b3b', fillOpacity: 1 })
-        .bindPopup('<b>' + (w.n || '') + '</b><br>' + w.a + '<br>' + (w.o || '') + '<br>' + [w.y ? 'spud ' + w.y : '', w.td ? 'TD ' + w.td.toLocaleString() + ' ft' : '', w.f || ''].filter(Boolean).join(' · ') + '<br><i>vertical well, induction log reviewed</i>').addTo(vertGrp));
+        .bindPopup('<b>' + (w.n || '') + '</b><br>API <a href="https://pipeline.wyo.gov/wellapi.cfm?nAPINO=' + (+w.a.split('-')[1]) + w.a.split('-')[2] + '" target="_blank" rel="noopener">' + w.a + '</a><br>' + (w.o || '') + '<br>' + [w.y ? 'spud ' + w.y : '', w.td ? 'TD ' + w.td.toLocaleString() + ' ft' : '', w.f || ''].filter(Boolean).join(' · ') + '<br><i>vertical well, induction log reviewed</i>').addTo(vertGrp));
       $('g_vn').textContent = '(' + list.length + ')';
     }).catch(() => { vertLoaded = false; $('g_vn').textContent = '(not available)'; });
   }
