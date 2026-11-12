@@ -258,7 +258,7 @@
 #gridpop .row2{display:flex;gap:6px}#gridpop .row2 label{flex:1 1 0;min-width:0}
 #gridpop .fmlist{max-height:92px;overflow:auto;border:1px solid var(--line);border-radius:4px;padding:2px 4px;background:var(--bg)}
 #gridpop .fmlist label{margin:0}#gridpop .msg{margin:4px 0 0;opacity:.75}#gridpop .err{color:#c0392b;opacity:1}
-.gridclab{background:none;border:0;font:600 11px/1 system-ui,sans-serif;color:var(--fg);white-space:nowrap;text-align:center;text-shadow:0 0 3px var(--panel),0 0 3px var(--panel),0 0 2px var(--panel);pointer-events:none}
+.gridclab.b{font-weight:800;font-size:12px}.gridclab{background:none;border:0;font:600 11px/1 system-ui,sans-serif;color:var(--fg);white-space:nowrap;text-align:center;text-shadow:0 0 3px var(--panel),0 0 3px var(--panel),0 0 2px var(--panel);pointer-events:none}
 #gridlegend{position:absolute;z-index:900;left:50%;transform:translateX(-50%);top:10px;padding:6px 8px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;font-size:11px;box-shadow:0 1px 6px #0003}
 #gridlegend[hidden]{display:none}#gridlegend canvas{display:block;width:200px;height:12px}#gridlegend .tk{position:relative;height:14px;margin-top:2px}
 #gridlegend .tk span{position:absolute;transform:translateX(-50%);white-space:nowrap}
@@ -299,6 +299,7 @@
 <label class="ck"><input type="checkbox" id="g_cont" class="disp"> Contours</label>
 <label>Contour interval <input type="text" id="g_cint" class="disp" placeholder="auto"></label>
 <label class="ck"><input type="checkbox" id="g_clab" class="disp" checked> Contour labels</label>
+<label>Bold every Nth line (0 = off) <input type="number" id="g_cbold" class="disp" value="5" min="0" max="50" step="1"></label>
 <label class="ck"><input type="checkbox" id="g_pts" class="disp" checked> Show points</label>
 <label class="ck"><input type="checkbox" id="g_box" class="disp"> Show extent box</label>
 <div class="msg" id="g_msg"></div>
@@ -440,13 +441,14 @@
     paint();
     if (S.grid && $('g_cont').checked) {
       const st = +$('g_cint').value > 0 ? +$('g_cint').value : C.niceStep(hi - lo, 10), col = isDark() ? '#f2f2f2' : '#222';
-      const lab = $('g_clab').checked, fmtL = v => (+v.toPrecision(6)).toString();
+      const nb = Math.max(0, Math.floor(+$('g_cbold').value || 0)), lab = $('g_clab').checked, fmtL = v => (+v.toPrecision(6)).toString();
       C.contours(S.grid, C.contourLevels(lo, hi, st)).forEach(c => {
         const segs = c.segs.map(s => { const a = S.proj.inv(s[0], s[1]), b = S.proj.inv(s[2], s[3]); return [[a[1], a[0]], [b[1], b[0]]]; });
-        L.polyline(segs, { renderer: lineR, pane: 'gridlines', color: col, weight: 1.2, opacity: 0.85, interactive: true }).bindTooltip(String(c.level), { sticky: true }).addTo(contourGrp);
+        const bold = nb > 0 && Math.round(c.level / st) % nb === 0;
+        L.polyline(segs, { renderer: lineR, pane: 'gridlines', color: col, weight: bold ? 2.8 : 1.2, opacity: bold ? 1 : 0.85, interactive: true }).bindTooltip(String(c.level), { sticky: true }).addTo(contourGrp);
         if (lab) C.labelSpots(C.chainSegments(c.segs), 14 * S.grid.dx, 4 * S.grid.dx).forEach(sp => {
           const ll = S.proj.inv(sp.x, sp.y), deg = (-sp.angle * 180 / Math.PI).toFixed(1);
-          L.marker([ll[1], ll[0]], { interactive: false, keyboard: false, pane: 'gridlines', icon: L.divIcon({ className: 'gridclab', iconSize: [0, 0], html: '<span style="display:inline-block;transform:translate(-50%,-50%) rotate(' + deg + 'deg)">' + fmtL(c.level) + '</span>' }) }).addTo(contourGrp);
+          L.marker([ll[1], ll[0]], { interactive: false, keyboard: false, pane: 'gridlines', icon: L.divIcon({ className: 'gridclab' + (bold ? ' b' : ''), iconSize: [0, 0], html: '<span style="display:inline-block;transform:translate(-50%,-50%) rotate(' + deg + 'deg)">' + fmtL(c.level) + '</span>' }) }).addTo(contourGrp);
         });
       });
     }
