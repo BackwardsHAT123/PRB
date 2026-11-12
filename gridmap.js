@@ -232,6 +232,7 @@
   const leg = document.createElement('div'); leg.id = 'gridlegend'; leg.hidden = true;
   host.append(btn, pop, leg);
   pop.innerHTML = `
+<label class="ck"><input type="checkbox" id="g_vert" checked> Vertical wells with logs <span id="g_vn"></span></label>
 <h4>Data</h4>
 <input type="file" id="g_file" accept=".csv,text/csv">
 <div class="msg" id="g_info">Import a CSV with latitude / longitude and one or more numeric columns.</div>
@@ -421,6 +422,23 @@
   map.on('zoomstart', () => { cv.style.visibility = 'hidden'; });
   map.on('zoomend moveend resize', () => { cv.style.visibility = ''; if (S.pts.length) paint(); });
   try { const sv = JSON.parse(localStorage.getItem(KEY) || 'null'); if (sv && sv.text) loadText(sv.text, sv.name); } catch (e) { }
+
+  /* permanent layer: vertical wells whose logs were read (public state data only: location, name, API, operator, spud year, TD, formation) */
+  map.createPane('gridverts').style.zIndex = 408;
+  const vertR = L.canvas({ pane: 'gridverts' }), vertGrp = L.layerGroup(); let vertLoaded = false;
+  function vertToggle() {
+    if ($('g_vert').checked) { vertGrp.addTo(map); if (!vertLoaded) vertLoad(); } else map.removeLayer(vertGrp);
+  }
+  function vertLoad() {
+    vertLoaded = true;
+    fetch('data/vertical_wells.json').then(r => r.json()).then(list => {
+      const dk = isDark();
+      list.forEach(w => L.circleMarker([w.ll[1], w.ll[0]], { renderer: vertR, pane: 'gridverts', radius: 3.5, weight: 1, color: dk ? '#fff' : '#fff', fillColor: dk ? '#c9c9c9' : '#3b3b3b', fillOpacity: 1 })
+        .bindPopup('<b>' + (w.n || '') + '</b><br>' + w.a + '<br>' + (w.o || '') + '<br>' + [w.y ? 'spud ' + w.y : '', w.td ? 'TD ' + w.td.toLocaleString() + ' ft' : '', w.f || ''].filter(Boolean).join(' · ') + '<br><i>vertical well, induction log reviewed</i>').addTo(vertGrp));
+      $('g_vn').textContent = '(' + list.length + ')';
+    }).catch(() => { vertLoaded = false; $('g_vn').textContent = '(not available)'; });
+  }
+  $('g_vert').addEventListener('change', vertToggle); vertToggle();
 
   /* handle for later work (correlating the surface with horizontal wells, scripts, console) */
   window.GridMap = {
