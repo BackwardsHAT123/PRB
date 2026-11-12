@@ -467,6 +467,18 @@
 "r": "Shannon",
 "cty": "Converse",
 "sec": "23-40N-75W"
+},
+{
+"d": "2026-11-12",
+"t": "add",
+"a": "49-009-48983",
+"n": "PIPPIN FED 4170-31-32-8N NH",
+"o": "Anschutz",
+"s": "Active Permit",
+"f": "CROSSBOW",
+"r": "Niobrara",
+"cty": "Converse",
+"sec": "31-41N-70W"
 }
 ]
 }
