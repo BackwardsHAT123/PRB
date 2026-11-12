@@ -295,12 +295,12 @@
 <div class="row2"><label>Min <input type="text" id="g_min" class="disp" placeholder="auto"></label><label>Max <input type="text" id="g_max" class="disp" placeholder="auto"></label></div>
 <label class="ck"><input type="checkbox" id="g_rev" class="disp"> Reverse colors</label>
 <label>Opacity <input type="range" id="g_op" class="disp" min="0.1" max="1" step="0.05" value="0.7"></label>
-<label class="ck"><input type="checkbox" id="g_fill" class="disp" checked> Show filled grid</label>
+<label class="ck"><input type="checkbox" id="g_fill" class="disp"> Show filled grid</label>
 <label class="ck"><input type="checkbox" id="g_cont" class="disp"> Contours</label>
 <label>Contour interval <input type="text" id="g_cint" class="disp" placeholder="auto"></label>
 <label class="ck"><input type="checkbox" id="g_clab" class="disp" checked> Contour labels</label>
 <label>Bold every Nth line (0 = off) <input type="number" id="g_cbold" class="disp" value="5" min="0" max="50" step="1"></label>
-<label class="ck"><input type="checkbox" id="g_pts" class="disp" checked> Show points</label>
+<label class="ck"><input type="checkbox" id="g_pts" class="disp"> Show points</label>
 <label class="ck"><input type="checkbox" id="g_box" class="disp"> Show extent box</label>
 <div class="msg" id="g_msg"></div>
 <div class="row2"><button type="button" class="pbtn" id="g_go">Update</button><button type="button" class="pbtn" id="g_exp">Export grid CSV</button><button type="button" class="pbtn" id="g_clear">Clear</button></div>`;
@@ -458,7 +458,7 @@
         .bindTooltip((p.id ? p.id + '<br>' : '') + (p.f ? p.f + '<br>' : '') + $('g_var').value + ': ' + p.z).addTo(ptGrp);
     });
     if ($('g_box').checked && S.ext) boxLayer = L.rectangle([[S.ext.s, S.ext.w], [S.ext.n, S.ext.e]], { color: '#e67e22', weight: 1.5, dashArray: '5 4', fill: false, interactive: false }).addTo(map);
-    legend(lo, hi, cm);
+    if ($('g_fill').checked && S.grid) legend(lo, hi, cm); else leg.hidden = true;
   }
   function legend(lo, hi, cm) {
     const steps = +$('g_steps').value; leg.hidden = false; leg.innerHTML = '<b>' + $('g_var').value + '</b><canvas width="200" height="12"></canvas><div class="tk"></div>';
@@ -478,7 +478,7 @@
     later(rebuild);
   }));
   pop.querySelectorAll('.disp').forEach(el => el.addEventListener('input', () => later(redraw)));
-  $('g_file').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(t => loadText(t, f.name)); };
+  $('g_file').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(t => { loadText(t, f.name); $('g_fill').checked = true; $('g_pts').checked = true; redraw(); }); };
   $('g_all').onclick = () => { if (S.data) { refreshFms(true); rebuild(); } };
   $('g_none').onclick = () => { if (S.data) { S.fms.clear(); refreshFms(false); rebuild(); } };
   $('g_go').onclick = rebuild;
