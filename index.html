@@ -1101,11 +1101,15 @@ function drawCmp(){
  let OW=[],aI=0;
  if(cnear.checked&&ds.length){aI=Math.min(+cnearw.value||0,ds.length-1);OW=nearbyProducers(ds[aI],+cmi.value||0).filter(d=>!CMP.includes(d.a))}
  const offA=GridCore.cmpOffsetsN([...ps.map(p=>p.s),...OW.map(d=>PROD[d.a].s)],xm),offs=offA.slice(0,ds.length),offO=offA.slice(ds.length);
- const S=ps.map(p=>GridCore.cumSeries(p[key])),SO=OW.map(d=>GridCore.cumSeries(PROD[d.a][key])),nT=Math.max(...S.map((v,i)=>offs[i]+v.length),...SO.map((v,i)=>offO[i]+v.length));
+ const S0=ps.map(p=>GridCore.cumSeries(p[key])),SO0=OW.map(d=>GridCore.cumSeries(PROD[d.a][key]));
+ /* x axis: the oldest producer's extent, capped at 36 months on the months-since-first-production axis */
+ const full=Math.max(...S0.map((v,i)=>offs[i]+v.length),...SO0.map((v,i)=>offO[i]+v.length)),nT=xm=='age'?GridCore.cmpExtent([full],'age',36):full,capped=xm=='age'&&full>nT;
+ const S=S0.map(v=>v.slice(0,nT)),SO=SO0.map(v=>v.slice(0,nT));
  /* average of the offset wells, drawn while at least half of them still report */
  const AV=[];if(OW.length){for(let t=0;t<nT;t++){let n=0,sm=0;SO.forEach((v,j)=>{const k=t-offO[j];if(k>=0&&k<v.length){n++;sm+=v[k]}});AV.push(n&&n>=Math.ceil(OW.length/2)?[sm/n,n]:null)}}
+ if(capped)document.getElementById('cnote').textContent+=' X axis capped at '+nT+' months.';
  if(cnear.checked){const nt=document.getElementById('cnote');nt.textContent+=' '+OW.length+' producing '+(ds.length?ds[aI].r:'')+' well'+(OW.length==1?'':'s')+' within '+(+cmi.value||0)+' mi of '+(ds.length?ds[aI].n:'-')+(OW.length?' (thin lines; dashed = their average while at least half still report).':'.')}
- document.getElementById('clegend').innerHTML=ds.map((d,i)=>`<span><i style="background:${cols[i]}"></i>${d.n}: cumulative ${nm.toLowerCase()} ${fmtN(S[i][S[i].length-1])} ${unit}</span>`).join('')+(OW.length?`<span><i style="background:${cols[aI]};opacity:.4"></i>${OW.length} offset wells (average dashed)</span>`:'');
+ document.getElementById('clegend').innerHTML=ds.map((d,i)=>`<span><i style="background:${cols[i]}"></i>${d.n}: cumulative ${nm.toLowerCase()}${capped?' at '+nT+' mo':''} ${fmtN(S[i][S[i].length-1])} ${unit}</span>`).join('')+(OW.length?`<span><i style="background:${cols[aI]};opacity:.4"></i>${OW.length} offset wells (average dashed)</span>`:'');
  const W=640,H=280,Lm=62,Rm=12,T=10,B=34,X=i=>Lm+i*(W-Lm-Rm)/Math.max(nT-1,1);
  const mx=Math.max(1,...S.map(v=>v[v.length-1]),...SO.map(v=>v[v.length-1]));let ymax,ymin=0,ticks=[];
  if(log){ymax=Math.max(1,Math.ceil(Math.log10(mx)));const pos=[...S.flat(),...SO.flat()].filter(v=>v>0);if(pos.length)ymin=Math.min(ymax-1,Math.floor(Math.log10(Math.min(...pos))));for(let k=ymin;k<=ymax;k++)ticks.push(k)}

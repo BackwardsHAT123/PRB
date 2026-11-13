@@ -258,13 +258,15 @@
     const lo = Math.min(...m); return m.map(v => v - lo);
   }
   function cmpOffsets(sa, sb, xmode) { return cmpOffsetsN([sa, sb], xmode); }
+  /* x-axis length in months for the compare chart: the oldest producer's extent, capped (age axis only) */
+  function cmpExtent(lens, xmode, cap) { const m = Math.max(...lens); return xmode === 'age' ? Math.min(cap, m) : m; }
   /* great-circle distance in statute miles between two lon/lat points */
   function milesBetween(lon1, lat1, lon2, lat2) {
     const r = Math.PI / 180, dLat = (lat2 - lat1) * r, dLon = (lon2 - lon1) * r;
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
     return 3958.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
   }
-  return { cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
+  return { cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, cmpExtent, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
     niceStep, contourLevels, contours, chainSegments, labelSpots, colormap, PALETTES: Object.keys(STOPS) };
 });
 
