@@ -14,6 +14,8 @@ html,body{height:100%}body{background:var(--bg);color:var(--fg);font:13px/1.4 sy
 #count{font-variant-numeric:tabular-nums;margin-top:4px;color:var(--accent);font-weight:600}
 #leg{margin:8px 0;max-height:210px;overflow:auto;font-size:12px}#leg i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-2px}#leg .lg{cursor:pointer;padding:1px 4px;margin:0 -4px;border-radius:4px}#leg .lg:hover{background:var(--line)}#leg .lg.on{font-weight:600;outline:1px solid var(--fg)}
 #note{font-size:11px;margin-top:6px}
+#panel [hidden]{display:none}
+#geopop{max-width:300px;font-size:12px}#geopop h4{margin:0 0 4px;font-size:12px}#geopop .gs{margin:6px 0 0;padding-top:5px;border-top:1px solid var(--line)}#geopop .gs:first-of-type{margin:0;padding:0;border:0}#geopop .gd{color:var(--muted);max-height:96px;overflow:auto;margin-top:2px}
 #legbox{position:absolute;z-index:900;left:10px;bottom:34px;max-width:240px;padding:6px 10px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px #0003}#legbox:has(#leg:empty){display:none}#legbox #leg{margin:0;max-height:min(260px,40vh)}
 #geosub{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}#geosub small{display:block;font-size:11px}#panel #geosub input[type=range]{width:100%;margin-top:2px}
 @media (max-width:700px){#legbox{left:52px;bottom:70px;max-width:calc(100% - 70px)}#legbox #leg{max-height:26vh}}
@@ -768,6 +770,25 @@ const GEO=[['gl_sgmc',{kind:'wms3857',url:MR,layers:'sgmc',attribution:'Geology:
  const ly=new GeoLayer('',Object.assign({pane:'geopane',tileSize:256,maxZoom:18,opacity:+gl_op.value/100,errorTileUrl:''},o)),el=document.getElementById(id);
  el.onchange=()=>el.checked?ly.addTo(map):map.removeLayer(ly);return ly});
 gl_op.oninput=()=>GEO.forEach(l=>l.setOpacity(+gl_op.value/100));
+/* Click-to-identify for the geology layers: USGS SGMC (WFS polygon + unit page) and WSGS bedrock geology/faults (ArcGIS identify). Ignores clicks that just opened a well popup. */
+const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),clip=(x,n)=>{x=String(x||'');return x.length>n?x.slice(0,n)+'…':x};
+const withT=(u,ms)=>{const c=new AbortController();setTimeout(()=>c.abort(),ms||15000);return fetch(u,{signal:c.signal})};
+const IDS={
+ sgmc:async ll=>{const e=1e-4,u='https://mrdata.usgs.gov/services/wfs/sgmc2?service=WFS&version=1.1.0&request=GetFeature&typeName=Lithology&maxFeatures=1&propertyName=state,orig_label,generalize,src_url,url,unit_link&bbox='+[ll.lat-e,ll.lng-e,ll.lat+e,ll.lng+e].join(',')+',urn:ogc:def:crs:EPSG::4326';
+  const x=new DOMParser().parseFromString(await (await withT(u)).text(),'text/xml'),g=k=>{const n=x.getElementsByTagName('ms:'+k)[0];return n?n.textContent:''};
+  if(!g('unit_link'))return '<small>No mapped unit here.</small>';
+  let name='',age='';try{const t=await (await withT('https://mrdata.usgs.gov/geology/state/sgmc2-unit.php?unit='+encodeURIComponent(g('unit_link')),10000)).text(),d=new DOMParser().parseFromString(t,'text/html'),tx=d.body.textContent.replace(/\s+/g,' ');
+   name=(d.title||'').replace(/\s*\([^)]*\)\s*$/,'');const m=tx.match(/Geologic age\s*(.*?)\s*Lithologic constituents/);age=m?m[1]:''}catch(e){}
+  return '<b>'+esc(name||g('orig_label'))+'</b> <small>('+esc(g('orig_label'))+')</small>'+(age?'<br>Age: '+esc(age):'')+'<br>'+esc(g('generalize'))+'<div><small><a href="'+esc(g('url'))+'" target="_blank" rel="noopener">unit details</a> · <a href="'+esc(g('src_url'))+'" target="_blank" rel="noopener">source map</a></small></div>'},
+ wgeo:async(ll,m)=>{const b=m.getBounds(),sz=m.getSize(),u='https://portal.wsgs.wyo.gov/ags/rest/services/IndexMap/GeologicMap500k/MapServer/identify?f=json&geometryType=esriGeometryPoint&geometry='+ll.lng+','+ll.lat+'&sr=4326&layers=all:0,1&tolerance=4&mapExtent='+[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].join(',')+'&imageDisplay='+sz.x+','+sz.y+',96&returnGeometry=false';
+  const r=(await (await withT(u)).json()).results||[],bed=r.find(q=>q.layerId==1),fl=r.filter(q=>q.layerId==0);
+  let h=bed?'<b>'+esc(bed.attributes.Name)+'</b> <small>('+esc(bed.attributes.UnitSymbol)+')</small><br>Age: '+esc(bed.attributes.Age)+'<div class="gd">'+esc(clip(bed.attributes.Description,500))+'</div>':'<small>No mapped unit here.</small>';
+  if(fl.length)h+='<div>Fault nearby: '+esc([...new Set(fl.map(q=>q.attributes.DESCRIPT||q.value).filter(Boolean))].slice(0,3).join('; ')||'yes')+'</div>';return h}};
+let lastPop=0;map.on('popupopen',e=>{if(e.popup.options.className!=='geopopc')lastPop=Date.now()});
+map.on('click',async e=>{if(Date.now()-lastPop<150)return;
+ const on=[['gl_sgmc','USGS surface geology (SGMC)','sgmc'],['gl_wgeo','Wyoming bedrock geology (WSGS 1:500k)','wgeo']].filter(([id])=>document.getElementById(id).checked);if(!on.length)return;
+ const ll=e.latlng,box=L.popup({className:'geopopc',maxWidth:320}).setLatLng(ll).openOn(map),secs=on.map(([,t])=>({t,h:'<small>Loading…</small>'})),draw=()=>box.setContent('<div id="geopop">'+secs.map(q=>'<div class="gs"><h4>'+q.t+'</h4>'+q.h+'</div>').join('')+'</div>');draw();
+ on.forEach(([,,k],i)=>IDS[k](ll,map).then(x=>{secs[i].h=x;if(box.isOpen())draw()}).catch(()=>{secs[i].h='<small>Service did not respond.</small>';if(box.isOpen())draw()}))});
 
 function applyBase(){const dk=isDark();map.getPane('tilePane').classList.toggle('dark-tiles',dk);const nx={auto:'light',light:'dark',dark:'auto'};themebtn.textContent={auto:'\u25D0',light:'\u2600',dark:'\u263E'}[tmode];themebtn.title=themebtn.ariaLabel='Theme: '+(tmode=='auto'?'automatic ('+(dk?'dark':'light')+', '+autoWhy+')':tmode)+'. Click for '+nx[tmode]}
 /* Theme: saved choice (light/dark) wins; otherwise auto = device preference, else daylight at the viewer (sunrise/sunset from the map latitude and the timezone's longitude, 7:00-19:00 if that fails) */
