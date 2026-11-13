@@ -245,7 +245,19 @@
     };
   }
 
-  return { MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
+  /* ---- well comparison helpers (used by the compare-two-wells plot in index.html) ---- */
+  /* Colour rule: same operator or same formation -> colour by well; otherwise colour by formation. */
+  function cmpMode(a, b) { return (a.oc === b.oc || a.r === b.r) ? 'well' : 'formation'; }
+  function cmpWhy(a, b) { return a.r === b.r ? 'same formation' : a.oc === b.oc ? 'same operator' : 'different formations'; }
+  function cumSeries(arr) { let t = 0; return arr.map(v => (t += (+v || 0))); }
+  /* month offset of each series on the x axis: 'age' = months since first production (both start at 0),
+     'date' = calendar months (the later well starts at its real offset). s is 'YYYY-MM'. */
+  function cmpOffsets(sa, sb, xmode) {
+    const mi = s => (+s.slice(0, 4)) * 12 + (+s.slice(5) - 1), a = mi(sa), b = mi(sb);
+    if (xmode !== 'date') return [0, 0];
+    const m = Math.min(a, b); return [a - m, b - m];
+  }
+  return { cmpMode, cmpWhy, cumSeries, cmpOffsets, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
     niceStep, contourLevels, contours, chainSegments, labelSpots, colormap, PALETTES: Object.keys(STOPS) };
 });
 

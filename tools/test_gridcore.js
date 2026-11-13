@@ -69,4 +69,12 @@ let threw = false; try { C.makeGrid({ w: -108, s: 41, e: -104, n: 45 }, 0.01 * C
   const gn = (nn) => { const gg = C.makeGrid(e2, cell, pr); C.gridPoints(gg, cl.map(p => ({ ...p })), { method: 'idw', power: 2, maxDist: 3 * C.MI, neighbors: nn, clamp: false }); return C.sampleGrid(gg, 1500, 0); };
   ok(Math.abs(gn(0) - gn(2)) > 1, 'nearest-N changes the cluster-weighted result (' + gn(0).toFixed(1) + ' vs ' + gn(2).toFixed(1) + ')');
 }
+
+// well comparison helpers
+ok(C.cmpMode({oc:'A',r:'Turner'},{oc:'A',r:'Parkman'}) === 'well', 'compare: same operator -> by well');
+ok(C.cmpMode({oc:'A',r:'Turner'},{oc:'B',r:'Turner'}) === 'well', 'compare: same formation -> by well');
+ok(C.cmpMode({oc:'A',r:'Turner'},{oc:'B',r:'Parkman'}) === 'formation', 'compare: different operator and formation -> by formation');
+ok(C.cmpWhy({oc:'A',r:'Turner'},{oc:'B',r:'Turner'}) === 'same formation' && C.cmpWhy({oc:'A',r:'T'},{oc:'A',r:'P'}) === 'same operator' && C.cmpWhy({oc:'A',r:'T'},{oc:'B',r:'P'}) === 'different formations', 'compare: reason text');
+ok(JSON.stringify(C.cumSeries([1,2,0,'3',null])) === '[1,3,3,6,6]', 'compare: cumulative series');
+ok(JSON.stringify(C.cmpOffsets('2019-11','2020-02','age')) === '[0,0]' && JSON.stringify(C.cmpOffsets('2019-11','2020-02','date')) === '[0,3]' && JSON.stringify(C.cmpOffsets('2020-02','2019-11','date')) === '[3,0]', 'compare: x offsets');
 console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
