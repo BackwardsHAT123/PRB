@@ -1091,9 +1091,9 @@ function drawCmp(){
  const key=document.querySelector('input[name=cprodk]:checked').value,[nm,unit]=CUNIT[key],log=clog.checked,xm=cxs.value;
  const ds=CMP.map(a=>D.find(x=>x.a==a)),ps=CMP.map(a=>PROD&&PROD[a]);
  let cols;
- if(ds.length==2){const mode=GridCore.cmpMode(ds[0],ds[1]);
+ if(ds.length==2){const mode=cnear.checked?'well':GridCore.cmpMode(ds[0],ds[1]);
   if(mode=='well')cols=WELLC.slice();else{const c0=fmColor(ds[0].r,null);cols=[c0,fmColor(ds[1].r,c0)]}
-  document.getElementById('cnote').textContent='Coloured by '+(mode=='well'?'well':'formation')+' ('+GridCore.cmpWhy(ds[0],ds[1])+').'}
+  document.getElementById('cnote').textContent='Coloured by '+(mode=='well'?'well':'formation')+' ('+(cnear.checked?'nearby-wells option on':GridCore.cmpWhy(ds[0],ds[1]))+').'}
  else{cols=[WELLC[0]];document.getElementById('cnote').textContent='Pick a second well on the map (popup, Compare button).'}
  {const keep=cnearw.value;cnearw.innerHTML=ds.map((d,i)=>`<option value="${i}">${d.n}</option>`).join('');if(keep&&+keep<ds.length)cnearw.value=keep}
  document.getElementById('cchips').innerHTML=ds.map((d,i)=>`<span class="chip"><i style="background:${cols[i]}"></i><b>${d.n}</b> <span style="color:var(--muted)">${d.r} · ${d.oc}</span><button data-i="${i}" aria-label="Remove ${d.n}">&times;</button></span>`).join('');
