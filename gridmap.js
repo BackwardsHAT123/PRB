@@ -281,9 +281,11 @@
 <div class="msg" id="g_info">Import a CSV with latitude / longitude and one or more numeric columns.</div>
 <label>Variable to grid <select id="g_var" class="calc"></select></label>
 <div class="row2"><label>Lat col <select id="g_lat" class="calc"></select></label><label>Lon col <select id="g_lon" class="calc"></select></label></div>
+<details id="g_fmd"><summary>Filter by formation <span id="g_fmn"></span></summary>
 <label>Formation column <select id="g_fmc" class="calc"></select></label>
 <div class="fmlist" id="g_fms"></div>
 <div class="row2"><button type="button" class="pbtn" id="g_all">All</button><button type="button" class="pbtn" id="g_none">None</button></div>
+</details>
 <h4>Grid</h4>
 <label>Method <select id="g_meth" class="calc"><option value="idw">IDW (stays within data, masked)</option><option value="spline">Spline (smooth, min. curvature)</option></select></label>
 <div class="row2"><label>Cell (mi) <input type="number" id="g_cell" class="calc" value="0.5" min="0.05" step="0.05"></label>
@@ -367,12 +369,12 @@
     const fc = $('g_fmc').value, box = $('g_fms'), counts = new Map();
     S.data.rows.forEach(r => { const f = fc ? (r[fc] || '(blank)') : ''; counts.set(f, (counts.get(f) || 0) + 1); });
     if (all) S.fms = new Set(counts.keys());
-    box.innerHTML = '';
+    box.innerHTML = ''; const badge = () => { $('g_fmn').textContent = fc && S.fms.size < counts.size ? '(' + S.fms.size + ' of ' + counts.size + ')' : ''; }; badge();
     if (!fc) { box.textContent = 'No formation column'; return; }
     [...counts.entries()].sort((a, b) => b[1] - a[1]).forEach(([f, n]) => {
       const l = document.createElement('label'); l.className = 'ck';
       const c = document.createElement('input'); c.type = 'checkbox'; c.checked = S.fms.has(f);
-      c.onchange = () => { c.checked ? S.fms.add(f) : S.fms.delete(f); rebuild(); };
+      c.onchange = () => { c.checked ? S.fms.add(f) : S.fms.delete(f); badge(); rebuild(); };
       l.append(c, document.createTextNode(f + ' (' + n + ')')); box.appendChild(l);
     });
   }
