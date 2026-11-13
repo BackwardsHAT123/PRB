@@ -759,6 +759,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 <div class="cctl"><span class="seg" id="cprod"><label><input type="radio" name="cprodk" value="o" checked><span>Oil</span></label><label><input type="radio" name="cprodk" value="g"><span>Gas</span></label><label><input type="radio" name="cprodk" value="w"><span>Water</span></label></span>
 <label><input type="checkbox" id="clog"> log scale</label>
 <select id="cx" aria-label="X axis"><option value="age">Months since first production</option><option value="date">Calendar date</option></select></div>
+<div class="cctl"><label><input type="checkbox" id="cnear"> add producing wells in the same formation within <input type="number" id="cmi" value="2" min="0.25" step="0.25" style="width:62px"> mi of</label><select id="cnearw" aria-label="Centre well"></select></div>
 <svg id="csvg" role="img" aria-label="Cumulative production of two wells"></svg><div id="cro"></div><div class="plg" id="clegend"></div><div id="cnote"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
@@ -1073,15 +1074,17 @@ function drawPlot(){
 }
 
 /* ---- compare two wells: cumulative oil / gas / water on one chart ---- */
-const CMP=[],cmpEl=document.getElementById('cmp'),csvg=document.getElementById('csvg'),cro=document.getElementById('cro'),clog=document.getElementById('clog'),cxs=document.getElementById('cx');
+const CMP=[],cmpEl=document.getElementById('cmp'),csvg=document.getElementById('csvg'),cro=document.getElementById('cro'),clog=document.getElementById('clog'),cxs=document.getElementById('cx'),cnear=document.getElementById('cnear'),cmi=document.getElementById('cmi'),cnearw=document.getElementById('cnearw');
 const CUNIT={o:['Oil','bbl'],g:['Gas','mcf'],w:['Water','bbl']},WELLC=['#1f78b4','#e6550d'],FMFIX={'Turner':'#2ca02c','Parkman':'#ff7f0e','Niobrara':'#ff69b4','Mowry':'#8b4513'};
 function fmColor(r,taken){if(FMFIX[r]&&FMFIX[r]!==taken)return FMFIX[r];let h=0;for(const ch of String(r))h=(h*31+ch.charCodeAt(0))>>>0;for(let k=0;k<PAL.length;k++){const c=PAL[(h+k)%PAL.length];if(c!==taken)return c}return '#999'}
+const cMid=d=>d.bhl?[(d.shl[0]+d.bhl[0])/2,(d.shl[1]+d.bhl[1])/2]:d.shl;
+function nearbyProducers(c,mi){const m=cMid(c);return D.filter(x=>x.a!=c.a&&x.r==c.r&&x.sg=='Active Producers'&&PROD[x.a]&&PROD[x.a].o&&PROD[x.a].o.some(v=>v>0)&&GridCore.milesBetween(m[0],m[1],cMid(x)[0],cMid(x)[1])<=mi)}
 function cmpAdd(a){
  if(!PROD||!PROD[a]||!PROD[a].o)return;
  const i=CMP.indexOf(a);if(i>=0)CMP.splice(i,1);else{if(CMP.length>=2)CMP.shift();CMP.push(a)}
  plotEl.hidden=true;plotApi=null;cmpEl.hidden=!CMP.length;drawCmp()}
 document.getElementById('cclose').onclick=()=>{cmpEl.hidden=true;CMP.length=0};
-document.querySelectorAll('input[name=cprodk]').forEach(r=>r.onchange=drawCmp);clog.onchange=cxs.onchange=drawCmp;
+document.querySelectorAll('input[name=cprodk]').forEach(r=>r.onchange=drawCmp);clog.onchange=cxs.onchange=cnear.onchange=cmi.onchange=cnearw.onchange=drawCmp;
 L.DomEvent.disableClickPropagation(cmpEl);L.DomEvent.disableScrollPropagation(cmpEl);
 function drawCmp(){
  if(cmpEl.hidden)return;
@@ -1092,30 +1095,38 @@ function drawCmp(){
   if(mode=='well')cols=WELLC.slice();else{const c0=fmColor(ds[0].r,null);cols=[c0,fmColor(ds[1].r,c0)]}
   document.getElementById('cnote').textContent='Coloured by '+(mode=='well'?'well':'formation')+' ('+GridCore.cmpWhy(ds[0],ds[1])+').'}
  else{cols=[WELLC[0]];document.getElementById('cnote').textContent='Pick a second well on the map (popup, Compare button).'}
+ {const keep=cnearw.value;cnearw.innerHTML=ds.map((d,i)=>`<option value="${i}">${d.n}</option>`).join('');if(keep&&+keep<ds.length)cnearw.value=keep}
  document.getElementById('cchips').innerHTML=ds.map((d,i)=>`<span class="chip"><i style="background:${cols[i]}"></i><b>${d.n}</b> <span style="color:var(--muted)">${d.r} · ${d.oc}</span><button data-i="${i}" aria-label="Remove ${d.n}">&times;</button></span>`).join('');
  document.querySelectorAll('#cchips button').forEach(b=>b.onclick=()=>{CMP.splice(+b.dataset.i,1);if(!CMP.length){cmpEl.hidden=true}drawCmp()});
- const offs=ds.length==2?GridCore.cmpOffsets(ps[0].s,ps[1].s,xm):[0];
- const S=ps.map(p=>GridCore.cumSeries(p[key])),nT=Math.max(...S.map((v,i)=>offs[i]+v.length));
- document.getElementById('clegend').innerHTML=ds.map((d,i)=>`<span><i style="background:${cols[i]}"></i>${d.n}: cumulative ${nm.toLowerCase()} ${fmtN(S[i][S[i].length-1])} ${unit}</span>`).join('');
+ let OW=[],aI=0;
+ if(cnear.checked&&ds.length){aI=Math.min(+cnearw.value||0,ds.length-1);OW=nearbyProducers(ds[aI],+cmi.value||0).filter(d=>!CMP.includes(d.a))}
+ const offA=GridCore.cmpOffsetsN([...ps.map(p=>p.s),...OW.map(d=>PROD[d.a].s)],xm),offs=offA.slice(0,ds.length),offO=offA.slice(ds.length);
+ const S=ps.map(p=>GridCore.cumSeries(p[key])),SO=OW.map(d=>GridCore.cumSeries(PROD[d.a][key])),nT=Math.max(...S.map((v,i)=>offs[i]+v.length),...SO.map((v,i)=>offO[i]+v.length));
+ /* average of the offset wells, drawn while at least half of them still report */
+ const AV=[];if(OW.length){for(let t=0;t<nT;t++){let n=0,sm=0;SO.forEach((v,j)=>{const k=t-offO[j];if(k>=0&&k<v.length){n++;sm+=v[k]}});AV.push(n&&n>=Math.ceil(OW.length/2)?[sm/n,n]:null)}}
+ if(cnear.checked){const nt=document.getElementById('cnote');nt.textContent+=' '+OW.length+' producing '+(ds.length?ds[aI].r:'')+' well'+(OW.length==1?'':'s')+' within '+(+cmi.value||0)+' mi of '+(ds.length?ds[aI].n:'-')+(OW.length?' (thin lines; dashed = their average while at least half still report).':'.')}
+ document.getElementById('clegend').innerHTML=ds.map((d,i)=>`<span><i style="background:${cols[i]}"></i>${d.n}: cumulative ${nm.toLowerCase()} ${fmtN(S[i][S[i].length-1])} ${unit}</span>`).join('')+(OW.length?`<span><i style="background:${cols[aI]};opacity:.4"></i>${OW.length} offset wells (average dashed)</span>`:'');
  const W=640,H=280,Lm=62,Rm=12,T=10,B=34,X=i=>Lm+i*(W-Lm-Rm)/Math.max(nT-1,1);
- const mx=Math.max(1,...S.map(v=>v[v.length-1]));let ymax,ymin=0,ticks=[];
- if(log){ymax=Math.max(1,Math.ceil(Math.log10(mx)));const pos=S.flat().filter(v=>v>0);if(pos.length)ymin=Math.min(ymax-1,Math.floor(Math.log10(Math.min(...pos))));for(let k=ymin;k<=ymax;k++)ticks.push(k)}
+ const mx=Math.max(1,...S.map(v=>v[v.length-1]),...SO.map(v=>v[v.length-1]));let ymax,ymin=0,ticks=[];
+ if(log){ymax=Math.max(1,Math.ceil(Math.log10(mx)));const pos=[...S.flat(),...SO.flat()].filter(v=>v>0);if(pos.length)ymin=Math.min(ymax-1,Math.floor(Math.log10(Math.min(...pos))));for(let k=ymin;k<=ymax;k++)ticks.push(k)}
  else{const raw=mx/5,e=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,5,10].map(f=>f*e).find(v=>v>=raw);ymax=Math.ceil(mx/st)*st;for(let v=0;v<=ymax+1e-9;v+=st)ticks.push(v)}
  const Y=v=>log?T+(H-T-B)*(1-(Math.log10(Math.max(v,Math.pow(10,ymin)))-ymin)/(ymax-ymin)):T+(H-T-B)*(1-v/ymax);
  let s='';
  ticks.forEach(t=>{const v=log?Math.pow(10,t):t,yy=Y(v);s+=`<line x1="${Lm}" x2="${W-Rm}" y1="${yy}" y2="${yy}" style="stroke:var(--line)"/><text x="${Lm-6}" y="${yy+3}" text-anchor="end" style="fill:var(--muted);font-size:10px">${fmtN(v)}</text>`});
- if(xm=='date'){const m0=Math.min(...ps.map(p=>+p.s.slice(0,4)*12+ +p.s.slice(5)-1)),yrs=Math.ceil(nT/12),stp=Math.max(1,Math.ceil(yrs/8));
+ if(xm=='date'){const m0=Math.min(...[...ps.map(p=>p.s),...OW.map(d=>PROD[d.a].s)].map(x=>+x.slice(0,4)*12+ +x.slice(5)-1)),yrs=Math.ceil(nT/12),stp=Math.max(1,Math.ceil(yrs/8));
   for(let i=0;i<nT;i++){const mm=m0+i;if(mm%12==0&&(Math.floor(mm/12)%stp==0))s+=`<line x1="${X(i)}" x2="${X(i)}" y1="${H-B}" y2="${H-B+4}" style="stroke:var(--muted)"/><text x="${X(i)}" y="${H-B+15}" text-anchor="middle" style="fill:var(--muted);font-size:10px">${Math.floor(mm/12)}</text>`}}
  else{const stp=nT>240?60:nT>120?24:nT>48?12:6;for(let i=0;i<nT;i+=stp)s+=`<line x1="${X(i)}" x2="${X(i)}" y1="${H-B}" y2="${H-B+4}" style="stroke:var(--muted)"/><text x="${X(i)}" y="${H-B+15}" text-anchor="middle" style="fill:var(--muted);font-size:10px">${i}</text>`;
   s+=`<text x="${(Lm+W-Rm)/2}" y="${H-3}" text-anchor="middle" style="fill:var(--muted);font-size:10px">months since first production</text>`}
  s+=`<text transform="translate(11 ${(T+H-B)/2}) rotate(-90)" text-anchor="middle" style="fill:var(--muted);font-size:10px">cumulative ${nm.toLowerCase()} (${unit})</text>`;
+ SO.forEach((v,j)=>{let path='',pen=false;v.forEach((y,i)=>{if(log&&y<=0){pen=false;return}path+=(pen?'L':'M')+X(offO[j]+i).toFixed(1)+' '+Y(y).toFixed(1);pen=true});s+=`<path d="${path}" fill="none" stroke="${cols[aI]}" stroke-width="1" opacity=".3"/>`});
+ if(AV.length){let path='',pen=false;AV.forEach((a,i)=>{if(!a||(log&&a[0]<=0)){pen=false;return}path+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(a[0]).toFixed(1);pen=true});s+=`<path d="${path}" fill="none" stroke="${cols[aI]}" stroke-width="2.5" stroke-dasharray="6 4"/>`}
  S.forEach((v,j)=>{let path='',pen=false;v.forEach((y,i)=>{if(log&&y<=0){pen=false;return}path+=(pen?'L':'M')+X(offs[j]+i).toFixed(1)+' '+Y(y).toFixed(1);pen=true});s+=`<path d="${path}" fill="none" stroke="${cols[j]}" stroke-width="2" stroke-linejoin="round"/>`});
  s+=`<line id="ccross" x1="0" x2="0" y1="${T}" y2="${H-B}" style="stroke:var(--fg);opacity:.4" visibility="hidden"/>`;
  csvg.setAttribute('viewBox',`0 0 ${W} ${H}`);csvg.innerHTML=s;
  const cross=csvg.querySelector('#ccross'),dflt='Hover or touch the chart for cumulative values';cro.textContent=dflt;
  csvg.onpointermove=ev=>{const r=csvg.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width*W,i=Math.max(0,Math.min(nT-1,Math.round((x-Lm)/((W-Lm-Rm)/Math.max(nT-1,1)))));
   cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.setAttribute('visibility','visible');
-  cro.textContent=(xm=='age'?'month '+i:'')+'  '+ds.map((d,j)=>{const k=i-offs[j];return d.n+' '+(k>=0&&k<S[j].length?fmtN(S[j][k])+' '+unit:'-')}).join('  ·  ')};
+  cro.textContent=(xm=='age'?'month '+i:'')+'  '+ds.map((d,j)=>{const k=i-offs[j];return d.n+' '+(k>=0&&k<S[j].length?fmtN(S[j][k])+' '+unit:'-')}).join('  ·  ')+(AV[i]?'  ·  offset avg '+fmtN(AV[i][0])+' '+unit+' ('+AV[i][1]+' wells)':'')};
  csvg.onpointerleave=()=>{cross.setAttribute('visibility','hidden');cro.textContent=dflt};
 }
 

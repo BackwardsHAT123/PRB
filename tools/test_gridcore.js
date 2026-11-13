@@ -77,4 +77,6 @@ ok(C.cmpMode({oc:'A',r:'Turner'},{oc:'B',r:'Parkman'}) === 'formation', 'compare
 ok(C.cmpWhy({oc:'A',r:'Turner'},{oc:'B',r:'Turner'}) === 'same formation' && C.cmpWhy({oc:'A',r:'T'},{oc:'A',r:'P'}) === 'same operator' && C.cmpWhy({oc:'A',r:'T'},{oc:'B',r:'P'}) === 'different formations', 'compare: reason text');
 ok(JSON.stringify(C.cumSeries([1,2,0,'3',null])) === '[1,3,3,6,6]', 'compare: cumulative series');
 ok(JSON.stringify(C.cmpOffsets('2019-11','2020-02','age')) === '[0,0]' && JSON.stringify(C.cmpOffsets('2019-11','2020-02','date')) === '[0,3]' && JSON.stringify(C.cmpOffsets('2020-02','2019-11','date')) === '[3,0]', 'compare: x offsets');
+ok(JSON.stringify(C.cmpOffsetsN(['2020-03','2020-01','2021-01'],'date')) === '[2,0,12]' && JSON.stringify(C.cmpOffsetsN(['2020-03','2020-01'],'age')) === '[0,0]', 'compare: N-well offsets');
+ok(Math.abs(C.milesBetween(-105.5, 43.5, -105.5, 44.5) - 69.1) < 0.3 && C.milesBetween(-105.5, 43.5, -105.5, 43.5) === 0, 'miles between points (1 deg lat = 69.1 mi)');
 console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
