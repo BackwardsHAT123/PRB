@@ -52,4 +52,21 @@ const q = C.colormap('viridis', false, 4); ok(q(0.30).join() === q(0.40).join() 
 
 // big-grid guard
 let threw = false; try { C.makeGrid({ w: -108, s: 41, e: -104, n: 45 }, 0.01 * C.MI, proj); } catch (e) { threw = true; } ok(threw, 'huge grid refused');
+
+// decluster: points in the same cell are averaged; IDW still blanks cells beyond the mask; nearest-N caps the neighbours
+{
+  const pr = C.makeProj(-105.5, 43.7), cell = 304.8;                 // 1000 ft
+  const dp = [{ x: 10, y: 10, z: 100 }, { x: 60, y: 90, z: 200 }, { x: 120, y: 40, z: 300 }, { x: 5000, y: 5000, z: 50 }];
+  const e2 = (() => { const a = pr.inv(-2000, -2000), b = pr.inv(7000, 7000); return { w: a[0], s: a[1], e: b[0], n: b[1] }; })();
+  let g2 = C.makeGrid(e2, cell, pr); let info = C.gridPoints(g2, dp.map(p => ({ ...p })), { method: 'idw', power: 2, maxDist: 2 * C.MI, decluster: true, cellM: cell });
+  ok(info.nraw === 4 && info.npts === 2, 'decluster averages the 3 points in one cell (raw ' + info.nraw + ' -> ' + info.npts + ')');
+  g2 = C.makeGrid(e2, cell, pr); info = C.gridPoints(g2, dp.map(p => ({ ...p })), { method: 'idw', power: 2, maxDist: 2 * C.MI });
+  ok(info.npts === 4, 'no decluster keeps all 4 points');
+  const dc2 = C.declust(dp.map(p => ({ ...p })), cell).sort((a, b) => a.z - b.z); ok(Math.abs(dc2[1].z - 200) < 1e-9, 'cell mean is 200');
+  const far = C.makeGrid({ w: -105.9, s: 43.3, e: -105.8, n: 43.4 }, cell, pr); C.gridPoints(far, [{ x: 0, y: 0, z: 1 }], { method: 'idw', power: 2, maxDist: 2 * C.MI });
+  ok(C.gridStats(far).n === 0, 'IDW leaves cells beyond the mask blank');
+  const cl = [{ x: 0, y: 0, z: 100 }, { x: 10, y: 0, z: 100 }, { x: 20, y: 0, z: 100 }, { x: 30, y: 0, z: 100 }, { x: 3000, y: 0, z: 200 }];
+  const gn = (nn) => { const gg = C.makeGrid(e2, cell, pr); C.gridPoints(gg, cl.map(p => ({ ...p })), { method: 'idw', power: 2, maxDist: 3 * C.MI, neighbors: nn, clamp: false }); return C.sampleGrid(gg, 1500, 0); };
+  ok(Math.abs(gn(0) - gn(2)) > 1, 'nearest-N changes the cluster-weighted result (' + gn(0).toFixed(1) + ' vs ' + gn(2).toFixed(1) + ')');
+}
 console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
