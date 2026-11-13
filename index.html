@@ -768,7 +768,7 @@ const MR='https://mrdata.usgs.gov/services/sgmc',WS='https://portal.wsgs.wyo.gov
 const GEO=[['gl_sgmc',{kind:'wms3857',url:MR,layers:'sgmc',attribution:'Geology: USGS SGMC'}],['gl_mag',{kind:'wms4326',url:MR,layers:'magnetic',attribution:'Magnetic anomaly: USGS / GSC / CRM'}],
  ['gl_wgeo',{kind:'ags',url:WS+'IndexMap/GeologicMap500k/MapServer',layers:'1,0',attribution:'Geology: Wyoming State Geological Survey'}],['gl_wmag',{kind:'ags',url:WS+'Minerals/Wyoming_geophysical_anomaly_grids/MapServer',layers:'0',attribution:'Aeromagnetic: WSGS / USGS OFR 00-198'}]].map(([id,o])=>{
  const ly=new GeoLayer('',Object.assign({pane:'geopane',tileSize:256,maxZoom:18,opacity:+gl_op.value/100,errorTileUrl:''},o)),el=document.getElementById(id);
- el.onchange=()=>el.checked?ly.addTo(map):map.removeLayer(ly);return ly});
+ el.onchange=()=>{if(el.checked){GEO.forEach((o,j)=>{if(o.ck!==el){o.ck.checked=false;map.removeLayer(o)}});ly.addTo(map)}else map.removeLayer(ly)};ly.ck=el;return ly});
 gl_op.oninput=()=>GEO.forEach(l=>l.setOpacity(+gl_op.value/100));
 /* Click-to-identify for the geology layers: USGS SGMC (WFS polygon + unit page) and WSGS bedrock geology/faults (ArcGIS identify). Ignores clicks that just opened a well popup. */
 const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),clip=(x,n)=>{x=String(x||'');return x.length>n?x.slice(0,n)+'…':x};
