@@ -29,7 +29,34 @@ def wfs(apis):
         except Exception:
             time.sleep(3 * (i + 1))
     out = subprocess.run(["curl", "-s", "-m", "90", url], capture_output=True)
-    return json.loads(out.stdout)["features"]
+    try:
+        return json.loads(out.stdout)["features"]
+    except ValueError:
+        return []     # WFS answered with an error page (layer unavailable); caller falls back to the DBF
+
+
+def dbf_coords(path):
+    """Fallback surface locations from the well-header DBF (LAT/LON; same values as the WFS layer) when the WFS is down."""
+    f = open(path, "rb"); h = f.read(32); n, hl, rl = struct.unpack("<IHH", h[4:12]); fl = []
+    while True:
+        d = f.read(32)
+        if d[0] == 0x0D: break
+        fl.append((d[:11].split(b"\0")[0].decode(), d[16]))
+    off, o = {}, 1
+    for nm, ln in fl: off[nm] = (o, ln); o += ln
+    f.seek(hl); res = {}
+    for _ in range(n):
+        r = f.read(rl)
+        g = lambda k: r[off[k][0]:off[k][0] + off[k][1]].decode("latin-1").strip() if k in off else ""
+        try:
+            res[str(int(round(float(g("APINO")))))] = (float(g("LON")), float(g("LAT")))
+        except ValueError:
+            pass
+    return res
+
+
+def api_key(api):
+    return str(int(api[3:6]) * 100000 + int(api[7:]))
 
 
 def botform(path):
@@ -61,6 +88,12 @@ for i in range(0, len(apis), 25):
         loc[f["properties"]["WellId"]] = f["geometry"]["coordinates"]
     time.sleep(1)
 bf = botform(a.dbf) if a.dbf else {}
+if a.dbf:
+    dc = dbf_coords(a.dbf); nf = 0
+    for api in apis:
+        if api not in loc and api_key(api) in dc and dc[api_key(api)][1]:
+            loc[api] = list(dc[api_key(api)]); nf += 1
+    if nf: print(f"{nf} locations taken from the DBF (WFS had no answer)")
 
 
 def best(group, col, conf):
