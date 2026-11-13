@@ -479,6 +479,42 @@
 "r": "Niobrara",
 "cty": "Converse",
 "sec": "31-41N-70W"
+},
+{
+"d": "2026-11-13",
+"t": "add",
+"a": "49-009-50920",
+"n": "Glenwood 22NXH",
+"o": "1876 Resources",
+"s": "Well Spudded",
+"f": null,
+"r": "Unknown",
+"cty": "Converse",
+"sec": "-"
+},
+{
+"d": "2026-11-13",
+"t": "add",
+"a": "49-009-50921",
+"n": "Glenwood 23NXH",
+"o": "1876 Resources",
+"s": "Well Spudded",
+"f": null,
+"r": "Unknown",
+"cty": "Converse",
+"sec": "-"
+},
+{
+"d": "2026-11-13",
+"t": "add",
+"a": "49-009-50922",
+"n": "Glenwood 24NXH",
+"o": "1876 Resources",
+"s": "Active Permit",
+"f": null,
+"r": "Unknown",
+"cty": "Converse",
+"sec": "-"
 }
 ]
 }
