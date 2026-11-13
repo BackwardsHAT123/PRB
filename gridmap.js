@@ -55,7 +55,7 @@
     const a = proj.fwd(ext.w, ext.s), b = proj.fwd(ext.e, ext.n);
     const x0 = Math.floor(a[0] / cellM) * cellM, y0 = Math.floor(a[1] / cellM) * cellM;
     const nx = Math.max(1, Math.ceil((b[0] - x0) / cellM)), ny = Math.max(1, Math.ceil((b[1] - y0) / cellM));
-    if (nx * ny > (maxCells || 400000)) throw new Error('Grid would be ' + nx + ' x ' + ny + ' = ' + (nx * ny).toLocaleString() + ' cells; use a larger cell or smaller extent');
+    if (nx * ny > (maxCells || 1500000)) throw new Error('Grid would be ' + nx + ' x ' + ny + ' = ' + (nx * ny).toLocaleString() + ' cells; use a larger cell or smaller extent');
     return { x0, y0, dx: cellM, nx, ny, z: new Float64Array(nx * ny).fill(NaN) };
   }
   const cx = (g, i) => g.x0 + (i + 0.5) * g.dx, cy = (g, j) => g.y0 + (j + 0.5) * g.dx;
@@ -65,6 +65,12 @@
     const m = new Map();
     pts.forEach(p => { const k = Math.round(p.x) + ',' + Math.round(p.y); const e = m.get(k); if (e) { e.s += p.z; e.n++; } else m.set(k, { x: p.x, y: p.y, s: p.z, n: 1 }); });
     return [...m.values()].map(e => ({ x: e.x, y: e.y, z: e.s / e.n }));
+  }
+  /* decluster: average the points that fall in the same grid cell (cells aligned to multiples of cellM from the projection origin, same as the grid) */
+  function declust(pts, cellM) {
+    const m = new Map();
+    pts.forEach(p => { const k = Math.floor(p.x / cellM) + ',' + Math.floor(p.y / cellM); const e = m.get(k); if (e) { e.x += p.x; e.y += p.y; e.z += p.z; e.n++; } else m.set(k, { x: p.x, y: p.y, z: p.z, n: 1 }); });
+    return [...m.values()].map(e => ({ x: e.x / e.n, y: e.y / e.n, z: e.z / e.n }));
   }
   function nearestDist(pts, x, y) { let d = Infinity; for (const p of pts) { const h = Math.hypot(p.x - x, p.y - y); if (h < d) d = h; } return d; }
 
@@ -122,16 +128,17 @@
 
   /* full pipeline: interpolate, clamp, mask by distance to data */
   function gridPoints(g, pts, o) {
-    pts = dedupe(pts); if (!pts.length) throw new Error('No points to grid');
+    const nraw = pts.length; pts = dedupe(pts); if (o.decluster && o.cellM > 0) pts = declust(pts, o.cellM); if (!pts.length) throw new Error('No points to grid');
     const zs = pts.map(p => p.z), zmin = Math.min(...zs), zmax = Math.max(...zs);
+    if (o.method === 'spline' && g.nx * g.ny * pts.length > 6e8) throw new Error('Spline would take too long here (' + (g.nx * g.ny).toLocaleString() + ' cells x ' + pts.length + ' points); use IDW, a larger cell, or a smaller extent');
     if (o.method === 'spline') tps(g, pts, o); else idw(g, pts, { power: o.power, neighbors: o.neighbors, maxDist: o.maxDist });
     const R = o.maxDist || Infinity, pad = (zmax - zmin) * (o.clampPad == null ? 0.1 : o.clampPad);
     for (let j = 0; j < g.ny; j++) for (let i = 0; i < g.nx; i++) {
       const k = j * g.nx + i; if (isNaN(g.z[k])) continue;
-      if (isFinite(R) && nearestDist(pts, cx(g, i), cy(g, j)) > R) { g.z[k] = NaN; continue; }
+      if (o.method === 'spline' && isFinite(R) && nearestDist(pts, cx(g, i), cy(g, j)) > R) { g.z[k] = NaN; continue; }   // IDW already leaves cells with no point within R blank
       if (o.clamp !== false) g.z[k] = Math.min(zmax + pad, Math.max(zmin - pad, g.z[k]));
     }
-    return { npts: pts.length, zmin, zmax };
+    return { npts: pts.length, nraw, zmin, zmax };
   }
   function gridStats(g) { let mn = Infinity, mx = -Infinity, n = 0; for (const v of g.z) if (!isNaN(v)) { n++; if (v < mn) mn = v; if (v > mx) mx = v; } return { min: mn, max: mx, n }; }
   function sampleGrid(g, x, y) { /* bilinear between cell centres; nearest cell at the edges; NaN outside */
@@ -238,7 +245,7 @@
     };
   }
 
-  return { MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, idw, tps, gridPoints, gridStats, sampleGrid,
+  return { MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
     niceStep, contourLevels, contours, chainSegments, labelSpots, colormap, PALETTES: Object.keys(STOPS) };
 });
 
@@ -288,8 +295,10 @@
 </details>
 <h4>Grid</h4>
 <label>Method <select id="g_meth" class="calc"><option value="idw">IDW (stays within data, masked)</option><option value="spline">Spline (smooth, min. curvature)</option></select></label>
-<div class="row2"><label>Cell (mi) <input type="number" id="g_cell" class="calc" value="0.5" min="0.05" step="0.05"></label>
+<div class="row2"><label>Cell (ft) <input type="number" id="g_cell" class="calc" value="1000" min="100" step="100"></label>
 <label>Mask beyond (mi) <input type="number" id="g_mask" class="calc" value="5" min="0" step="0.5"></label></div>
+<label class="ck"><input type="checkbox" id="g_dec" class="calc" checked> Average points within each cell first (declusters pads and infill)</label>
+<div class="row2"><label>IDW nearest N (0 = all) <input type="number" id="g_nn" class="calc" value="0" min="0" step="1"></label></div>
 <div class="row2"><label>IDW power <input type="number" id="g_pow" class="calc" value="2" min="0.5" max="6" step="0.5"></label>
 <label>Spline smooth <input type="number" id="g_smooth" class="calc" value="0" min="0" step="0.1"></label></div>
 <label>Extent <select id="g_ext" class="calc"><option value="auto">Auto (data + 2 mi)</option><option value="view">Current map view</option><option value="custom">Custom</option></select></label>
@@ -407,12 +416,12 @@
       if (!pts.length) { S.grid = null; msg('No usable points (check lat/lon/variable/formations)', true); redraw(); return; }
       const lat0 = pts.reduce((a, p) => a + p.lat, 0) / pts.length, lon0 = pts.reduce((a, p) => a + p.lon, 0) / pts.length;
       S.proj = C.makeProj(lon0, lat0);
-      const ext = extent(pts), cell = Math.max(0.01, +$('g_cell').value || 0.5) * C.MI;
+      const ext = extent(pts), cell = Math.max(30, +$('g_cell').value || 1000) * 0.3048;
       const g = C.makeGrid(ext, cell, S.proj);
-      const maskMi = +$('g_mask').value, o = { method: $('g_meth').value, power: +$('g_pow').value || 2, smooth: +$('g_smooth').value || 0, maxDist: maskMi > 0 ? maskMi * C.MI : Infinity };
+      const maskMi = +$('g_mask').value, o = { method: $('g_meth').value, power: +$('g_pow').value || 2, smooth: +$('g_smooth').value || 0, maxDist: maskMi > 0 ? maskMi * C.MI : Infinity, decluster: $('g_dec').checked, cellM: cell, neighbors: Math.max(0, Math.floor(+$('g_nn').value || 0)) };
       const t0 = performance.now(), info = C.gridPoints(g, pts.map(p => { const q = S.proj.fwd(p.lon, p.lat); return { x: q[0], y: q[1], z: p.z }; }), o);
       S.grid = g; S.ext = ext; S.stats = C.gridStats(g);
-      msg(info.npts + ' points, ' + g.nx + ' x ' + g.ny + ' cells (' + S.stats.n.toLocaleString() + ' filled), ' + Math.round(performance.now() - t0) + ' ms');
+      msg((info.nraw !== info.npts ? info.nraw + ' points (' + info.npts + ' after averaging within cells), ' : info.npts + ' points, ') + g.nx + ' x ' + g.ny + ' cells (' + S.stats.n.toLocaleString() + ' filled), ' + Math.round(performance.now() - t0) + ' ms');
     } catch (e) { S.grid = null; msg(e.message, true); }
     redraw();
   }
