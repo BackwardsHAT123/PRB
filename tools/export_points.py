@@ -3,7 +3,7 @@
     python3 tools/export_points.py [--readings ../header_readings.csv ../campbell_headers/header_readings.csv] [--out ../vertical_points.csv] [--dbf wells.dbf]
 
 * one row per well (API); when a well has several logs the HIGH-confidence value wins, else the first non-blank one
-* Lat/Lon come from the state WOGCC GeoServer WFS (batched, ~25 wells per request - gentle on the server)
+* Lat/Lon come from the state well-header DBF when --dbf is given (same values as the WFS layer), else from the WOGCC GeoServer WFS (batched, ~25 wells per request - gentle on the server); WFS also fills any well the DBF lacks
 * Formation comes from BOTFORM in the state well-header DBF if --dbf is given (the WFS layer has no formation); else blank
 * re-run after importing manual review answers (review_sheet/import_answers.py) to refresh the CSV
 """
@@ -83,17 +83,18 @@ by = {}
 for r in rows: by.setdefault(r["API"], []).append(r)
 apis = sorted(by)
 loc = {}
-for i in range(0, len(apis), 25):
-    for f in wfs(apis[i:i + 25]):
+bf = botform(a.dbf) if a.dbf else {}
+if a.dbf:      # the state well-header DBF carries the same surface lat/lon as the WFS layer, so use it first (fast, no server load)
+    dc = dbf_coords(a.dbf)
+    for api in apis:
+        if api_key(api) in dc and dc[api_key(api)][1]:
+            loc[api] = list(dc[api_key(api)])
+    print(f"{len(loc)} of {len(apis)} locations from the DBF")
+miss = [x for x in apis if x not in loc]
+for i in range(0, len(miss), 25):          # WFS only for wells the DBF has no coordinates for
+    for f in wfs(miss[i:i + 25]):
         loc[f["properties"]["WellId"]] = f["geometry"]["coordinates"]
     time.sleep(1)
-bf = botform(a.dbf) if a.dbf else {}
-if a.dbf:
-    dc = dbf_coords(a.dbf); nf = 0
-    for api in apis:
-        if api not in loc and api_key(api) in dc and dc[api_key(api)][1]:
-            loc[api] = list(dc[api_key(api)]); nf += 1
-    if nf: print(f"{nf} locations taken from the DBF (WFS had no answer)")
 
 
 def best(group, col, conf):
