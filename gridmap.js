@@ -252,12 +252,19 @@
   function cumSeries(arr) { let t = 0; return arr.map(v => (t += (+v || 0))); }
   /* month offset of each series on the x axis: 'age' = months since first production (both start at 0),
      'date' = calendar months (the later well starts at its real offset). s is 'YYYY-MM'. */
-  function cmpOffsets(sa, sb, xmode) {
-    const mi = s => (+s.slice(0, 4)) * 12 + (+s.slice(5) - 1), a = mi(sa), b = mi(sb);
-    if (xmode !== 'date') return [0, 0];
-    const m = Math.min(a, b); return [a - m, b - m];
+  function cmpOffsetsN(starts, xmode) {
+    const mi = s => (+s.slice(0, 4)) * 12 + (+s.slice(5) - 1), m = starts.map(mi);
+    if (xmode !== 'date') return m.map(() => 0);
+    const lo = Math.min(...m); return m.map(v => v - lo);
   }
-  return { cmpMode, cmpWhy, cumSeries, cmpOffsets, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
+  function cmpOffsets(sa, sb, xmode) { return cmpOffsetsN([sa, sb], xmode); }
+  /* great-circle distance in statute miles between two lon/lat points */
+  function milesBetween(lon1, lat1, lon2, lat2) {
+    const r = Math.PI / 180, dLat = (lat2 - lat1) * r, dLon = (lon2 - lon1) * r;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
+    return 3958.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+  return { cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
     niceStep, contourLevels, contours, chainSegments, labelSpots, colormap, PALETTES: Object.keys(STOPS) };
 });
 
