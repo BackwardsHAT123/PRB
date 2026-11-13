@@ -274,6 +274,10 @@
 <label class="ck"><input type="checkbox" id="g_vert" checked> Vertical wells with logs <span id="g_vn"></span></label>
 <h4>Data</h4>
 <input type="file" id="g_file" accept=".csv,text/csv">
+<details id="g_bh"><summary>Borehole temperatures (AASG/SMU, via NBMG)</summary>
+<div class="row2"><label>Depth min (ft) <input type="number" id="bh_dmin" value="4000" min="0" step="500"></label><label>Depth max (ft) <input type="number" id="bh_dmax" placeholder="none" min="0" step="500"></label></div>
+<div class="row2"><label>Surface temp (&deg;F) <input type="number" id="bh_ts" value="47" step="1"></label><label class="ck"><input type="checkbox" id="bh_qc" checked> Drop gradients outside 0.5-4</label></div>
+<button type="button" class="pbtn" id="bh_load">Load and grid these points</button><div class="msg" id="bh_msg">Pulls the public state borehole-temperature points for the basin (reads the map service, nothing is stored on a server). Temp = max recorded if reported, else the measured value; Gradient_F_100ft = (Temp - surface) / depth x 100.</div></details>
 <div class="msg" id="g_info">Import a CSV with latitude / longitude and one or more numeric columns.</div>
 <label>Variable to grid <select id="g_var" class="calc"></select></label>
 <div class="row2"><label>Lat col <select id="g_lat" class="calc"></select></label><label>Lon col <select id="g_lon" class="calc"></select></label></div>
@@ -301,7 +305,7 @@
 <label class="ck"><input type="checkbox" id="g_clab" class="disp" checked> Contour labels</label>
 <label>Bold every Nth line (0 = off) <input type="number" id="g_cbold" class="disp" value="5" min="0" max="50" step="1"></label>
 <label class="ck"><input type="checkbox" id="g_pts" class="disp"> Show points</label>
-<label class="ck"><input type="checkbox" id="g_wlab" class="disp" checked> Show well values (when grid shown)</label>
+<label class="ck"><input type="checkbox" id="g_wlab" class="disp" checked> Show well values (when grid shown, zoom 10+)</label>
 <label class="ck"><input type="checkbox" id="g_box" class="disp"> Show extent box</label>
 <div class="msg" id="g_msg"></div>
 <div class="row2"><button type="button" class="pbtn" id="g_go">Update</button><button type="button" class="pbtn" id="g_exp">Export grid CSV</button><button type="button" class="pbtn" id="g_clear">Clear</button></div>`;
@@ -434,6 +438,7 @@
       }
     }
   }
+  const LABZ = 10; let labShown = false;   // well value labels only from zoom 10 so thousands of points stay readable
   function redraw() {
     contourGrp.clearLayers(); ptGrp.clearLayers(); if (boxLayer) { map.removeLayer(boxLayer); boxLayer = null; }
     cv.style.opacity = +$('g_op').value;
@@ -458,7 +463,8 @@
       L.circleMarker([p.lat, p.lon], { radius: 4, weight: 1, color: isDark() ? '#fff' : '#000', fillColor: 'rgb(' + c.join(',') + ')', fillOpacity: 1 })
         .bindTooltip((p.id ? p.id + '<br>' : '') + (p.f ? p.f + '<br>' : '') + $('g_var').value + ': ' + p.z).addTo(ptGrp);
     });
-    if ($('g_wlab').checked && $('g_fill').checked && S.grid) S.pts.forEach(p => {
+    labShown = map.getZoom() >= LABZ;
+    if ($('g_wlab').checked && $('g_fill').checked && S.grid && labShown) S.pts.forEach(p => {
       L.marker([p.lat, p.lon], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'gridclab', iconSize: [0, 0],
         html: '<span style="display:inline-block;transform:translate(8px,-50%)">' + (+(+p.z).toPrecision(5)) + '</span>' }) }).addTo(ptGrp);
     });
@@ -483,6 +489,40 @@
     later(rebuild);
   }));
   pop.querySelectorAll('.disp').forEach(el => el.addEventListener('input', () => later(redraw)));
+
+  /* Borehole temperatures (state well-log header values, AASG/SMU via NBMG ArcGIS service): fetch the basin's points, filter, compute a depth-normalised gradient, then hand a CSV to the normal loader. */
+  const BH_URL = 'https://web2.nbmg.unr.edu/arcgis/rest/services/WY_Data/WYBoreholeTemperatures/MapServer/0/query';
+  async function loadBoreholes() {
+    const msgB = t => { $('bh_msg').textContent = t; }, btn = $('bh_load'); btn.disabled = true; msgB('Loading points...');
+    try {
+      const F = 'WellName,APINo,Operator,County,MeasuredTemperature,MaximumRecordedTemperature,DepthOfMeasurement,TimeSinceCirculation,MeasurementFormation,MeasurementDateTime';
+      let feats = [], off = 0;
+      for (;;) {
+        const q = new URLSearchParams({ where: '1=1', geometry: '-107.6,42.0,-104.0,45.0', geometryType: 'esriGeometryEnvelope', inSR: '4326', outSR: '4326', outFields: F, returnGeometry: 'true', resultOffset: off, resultRecordCount: 1000, orderByFields: 'OBJECTID', f: 'json' });
+        const d = await (await fetch(BH_URL + '?' + q)).json(); if (d.error) throw new Error(d.error.message || 'service error');
+        feats = feats.concat(d.features || []); off += 1000; msgB('Loading points... ' + feats.length);
+        if (!d.exceededTransferLimit || !(d.features || []).length) break;
+      }
+      const ok = v => v != null && v !== '' && v !== 'Null' && +v > -90000, dmin = +$('bh_dmin').value || 0, dmax = +$('bh_dmax').value || Infinity, ts = +$('bh_ts').value, qc = $('bh_qc').checked;
+      const hdr = ['API', 'Well_Name', 'Operator', 'County', 'Lat', 'Lon', 'Depth_ft', 'Temp_F', 'Gradient_F_100ft', 'Measured_F', 'MaxRecorded_F', 'Time_Since_Circ_hrs', 'Formation', 'Date'];
+      const cell = v => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+      let nd = 0, nq = 0, nm = 0; const lines = [hdr.join(',')];
+      feats.forEach(f => {
+        const a = f.attributes, g = f.geometry; if (!g || !ok(a.DepthOfMeasurement) || +a.DepthOfMeasurement <= 0) { nm++; return; }
+        const dep = +a.DepthOfMeasurement, T = ok(a.MaximumRecordedTemperature) && +a.MaximumRecordedTemperature > 0 ? +a.MaximumRecordedTemperature : (ok(a.MeasuredTemperature) ? +a.MeasuredTemperature : NaN);
+        if (isNaN(T) || dep < dmin || dep > dmax) { nd++; return; }
+        const gr = (T - ts) / dep * 100; if (qc && (gr < 0.5 || gr > 4)) { nq++; return; }
+        const dt = a.MeasurementDateTime ? new Date(+a.MeasurementDateTime).toISOString().slice(0, 10) : '';
+        lines.push([a.APINo, a.WellName, a.Operator, a.County, g.y.toFixed(5), g.x.toFixed(5), dep, T, gr.toFixed(3), ok(a.MeasuredTemperature) ? a.MeasuredTemperature : '', ok(a.MaximumRecordedTemperature) ? a.MaximumRecordedTemperature : '', ok(a.TimeSinceCirculation) ? a.TimeSinceCirculation : '', a.MeasurementFormation || '', dt].map(cell).join(','));
+      });
+      if (lines.length < 4) { msgB('Only ' + (lines.length - 1) + ' points pass the filters; widen the depth range.'); return; }
+      loadText(lines.join('\n'), 'Borehole temperatures (AASG/SMU)');
+      $('g_var').value = 'Gradient_F_100ft'; $('g_fill').checked = true; $('g_pts').checked = true; rebuild();
+      msgB((lines.length - 1) + ' points loaded of ' + feats.length + ' in the service (' + nm + ' have no depth, ' + nd + ' outside the depth range or no temperature, ' + nq + ' dropped by gradient check). Variable set to Gradient_F_100ft; choose Temp_F to grid temperature itself (best with a narrow depth range).');
+    } catch (e) { msgB('Could not load: ' + (e.message || e) + ' (the state service may be down; try again later).'); }
+    finally { btn.disabled = false; }
+  }
+  $('bh_load').onclick = loadBoreholes;
   $('g_file').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(t => { loadText(t, f.name); $('g_fill').checked = true; $('g_pts').checked = true; redraw(); }); };
   $('g_all').onclick = () => { if (S.data) { refreshFms(true); rebuild(); } };
   $('g_none').onclick = () => { if (S.data) { S.fms.clear(); refreshFms(false); rebuild(); } };
@@ -496,6 +536,7 @@
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })); a.download = 'grid_' + $('g_var').value + '.csv'; a.click();
   };
   map.on('zoomstart', () => { cv.style.visibility = 'hidden'; });
+  map.on('zoomend', () => { if ((map.getZoom() >= LABZ) !== labShown && S.pts.length) redraw(); });
   map.on('zoomend moveend resize', () => { cv.style.visibility = ''; if (S.pts.length) paint(); });
   try { const sv = JSON.parse(localStorage.getItem(KEY) || 'null'); if (sv && sv.text) loadText(sv.text, sv.name); } catch (e) { }
 
