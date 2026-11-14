@@ -12,6 +12,8 @@ import json, math, os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OVERRIDES = os.path.join(ROOT, "data", "overrides.json")
 INDEX = os.path.join(ROOT, "index.html")
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import wellsio
 TOL_M = 15.0           # decimation tolerance
 FT = 1200 / 3937       # US survey foot in metres
 
@@ -91,7 +93,7 @@ def main():
     apply = "--apply" in sys.argv
     forced = {x.split("=", 1)[1] for x in sys.argv if x.startswith("--accept=")}   # --accept=49-005-xxxxx to accept a large bottom-hole gap
     files = [x for x in sys.argv[1:] if not x.startswith("--")]
-    s = open(INDEX).read()
+    s = wellsio.read_index(INDEX)
     i = s.index("const D=") + 8
     j = s.index(";\nconst GRID", i)
     D = json.loads(s[i:j])
@@ -143,7 +145,7 @@ def main():
         for d in D:
             if d["a"] in done:
                 d["ln"] = ov[d["a"]]["ln"]; d["surv"] = True; d["fx"] = 6
-        open(INDEX, "w").write(s[:i] + json.dumps(D, separators=(",", ":")) + s[j:])
+        wellsio.write_index(INDEX, s[:i] + json.dumps(D, separators=(",", ":")) + s[j:])
         print(f"applied {len(done)} wells; run update.py or push to publish")
     elif not apply:
         print("dry run only; add --apply to write the changes")

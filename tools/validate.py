@@ -63,7 +63,9 @@ def validate(wells, previous_count=None, production=None):
 
 
 def main():
-    s = open(os.path.join(ROOT, "index.html")).read()
+    import sys as _sys; _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import wellsio
+    s = wellsio.read_index(os.path.join(ROOT, "index.html"))
     i = s.index("const D=") + 8
     wells = json.loads(s[i:s.index(";\nconst GRID", i)])
     pf = os.path.join(ROOT, "data", "production.json")

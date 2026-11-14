@@ -4,7 +4,9 @@ Writes wells.json, bench.json, curves.json, grid.json and sections.json."""
 import os, json, math, collections
 import numpy as np
 
-S = open("index.html").read(); i = S.index("const D=") + 8; D = json.loads(S[i:S.index(";\nconst GRID", i)])
+import sys as _sys, os as _os; _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+import wellsio
+S = wellsio.read_index("index.html"); i = S.index("const D=") + 8; D = json.loads(S[i:S.index(";\nconst GRID", i)])
 P = json.load(open("production.json"))
 import os
 # state producing intervals (WOGCC Producing Intervals page, measured depth, top and bottom per row); the lateral is the span from the top of the first to the bottom of the last interval, which excludes the run from the surface location to the heel that the map path includes

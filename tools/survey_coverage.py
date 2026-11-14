@@ -18,7 +18,9 @@ SURVEYED = {8, 9, 17}
 
 
 def load_wells():
-    s = open(os.path.join(ROOT, "index.html")).read()
+    import sys as _sys; _sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import wellsio
+    s = wellsio.read_index(os.path.join(ROOT, "index.html"))
     i = s.index("const D=") + 8
     return json.loads(s[i:s.index(";\nconst GRID", i)])
 
