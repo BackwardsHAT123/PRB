@@ -80,4 +80,8 @@ ok(JSON.stringify(C.cmpOffsets('2019-11','2020-02','age')) === '[0,0]' && JSON.s
 ok(JSON.stringify(C.cmpOffsetsN(['2020-03','2020-01','2021-01'],'date')) === '[2,0,12]' && JSON.stringify(C.cmpOffsetsN(['2020-03','2020-01'],'age')) === '[0,0]', 'compare: N-well offsets');
 ok(Math.abs(C.milesBetween(-105.5, 43.5, -105.5, 44.5) - 69.1) < 0.3 && C.milesBetween(-105.5, 43.5, -105.5, 43.5) === 0, 'miles between points (1 deg lat = 69.1 mi)');
 ok(C.cmpExtent([20,48,30],'age',36) === 36 && C.cmpExtent([20,30],'age',36) === 30 && C.cmpExtent([20,48],'date',36) === 48, 'compare: axis capped at 36 months, else oldest extent');
+{ // Harrison BHT correction: 9000 ft = 2743.2 m -> +15.96 C = +28.7 F
+  const c = C.harrisonBHT(178, 9000); ok(Math.abs(c - 178 - 28.72) < 0.05, 'harrison BHT 9000 ft (' + (c - 178).toFixed(2) + ' F added)');
+  ok(isNaN(C.harrisonBHT(178, 0)) && isNaN(C.harrisonBHT(NaN, 9000)), 'harrison BHT needs depth and temperature');
+}
 console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);

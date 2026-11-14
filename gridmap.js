@@ -260,13 +260,20 @@
   function cmpOffsets(sa, sb, xmode) { return cmpOffsetsN([sa, sb], xmode); }
   /* x-axis length in months for the compare chart: the oldest producer's extent, capped (age axis only) */
   function cmpExtent(lens, xmode, cap) { const m = Math.max(...lens); return xmode === 'age' ? Math.min(cap, m) : m; }
+  /* Bottom-hole temperature correction after Harrison et al. (1983, Oklahoma Geological Survey SP 83-1; AAPG-type correction):
+     dT(degC) = -16.51213476 + 0.01826842109 Z - 2.344936959e-6 Z^2, Z = depth in metres, added to the measured BHT.
+     Takes and returns degF, depth in feet. Depth-only (it does not use time since circulation); NaN without a usable depth. */
+  function harrisonBHT(tF, depthFt) {
+    if (!(depthFt > 0) || isNaN(tF)) return NaN;
+    const z = depthFt * 0.3048; return tF + 1.8 * (-16.51213476 + 0.01826842109 * z - 2.344936959e-6 * z * z);
+  }
   /* great-circle distance in statute miles between two lon/lat points */
   function milesBetween(lon1, lat1, lon2, lat2) {
     const r = Math.PI / 180, dLat = (lat2 - lat1) * r, dLon = (lon2 - lon1) * r;
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
     return 3958.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
   }
-  return { cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, cmpExtent, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
+  return { cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, cmpExtent, harrisonBHT, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
     niceStep, contourLevels, contours, chainSegments, labelSpots, colormap, PALETTES: Object.keys(STOPS) };
 });
 
@@ -308,6 +315,11 @@
 <button type="button" class="pbtn" id="bh_load">Load and grid these points</button><div class="msg" id="bh_msg">Pulls the public state borehole-temperature points for the basin (reads the map service, nothing is stored on a server). Temp = max recorded if reported, else the measured value; Gradient_F_100ft = (Temp - surface) / depth x 100.</div></details>
 <div class="msg" id="g_info">Import a CSV with latitude / longitude and one or more numeric columns.</div>
 <label>Variable to grid <select id="g_var" class="calc"></select></label>
+<details id="g_bhd"><summary>Bottom-hole temperature correction <span id="g_bhn"></span></summary>
+<label class="ck"><input type="checkbox" id="g_bht" class="calc"> Correct the variable as a raw bottom-hole temperature (&deg;F)</label>
+<div class="row2"><label>Depth col (ft) <select id="g_bhtd" class="calc"></select></label><label>If blank, use <select id="g_bhtd2" class="calc"></select></label></div>
+<div class="msg">Harrison et al. (1983) depth correction (Oklahoma DST calibration), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out.</div>
+</details>
 <div class="row2"><label>Lat col <select id="g_lat" class="calc"></select></label><label>Lon col <select id="g_lon" class="calc"></select></label></div>
 <details id="g_fmd"><summary>Filter by formation <span id="g_fmn"></span></summary>
 <label>Formation column <select id="g_fmc" class="calc"></select></label>
@@ -394,6 +406,9 @@
     const nc = C.numericColumns(S.data.rows, S.data.headers, skip.concat(S.data.headers.filter(h => /name|^api|^id$|log_?id/i.test(h))));
     const pref = nc.find(h => /temp/i.test(h)) || nc[0];
     fillSelect($('g_var'), nc, nc.includes(keep) ? keep : pref);
+    const k1 = $('g_bhtd').value, k2 = $('g_bhtd2').value;
+    fillSelect($('g_bhtd'), nc, nc.includes(k1) ? k1 : (nc.find(h => /bottom_?logged|bli/i.test(h)) || nc.find(h => /td/i.test(h)) || nc[0]));
+    fillSelect($('g_bhtd2'), nc, nc.includes(k2) ? k2 : (nc.find(h => /state_?td|^td|depth/i.test(h)) || nc[0]));
   }
   function refreshFms(all) {
     const fc = $('g_fmc').value, box = $('g_fms'), counts = new Map();
@@ -409,13 +424,16 @@
     });
   }
   function currentPoints() {
-    const v = $('g_var').value, la = $('g_lat').value, lo = $('g_lon').value, fc = $('g_fmc').value, out = [];
+    const v = $('g_var').value, la = $('g_lat').value, lo = $('g_lon').value, fc = $('g_fmc').value, out = [], bht = $('g_bht').checked; let nodepth = 0;
     S.data.rows.forEach(r => {
-      const lat = C.num(r[la]), lon = C.num(r[lo]), z = C.num(r[v]);
+      const lat = C.num(r[la]), lon = C.num(r[lo]); let z = C.num(r[v]);
       if (isNaN(lat) || isNaN(lon) || isNaN(z) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return;
       const f = fc ? (r[fc] || '(blank)') : ''; if (fc && !S.fms.has(f)) return;
-      out.push({ lat, lon, z, f, id: r[S.label] || '', row: r });
+      const raw = z;
+      if (bht) { let dp = C.num(r[$('g_bhtd').value]); if (!(dp > 0)) dp = C.num(r[$('g_bhtd2').value]); z = C.harrisonBHT(z, dp); if (isNaN(z)) { nodepth++; return; } }
+      out.push({ lat, lon, z, raw, f, id: r[S.label] || '', row: r });
     });
+    S.nodepth = nodepth; $('g_bhn').textContent = bht ? '(on' + (nodepth ? ', ' + nodepth + ' without depth' : '') + ')' : '';
     return out;
   }
   function extent(pts) {
@@ -493,7 +511,7 @@
     if ($('g_pts').checked) S.pts.forEach(p => {
       const c = cm((p.z - lo) / (hi - lo));
       L.circleMarker([p.lat, p.lon], { radius: 4, weight: 1, color: isDark() ? '#fff' : '#000', fillColor: 'rgb(' + c.join(',') + ')', fillOpacity: 1 })
-        .bindTooltip((p.id ? p.id + '<br>' : '') + (p.f ? p.f + '<br>' : '') + $('g_var').value + ': ' + p.z).addTo(ptGrp);
+        .bindTooltip((p.id ? p.id + '<br>' : '') + (p.f ? p.f + '<br>' : '') + $('g_var').value + ': ' + (p.raw != null && p.raw !== p.z ? (+p.z.toFixed(1)) + ' (raw ' + p.raw + ')' : p.z)).addTo(ptGrp);
     });
     labShown = map.getZoom() >= LABZ;
     if ($('g_wlab').checked && $('g_fill').checked && S.grid && labShown) S.pts.forEach(p => {
@@ -504,7 +522,7 @@
     if ($('g_fill').checked && S.grid) legend(lo, hi, cm); else leg.hidden = true;
   }
   function legend(lo, hi, cm) {
-    const steps = +$('g_steps').value; leg.hidden = false; leg.innerHTML = '<b>' + $('g_var').value + '</b><canvas width="200" height="12"></canvas><div class="tk"></div>';
+    const steps = +$('g_steps').value; leg.hidden = false; leg.innerHTML = '<b>' + $('g_var').value + ($('g_bht').checked ? ' (BHT-corrected)' : '') + '</b><canvas width="200" height="12"></canvas><div class="tk"></div>';
     const c = leg.querySelector('canvas').getContext('2d');
     for (let x = 0; x < 200; x++) { const k = cm(x / 199); c.fillStyle = 'rgb(' + k.join(',') + ')'; c.fillRect(x, 0, 1, 12); }
     const tk = leg.querySelector('.tk'), st = C.niceStep(hi - lo, 4), fmt = v => (+v.toPrecision(4)).toString();
