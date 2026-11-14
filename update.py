@@ -13,6 +13,8 @@ import urllib.parse, urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import prod
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+import wellsio   # wells array lives in data/wells.js; wellsio presents index.html with it inlined
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(ROOT, "index.html")
@@ -405,7 +407,7 @@ def record_new_wells(entries):
 
 
 def write_index(wells, rigs):
-    s = open(INDEX).read()
+    s = wellsio.read_index(INDEX)
     i = s.index("const D=") + 8
     j = s.index(";\nconst GRID", i)
     s = s[:i] + json.dumps(wells, separators=(",", ":")) + s[j:]
@@ -415,7 +417,7 @@ def write_index(wells, rigs):
     stamp = datetime.date.today().strftime("%b %-d, %Y")
     s = re.sub(r'(<span id="asof">)[^<]*(</span>)', rf"\g<1>{stamp}\g<2>", s)
     s = re.sub(r"as of [A-Z][a-z]{2} \d{1,2}, \d{4}</small>", f"as of {stamp}</small>", s)
-    open(INDEX, "w").write(s)
+    wellsio.write_index(INDEX, s)
 
 
 def _git(*a, check=True):
@@ -429,7 +431,7 @@ def push_changes(wells, rigs, log, attempts=4):
     """Commit and push. If someone else pushed while this run was working (it takes about 5 minutes), take their version
     of everything, re-apply today's well data, header cache and production on top of it, and push again."""
     for n in range(attempts):
-        _git("add", "index.html", "data/headers.json", "data/production.json", "data/new_wells.json", "data/review_queue.json")
+        _git("add", "index.html", "data/wells.js", "data/headers.json", "data/production.json", "data/new_wells.json", "data/review_queue.json")
         if _git("diff", "--cached", "--quiet", check=False).returncode == 0:
             log("nothing to commit")
             return
@@ -464,13 +466,13 @@ def push_changes(wells, rigs, log, attempts=4):
 def main():
     log = lambda m: print(datetime.datetime.now().strftime("%H:%M:%S"), m, flush=True)
     if "--annotate-only" in sys.argv:    # refresh only the rig-history (rg) and production (hp) fields of the wells already in index.html
-        s = open(INDEX).read()
+        s = wellsio.read_index(INDEX)
         i = s.index("const D=") + 8
         j = s.index(";\nconst GRID", i)
         wells = json.loads(s[i:j])
         annotate_rigs(wells, rig_records(log, RIG_HIST_DAYS), log)
         s = s[:i] + json.dumps(wells, separators=(",", ":")) + s[j:]
-        open(INDEX, "w").write(s)
+        wellsio.write_index(INDEX, s)
         return
     HELD.clear()
     wells = build_wells(log)
@@ -480,7 +482,7 @@ def main():
     recs = rig_records(log, RIG_HIST_DAYS)
     rigs = build_rigs(wells, log, recs)
     annotate_rigs(wells, recs, log)
-    before = open(INDEX).read()
+    before = wellsio.read_index(INDEX)
     try:        # wells added to or dropped from the map since the last run, for the New button
         i = before.index("const D=") + 8
         NEW_ENTRIES.extend(new_well_entries(json.loads(before[i:before.index(";\nconst GRID", i)]), wells))
@@ -509,7 +511,7 @@ def main():
         prod.refresh(PRODUCTION, [(w['a'], pk[w['a']]) for w in wells if w['a'] in pk and not w.get('pr')], log)
     except Exception as e:   # production is optional; never block the daily well update
         log(f'production refresh failed: {e}')
-    changed = open(INDEX).read() != before
+    changed = wellsio.read_index(INDEX) != before
     if not changed:   # production or header data can change without the page itself changing
         st = subprocess.run(["git", "status", "--porcelain", "data/production.json", "data/headers.json", "data/new_wells.json", "data/review_queue.json"], cwd=ROOT, capture_output=True, text=True)
         changed = bool(st.stdout.strip())

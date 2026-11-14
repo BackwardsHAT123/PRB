@@ -157,7 +157,9 @@ def main():
     ap.add_argument("--operator"); ap.add_argument("--formation"); ap.add_argument("--all", action="store_true")
     ap.add_argument("-o", "--out", required=True)
     a = ap.parse_args()
-    s = open(os.path.join(ROOT, "index.html")).read(); i = s.index("const D=") + 8
+    import sys as _sys; _sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import wellsio
+    s = wellsio.read_index(os.path.join(ROOT, "index.html")); i = s.index("const D=") + 8
     D = json.loads(s[i:s.index(";\nconst GRID", i)])
     P = json.load(open(os.path.join(ROOT, "data", "production.json")))
     LS = json.load(open(os.path.join(ROOT, "data", "lateral_state.json")))
