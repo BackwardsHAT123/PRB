@@ -84,4 +84,5 @@ ok(C.cmpExtent([20,48,30],'age',36) === 36 && C.cmpExtent([20,30],'age',36) === 
   const c = C.harrisonBHT(178, 9000); ok(Math.abs(c - 178 - 28.72) < 0.05, 'harrison BHT 9000 ft (' + (c - 178).toFixed(2) + ' F added)');
   ok(isNaN(C.harrisonBHT(178, 0)) && isNaN(C.harrisonBHT(NaN, 9000)), 'harrison BHT needs depth and temperature');
 }
+ok(C.percentile([1,2,3,4,5],0.5) === 3 && C.percentile([0,10],0.1) === 1 && C.percentile([7],0.9) === 7 && isNaN(C.percentile([],0.5)), 'percentile');
 console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
