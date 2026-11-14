@@ -1,0 +1,43 @@
+<!doctype html><meta charset="utf-8"><title>page checks</title>
+<iframe id="f" src="../index.html" style="width:1300px;height:800px"></iframe><pre id="out">running</pre>
+<script>
+const res=[],ok=(c,m)=>res.push([!!c,m]),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const f=document.getElementById('f');let errs=[];
+(async()=>{try{
+ await new Promise(r=>f.addEventListener('load',r));const w=f.contentWindow;
+ w.addEventListener('error',e=>errs.push(String(e.message)));
+ const E=x=>{try{return w.eval(x)}catch(e){return undefined}};   // top-level let/const are not window properties
+ for(let i=0;i<150&&!(E('PROD')&&E('D')&&w.GridCore);i++)await sleep(200);
+ const D=E('D'),PROD=E('PROD'),G=w.GridCore;
+ ok(D&&D.length>3000,'well data loaded ('+(D&&D.length)+')');ok(PROD&&Object.keys(PROD).length>1000,'production loaded');
+ ok(E('map')&&E('map').getZoom()>0,'map created');
+ const prod=D.filter(d=>PROD[d.a]&&PROD[d.a].o&&PROD[d.a].o.length>40&&d.sg=='Active Producers');
+ const A=prod.filter(d=>d.r=='Turner').sort((a,b)=>w.nearbyProducers(b,3).length-w.nearbyProducers(a,3).length)[0];
+ const B=prod.find(d=>d.r=='Parkman'&&d.oc!=A.oc),C=prod.find(d=>d.r==A.r&&d.oc==A.oc&&d.a!=A.a);
+ ok(w.prodHTML(A.a).includes('cmpAdd'),'popup has a Compare button');
+ const el=E('cmpEl'),q=s=>w.document.querySelector(s),chips=()=>[...w.document.querySelectorAll('#cchips i')].map(x=>x.style.background);
+ w.cmpAdd(A.a);w.cmpAdd(B.a);
+ ok(!el.hidden&&E('CMP').length==2,'compare panel opens with 2 wells');
+ ok(w.document.querySelectorAll('#csvg path').length>=2,'chart draws both wells');
+ ok(E('CMPST').nT<=36,'x axis capped at 36 months (nT='+E('CMPST').nT+')');
+ const setW=(x,y)=>{E('CMP').length=0;E('CMP').push(x,y);E('cmpEl').hidden=false;w.drawCmp()};
+ setW(A.a,B.a);ok(chips().join()=='rgb(44, 160, 44),rgb(255, 127, 14)','different formations -> coloured by formation (Turner green, Parkman orange)');
+ setW(A.a,C.a);ok(chips().join()=='rgb(31, 120, 180),rgb(230, 85, 13)','same operator and formation -> coloured by well');
+ ok(G.cmpMode(A,B)=='formation'&&G.cmpMode(A,C)=='well','colour rule helper agrees');
+ setW(A.a,B.a);
+ ['g','w','o'].forEach(k=>{q('input[name=cprodk][value='+k+']').click();ok(E('CMPST').key==k&&/cumulative (gas|water|oil)/.test(w.document.getElementById('clegend').textContent),'product toggle '+k)});
+ const cap=q('#ccap');cap.value=12;cap.dispatchEvent(new w.Event('change'));ok(E('CMPST').nT==12,'cap input changes the axis');cap.value=36;cap.dispatchEvent(new w.Event('change'));
+ const near=q('#cnear'),mi=q('#cmi');near.checked=true;mi.value=1;near.dispatchEvent(new w.Event('change'));
+ const nfew=E('CMPST').OW.length;ok(nfew>0&&nfew<=10&&E('CMPST').few,'<=10 nearby wells: each coloured ('+nfew+')');
+ mi.value=3;near.dispatchEvent(new w.Event('change'));ok(E('CMPST').OW.length>10&&!E('CMPST').few&&E('CMPST').BD.length>0,'>10 nearby wells: average mode ('+E('CMPST').OW.length+')');
+ q('#cbandm').value='band';q('#cbandm').dispatchEvent(new w.Event('change'));ok(!!q('#csvg path[opacity=".18"]'),'percentile band draws');
+ q('#cnorm').checked=true;q('#cnorm').dispatchEvent(new w.Event('change'));ok(/\/ft/.test(E('CMPST').unit),'per lateral foot units');
+ let blob=null;w.cmpSaveBlob=b=>{blob=b};q('#ccsv').click();await sleep(50);ok(blob&&(await blob.text()).split('\n').length>5,'CSV export has rows');
+ const sp=new URLSearchParams(w.location.search);ok(new Set((sp.get('cmp')||'').split(',')).size==2&&(sp.get('cmp')||'').includes(A.a)&&(sp.get('cmp')||'').includes(B.a),'share link carries the wells');
+ const url=w.location.search;E('CMP').length=0;E('cmpEl').hidden=true;w.history.replaceState(null,'',w.location.pathname+url);w.cmpRestore();
+ ok(!E('cmpEl').hidden&&E('CMP').length==2&&w.document.getElementById('cnorm').checked&&w.document.getElementById('cbandm').value=='band','share link restores wells and options');
+ ok(typeof G.harrisonBHT=='function'&&!!w.document.getElementById('g_bht'),'GRID has the BHT correction option');
+ ok(errs.length==0,'no uncaught page errors'+(errs.length?': '+errs.slice(0,2).join('; '):''));
+}catch(e){ok(false,'harness error: '+e.message)}
+document.getElementById('out').textContent='RESULT '+JSON.stringify(res)+' END'})();
+</script>
