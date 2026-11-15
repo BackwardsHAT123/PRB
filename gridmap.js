@@ -312,7 +312,7 @@
 #gridpop .fmlist label{margin:0}#gridpop .msg{margin:4px 0 0;opacity:.75}#gridpop .err{color:#c0392b;opacity:1}
 .gridclab.b{font-weight:800;font-size:12px}.gridclab{background:none;border:0;font:600 11px/1 system-ui,sans-serif;color:var(--fg);white-space:nowrap;text-align:center;text-shadow:0 0 3px var(--panel),0 0 3px var(--panel),0 0 2px var(--panel);pointer-events:none}
 #gridlegend{position:absolute;z-index:900;left:50%;transform:translateX(-50%);top:10px;padding:6px 8px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;font-size:11px;box-shadow:0 1px 6px #0003}
-#gridlegend[hidden]{display:none}#gridlegend canvas{display:block;width:200px;height:12px}#gridlegend .tk{position:relative;height:14px;margin-top:2px}
+#g_vtools{margin:2px 0 6px 22px}#g_vtools .glg{margin-top:5px;font-size:11px}#g_vtools .glg canvas{display:block;width:200px;height:12px}#g_vtools .glg .tk{position:relative;height:14px;margin-top:2px}#g_vtools .glg .tk span{position:absolute;transform:translateX(-50%);white-space:nowrap}#gridlegend[hidden]{display:none}#gridlegend canvas{display:block;width:200px;height:12px}#gridlegend .tk{position:relative;height:14px;margin-top:2px}
 #gridlegend .tk span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 @media (max-width:700px){#gridbtn{top:auto;bottom:244px}#gridpop{top:auto;bottom:244px;max-height:55%}#gridlegend{top:auto;bottom:130px;left:10px;transform:none}}`;
   document.head.appendChild(css);
@@ -324,6 +324,7 @@
   host.append(btn, pop, leg);
   pop.innerHTML = `
 <label class="ck"><input type="checkbox" id="g_vert" checked> Vertical wells with logs <span id="g_vn"></span></label>
+<div id="g_vtools"><button type="button" class="pbtn" id="g_vdl" disabled title="Download the gridded values as CSV">Download grid</button><div id="g_vleg" class="glg"><span class="msg">Legend appears once a grid is built.</span></div></div>
 <h4>Data</h4>
 <input type="file" id="g_file" accept=".csv,text/csv">
 <details id="g_bh"><summary>Borehole temperatures (AASG/SMU, via NBMG)</summary>
@@ -510,7 +511,7 @@
   function redraw() {
     contourGrp.clearLayers(); ptGrp.clearLayers(); if (boxLayer) { map.removeLayer(boxLayer); boxLayer = null; }
     cv.style.opacity = +$('g_op').value;
-    if (!S.pts.length) { leg.hidden = true; paint(); return; }
+    if (!S.pts.length) { leg.hidden = true; $('g_vdl').disabled = true; $('g_vleg').innerHTML = '<span class="msg">Legend appears once a grid is built.</span>'; paint(); return; }
     S.range = range(); const [lo, hi] = S.range, cm = C.colormap($('g_cmap').value, $('g_rev').checked, +$('g_steps').value);
     paint();
     if (S.grid && $('g_cont').checked) {
@@ -538,14 +539,19 @@
     });
     if ($('g_box').checked && S.ext) boxLayer = L.rectangle([[S.ext.s, S.ext.w], [S.ext.n, S.ext.e]], { color: '#e67e22', weight: 1.5, dashArray: '5 4', fill: false, interactive: false }).addTo(map);
     if ($('g_fill').checked && S.grid) legend(lo, hi, cm); else leg.hidden = true;
+    $('g_vdl').disabled = !S.grid; if (S.grid) drawLegend($('g_vleg'), lo, hi, cm); else $('g_vleg').innerHTML = '<span class="msg">Legend appears once a grid is built.</span>';
+  }
+  function drawLegend(el, lo, hi, cm) {
+    el.innerHTML = '<b>' + $('g_var').value + ($('g_bht').checked ? ' (BHT-corrected)' : '') + '</b><canvas width="200" height="12"></canvas><div class="tk"></div>';
+    const c = el.querySelector('canvas').getContext('2d');
+    for (let x = 0; x < 200; x++) { const k = cm(x / 199); c.fillStyle = 'rgb(' + k.join(',') + ')'; c.fillRect(x, 0, 1, 12); }
+    const tk = el.querySelector('.tk'), st = C.niceStep(hi - lo, 4), fmt = v => (+v.toPrecision(4)).toString();
+    C.contourLevels(lo, hi, st).forEach(v => { const s = document.createElement('span'); s.style.left = (200 * (v - lo) / (hi - lo)) + 'px'; s.textContent = fmt(v); tk.appendChild(s); });
+    return 'range ' + fmt(lo) + ' to ' + fmt(hi);
   }
   function legend(lo, hi, cm) {
-    const steps = +$('g_steps').value; leg.hidden = false; leg.innerHTML = '<b>' + $('g_var').value + ($('g_bht').checked ? ' (BHT-corrected)' : '') + '</b><canvas width="200" height="12"></canvas><div class="tk"></div>';
-    const c = leg.querySelector('canvas').getContext('2d');
-    for (let x = 0; x < 200; x++) { const k = cm(x / 199); c.fillStyle = 'rgb(' + k.join(',') + ')'; c.fillRect(x, 0, 1, 12); }
-    const tk = leg.querySelector('.tk'), st = C.niceStep(hi - lo, 4), fmt = v => (+v.toPrecision(4)).toString();
-    C.contourLevels(lo, hi, st).forEach(v => { const s = document.createElement('span'); s.style.left = (200 * (v - lo) / (hi - lo)) + 'px'; s.textContent = fmt(v); tk.appendChild(s); });
-    leg.title = (steps > 1 ? steps + ' color steps; ' : '') + 'range ' + fmt(lo) + ' to ' + fmt(hi);
+    const steps = +$('g_steps').value; leg.hidden = false;
+    leg.title = (steps > 1 ? steps + ' color steps; ' : '') + drawLegend(leg, lo, hi, cm);
   }
 
   /* wiring */
@@ -597,6 +603,7 @@
   $('g_go').onclick = rebuild;
   $('g_setview').onclick = () => { const b = map.getBounds(); $('g_w').value = b.getWest().toFixed(4); $('g_e').value = b.getEast().toFixed(4); $('g_s').value = b.getSouth().toFixed(4); $('g_n').value = b.getNorth().toFixed(4); $('g_ext').value = 'custom'; if (S.data) rebuild(); };
   $('g_clear').onclick = () => { S.data = null; S.grid = null; S.pts = []; $('g_info').textContent = 'Cleared'; msg(''); try { localStorage.removeItem(KEY); } catch (e) { } redraw(); };
+  $('g_vdl').onclick = () => $('g_exp').click();
   $('g_exp').onclick = () => {
     if (!S.grid) { msg('Nothing to export yet', true); return; }
     const g = S.grid, rows = ['i,j,lon,lat,' + $('g_var').value.replace(/[",]/g, '_')];
