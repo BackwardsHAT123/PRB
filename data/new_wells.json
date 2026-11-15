@@ -515,6 +515,54 @@
 "r": "Unknown",
 "cty": "Converse",
 "sec": "-"
+},
+{
+"d": "2026-11-14",
+"t": "add",
+"a": "49-005-80253",
+"n": "Overtime Fed 4676-35-14-15 MH",
+"o": "Anschutz",
+"s": "Active Permit",
+"f": null,
+"r": "Mowry",
+"cty": "Campbell",
+"sec": "-"
+},
+{
+"d": "2026-11-14",
+"t": "add",
+"a": "49-005-80255",
+"n": "Overtime Fed 4676-35-14-16 MH",
+"o": "Anschutz",
+"s": "Active Permit",
+"f": null,
+"r": "Mowry",
+"cty": "Campbell",
+"sec": "-"
+},
+{
+"d": "2026-11-14",
+"t": "add",
+"a": "49-009-50941",
+"n": "BIGHORN PEAK 3974-21-28-33-1SXH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Sussex",
+"cty": "Converse",
+"sec": "16-39N-74W"
+},
+{
+"d": "2026-11-14",
+"t": "add",
+"a": "49-009-50943",
+"n": "BIGHORN PEAK 3974-21-28-33-2SXH",
+"o": "WRC Energy",
+"s": "Active Permit",
+"f": "Wildcat",
+"r": "Sussex",
+"cty": "Converse",
+"sec": "16-39N-74W"
 }
 ]
 }
