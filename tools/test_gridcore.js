@@ -85,4 +85,9 @@ ok(C.cmpExtent([20,48,30],'age',36) === 36 && C.cmpExtent([20,30],'age',36) === 
   ok(isNaN(C.harrisonBHT(178, 0)) && isNaN(C.harrisonBHT(NaN, 9000)), 'harrison BHT needs depth and temperature');
 }
 ok(C.percentile([1,2,3,4,5],0.5) === 3 && C.percentile([0,10],0.1) === 1 && C.percentile([7],0.9) === 7 && isNaN(C.percentile([],0.5)), 'percentile');
+{ const r = { Max_Temp_F: '180', TEMP_conf: 'MED', Temp_Source: 'manual-check', BLI_conf: 'HIGH' };
+  ok(/confidence: medium/.test(C.confNote('Max_Temp_F', r)) && /source: manual-check/.test(C.confNote('Max_Temp_F', r)), 'confNote temp: confidence and source');
+  ok(/confidence: high/.test(C.confNote('Bottom_Logged_ft', r)) && !/source/.test(C.confNote('Bottom_Logged_ft', r)), 'confNote BLI: confidence only');
+  ok(C.confNote('Foo', { Foo: 1 }) === '' && C.confNote('x', null) === '', 'confNote empty when no columns');
+  ok(!/<script/.test(C.confNote('Max_Temp_F', { TEMP_conf: '', Temp_Source: '<script>' })), 'confNote escapes source'); }
 console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
