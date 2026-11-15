@@ -248,6 +248,18 @@
   /* ---- well comparison helpers (used by the compare-two-wells plot in index.html) ---- */
   /* Colour rule: same operator or same formation -> colour by well; otherwise colour by formation. */
   function cmpMode(a, b) { return (a.oc === b.oc || a.r === b.r) ? 'well' : 'formation'; }
+  /* confidence/source note for an imported point: finds the <field>_conf column that goes with the value column
+     (e.g. Max_Temp_F -> TEMP_conf, Bottom_Logged_ft -> BLI_conf) plus a Temp_Source column, and returns '' when neither is present */
+  const CONFMAP = { max_temp_f: 'temp_conf', bottom_logged_ft: 'bli_conf', time_since_circ_hrs: 'circ_conf', kb_ft: 'kb_conf' };
+  function confNote(varName, row) {
+    if (!row || !varName) return '';
+    const keys = Object.keys(row), lc = k => k.toLowerCase(), v = lc(varName), want = CONFMAP[v] || v.split('_')[0] + '_conf';
+    const ck = keys.find(k => lc(k) === want), sk = /temp/.test(v) ? keys.find(k => lc(k) === 'temp_source') : null;
+    const c = ck ? String(row[ck] || '').trim().toUpperCase() : '', sr = sk ? String(row[sk] || '').trim() : '';
+    if (!c && !sr) return '';
+    const tag = c === 'HIGH' ? 'high' : c === 'MED' ? 'medium' : c === 'LOW' ? 'LOW' : c.toLowerCase();
+    return '<br><span style="opacity:.75">' + [c ? 'confidence: ' + tag : '', sr ? 'source: ' + sr.replace(/[<>&]/g, '') : ''].filter(Boolean).join(' · ') + '</span>';
+  }
   function cmpWhy(a, b) { return a.r === b.r ? 'same formation' : a.oc === b.oc ? 'same operator' : 'different formations'; }
   function cumSeries(arr) { let t = 0; return arr.map(v => (t += (+v || 0))); }
   /* month offset of each series on the x axis: 'age' = months since first production (both start at 0),
@@ -278,7 +290,7 @@
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
     return 3958.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
   }
-  return { cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, cmpExtent, harrisonBHT, percentile, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
+  return { confNote, cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, cmpExtent, harrisonBHT, percentile, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
     niceStep, contourLevels, contours, chainSegments, labelSpots, colormap, PALETTES: Object.keys(STOPS) };
 });
 
@@ -516,7 +528,7 @@
     if ($('g_pts').checked) S.pts.forEach(p => {
       const c = cm((p.z - lo) / (hi - lo));
       L.circleMarker([p.lat, p.lon], { radius: 4, weight: 1, color: isDark() ? '#fff' : '#000', fillColor: 'rgb(' + c.join(',') + ')', fillOpacity: 1 })
-        .bindTooltip((p.id ? p.id + '<br>' : '') + (p.f ? p.f + '<br>' : '') + $('g_var').value + ': ' + (p.raw != null && p.raw !== p.z ? (+p.z.toFixed(1)) + ' (raw ' + p.raw + ')' : p.z)).addTo(ptGrp);
+        .bindTooltip((p.id ? p.id + '<br>' : '') + (p.f ? p.f + '<br>' : '') + $('g_var').value + ': ' + (p.raw != null && p.raw !== p.z ? (+p.z.toFixed(1)) + ' (raw ' + p.raw + ')' : p.z) + C.confNote($('g_var').value, p.row)).addTo(ptGrp);
     });
     labShown = map.getZoom() >= LABZ;
     if ($('g_wlab').checked && $('g_fill').checked && S.grid && labShown) S.pts.forEach(p => {
