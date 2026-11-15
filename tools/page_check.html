@@ -41,6 +41,7 @@ const f=document.getElementById('f');let errs=[];
   const imgs=[...w.document.querySelectorAll('#map img.leaflet-image-layer, .leaflet-geopane-pane img')].filter(i=>/prb_bht/.test(i.src));ok(imgs.length==1,'reference BHT figure overlay is on the map');
   const o=w.document.getElementById('gl_op');o.value=40;o.dispatchEvent(new w.Event('input'));ok(imgs[0]&&Math.abs(+imgs[0].style.opacity-0.4)<0.01,'opacity slider changes the overlay');
   sel.value='';sel.dispatchEvent(new w.Event('change'));await sleep(100);ok(![...w.document.querySelectorAll('img')].some(i=>/prb_bht/.test(i.src)&&i.isConnected),'overlay removed when none selected');}
+ ok(w.document.getElementById('g_cmap').value=='turbo','GRID colour bar defaults to turbo');
  ok(errs.length==0,'no uncaught page errors'+(errs.length?': '+errs.slice(0,2).join('; '):''));
 }catch(e){ok(false,'harness error: '+e.message)}
 document.getElementById('out').textContent='RESULT '+JSON.stringify(res)+' END'})();

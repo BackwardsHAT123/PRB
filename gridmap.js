@@ -372,6 +372,7 @@
 <div class="row2"><button type="button" class="pbtn" id="g_go">Update</button><button type="button" class="pbtn" id="g_exp">Export grid CSV</button><button type="button" class="pbtn" id="g_clear">Clear</button></div>`;
   const $ = id => pop.querySelector('#' + id);
   C.PALETTES.forEach(p => $('g_cmap').add(new Option(p, p)));
+  if (C.PALETTES.includes('turbo')) $('g_cmap').value = 'turbo';   // default colour bar
   ['click', 'dblclick', 'mousedown', 'wheel', 'touchstart'].forEach(ev => { L.DomEvent.on(pop, ev, L.DomEvent.stopPropagation); L.DomEvent.on(btn, ev, L.DomEvent.stopPropagation); });
   btn.onclick = () => { pop.hidden = !pop.hidden; btn.classList.toggle('on', !pop.hidden); };
 
