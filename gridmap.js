@@ -382,7 +382,7 @@
   map.getPane('gridpane').style.pointerEvents = 'none';
   /* Everything interactive below is drawn in the map's own canvas renderer (overlay pane), so clicks on the horizontal wells still reach them */
   const cv = document.createElement('canvas'); cv.style.position = 'absolute'; cv.style.left = cv.style.top = '0'; map.getPane('gridpane').appendChild(cv);
-  const contourGrp = L.layerGroup().addTo(map), ptGrp = L.layerGroup().addTo(map); let boxLayer = null;
+  const contourGrp = L.layerGroup().addTo(map), labGrp = L.layerGroup().addTo(map), ptGrp = L.layerGroup().addTo(map); let boxLayer = null;
 
   function msg(t, err) { const m = $('g_msg'); m.textContent = t || ''; m.className = 'msg' + (err ? ' err' : ''); }
   function fillSelect(sel, opts, val, blank) { sel.innerHTML = ''; if (blank) sel.add(new Option('(none)', '')); opts.forEach(o => sel.add(new Option(o, o))); if (val != null && [...sel.options].some(o => o.value === val)) sel.value = val; }
@@ -507,9 +507,31 @@
       }
     }
   }
+  /* contour labels are placed in screen space: ~LABGAP px apart along a line, sized with the zoom, and never on top of each other */
+  const LABGAP = 300, LABMIN = 70;
+  function drawLabels() {
+    labGrp.clearLayers();
+    if (!S.cl || !S.cl.length || !S.grid) return;
+    const z = map.getZoom(), fs = Math.max(9, Math.min(14, Math.round(8 + (z - 8) * 0.9)));
+    const a = S.proj.inv(S.grid.x0, S.grid.y0), b = S.proj.inv(S.grid.x0 + 10 * S.grid.dx, S.grid.y0), pa = map.latLngToLayerPoint([a[1], a[0]]), pb = map.latLngToLayerPoint([b[1], b[0]]);
+    const k = Math.hypot(pb.x - pa.x, pb.y - pa.y) / (10 * S.grid.dx); if (!(k > 0)) return;   // screen px per grid unit
+    const placed = [];
+    // bold lines first so they win collisions
+    S.cl.slice().sort((p, q) => (q.bold - p.bold)).forEach(c => {
+      const w = (c.txt.length * 0.62 + 0.6) * fs * (c.bold ? 1.1 : 1), h = fs * 1.25, r = Math.max(w, h) / 2 + 6;
+      C.labelSpots(c.chains, LABGAP / k, LABMIN / k).forEach(sp => {
+        const ll = S.proj.inv(sp.x, sp.y), pt = map.latLngToLayerPoint([ll[1], ll[0]]);
+        if (placed.some(q => Math.hypot(q.x - pt.x, q.y - pt.y) < r + q.r)) return;
+        placed.push({ x: pt.x, y: pt.y, r });
+        const deg = (-sp.angle * 180 / Math.PI).toFixed(1);
+        L.marker([ll[1], ll[0]], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'gridclab cl' + (c.bold ? ' b' : ''), iconSize: [0, 0], html: '<span style="display:inline-block;font-size:' + (c.bold ? fs + 1 : fs) + 'px;transform:translate(-50%,-50%) rotate(' + deg + 'deg)">' + c.txt + '</span>' }) }).addTo(labGrp);
+      });
+    });
+  }
+  map.on('zoomend', drawLabels);
   const LABZ = 10; let labShown = false;   // well value labels only from zoom 10 so thousands of points stay readable
   function redraw() {
-    contourGrp.clearLayers(); ptGrp.clearLayers(); if (boxLayer) { map.removeLayer(boxLayer); boxLayer = null; }
+    contourGrp.clearLayers(); labGrp.clearLayers(); S.cl = []; ptGrp.clearLayers(); if (boxLayer) { map.removeLayer(boxLayer); boxLayer = null; }
     cv.style.opacity = +$('g_op').value;
     if (!S.pts.length) { leg.hidden = true; $('g_vdl').disabled = true; $('g_vleg').innerHTML = '<span class="msg">Legend appears once a grid is built.</span>'; paint(); return; }
     S.range = range(); const [lo, hi] = S.range, cm = C.colormap($('g_cmap').value, $('g_rev').checked, +$('g_steps').value);
@@ -521,12 +543,10 @@
         const segs = c.segs.map(s => { const a = S.proj.inv(s[0], s[1]), b = S.proj.inv(s[2], s[3]); return [[a[1], a[0]], [b[1], b[0]]]; });
         const bold = nb > 0 && Math.round(c.level / st) % nb === 0;
         L.polyline(segs, { color: col, weight: bold ? 2.8 : 1.2, opacity: bold ? 1 : 0.85, interactive: false }).addTo(contourGrp);
-        if (lab) C.labelSpots(C.chainSegments(c.segs), 14 * S.grid.dx, 4 * S.grid.dx).forEach(sp => {
-          const ll = S.proj.inv(sp.x, sp.y), deg = (-sp.angle * 180 / Math.PI).toFixed(1);
-          L.marker([ll[1], ll[0]], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'gridclab' + (bold ? ' b' : ''), iconSize: [0, 0], html: '<span style="display:inline-block;transform:translate(-50%,-50%) rotate(' + deg + 'deg)">' + fmtL(c.level) + '</span>' }) }).addTo(contourGrp);
-        });
+        if (lab) S.cl.push({ level: c.level, bold, chains: C.chainSegments(c.segs), txt: fmtL(c.level) });
       });
     }
+    drawLabels();
     if ($('g_pts').checked) S.pts.forEach(p => {
       const c = cm((p.z - lo) / (hi - lo));
       L.circleMarker([p.lat, p.lon], { radius: 4, weight: 1, color: isDark() ? '#fff' : '#000', fillColor: 'rgb(' + c.join(',') + ')', fillOpacity: 1 })
