@@ -112,6 +112,8 @@ for api in apis:
          "Lat": round(ll[1], 6) if ll else "", "Lon": round(ll[0], 6) if ll else "", "Formation": bf.get(str(int(api[3:6]) * 100000 + int(api[7:])), "")}
     for col, conf in (("KB_ft", "KB_conf"), ("Bottom_Logged_ft", "BLI_conf"), ("Time_Since_Circ_hrs", "CIRC_conf"), ("Max_Temp_F", "TEMP_conf")):
         v, c = best(g, col, conf); d[col] = v; d[conf] = c
+    try: d["TD_Header_ft"] = int(float(g[0]["State_TD"]))   # the TD from the state's well-header record (scanned log-header depths were tried and dropped)
+    except ValueError: d["TD_Header_ft"] = ""
     d["Temp_Source"] = next((r["Temp_Source"] for r in g if r["Max_Temp_F"] == d["Max_Temp_F"] and r.get("Temp_Source")), "")
     out.append(d)
 with open(a.out, "w", newline="") as w:
