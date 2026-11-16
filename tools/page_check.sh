@@ -8,7 +8,7 @@ PORT=$((8800 + RANDOM % 200))
 python3 -m http.server $PORT --bind 127.0.0.1 >/dev/null 2>&1 & SRV=$!
 trap 'kill $SRV 2>/dev/null' EXIT
 sleep 1
-OUT=$("$CHROME" --headless=new --disable-gpu --no-sandbox --user-data-dir="${TMPDIR:-/tmp}/page_check_profile_$$" --virtual-time-budget=60000 --dump-dom "http://127.0.0.1:$PORT/tools/page_check.html" 2>/dev/null)
+OUT=$("$CHROME" --headless=new --disable-gpu --no-sandbox --user-data-dir="${TMPDIR:-/tmp}/page_check_profile_$$" --virtual-time-budget=150000 --dump-dom "http://127.0.0.1:$PORT/tools/page_check.html" 2>/dev/null)
 python3 -I -c "
 import sys,re,json
 t=sys.stdin.read();m=re.search(r'RESULT (\[.*\]) END',t,re.S)

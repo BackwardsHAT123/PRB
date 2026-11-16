@@ -82,6 +82,7 @@ ok(Math.abs(C.milesBetween(-105.5, 43.5, -105.5, 44.5) - 69.1) < 0.3 && C.milesB
 ok(C.cmpExtent([20,48,30],'age',36) === 36 && C.cmpExtent([20,30],'age',36) === 30 && C.cmpExtent([20,48],'date',36) === 48, 'compare: axis capped at 36 months, else oldest extent');
 { // Harrison BHT correction: 9000 ft = 2743.2 m -> +15.96 C = +28.7 F
   const c = C.harrisonBHT(178, 9000); ok(Math.abs(c - 178 - 28.72) < 0.05, 'harrison BHT 9000 ft (' + (c - 178).toFixed(2) + ' F added)');
+  { const a = C.aapgBHT(90, 10000); ok(Math.abs(a - 90 - 31.6835) < 0.01, 'AAPG BHT 10000 ft (' + (a - 90).toFixed(3) + ' F added)'); ok(Math.abs(C.aapgBHT(150, 5000) - 150 - (-7.972527e-12 * 1.25e11 - 4.406655e-8 * 2.5e7 + 22.402485 - 0.7423103)) < 1e-6, 'AAPG BHT 5000 ft'); ok(isNaN(C.aapgBHT(150, 0)) && isNaN(C.aapgBHT(NaN, 9000)), 'AAPG BHT needs depth and temperature'); }
   ok(isNaN(C.harrisonBHT(178, 0)) && isNaN(C.harrisonBHT(NaN, 9000)), 'harrison BHT needs depth and temperature');
 }
 ok(C.percentile([1,2,3,4,5],0.5) === 3 && C.percentile([0,10],0.1) === 1 && C.percentile([7],0.9) === 7 && isNaN(C.percentile([],0.5)), 'percentile');
