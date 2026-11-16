@@ -275,14 +275,14 @@
   /* Bottom-hole temperature correction of Harrison et al. (Oklahoma Geological Survey). The 1982 conference paper (OSTI 7369499, Harrison, Luza,
      Prater, Cheung, "Geothermal resource assessment in Oklahoma", p. 191-193, Fig. 4) gives it as a CURVE of (equilibrated - bottom-hole temperature,
      degF) against depth (ft), from mud-drilled-well BHTs compared with reliable temperatures; ~0 at 3,000-4,000 ft and as much as 32 degF at
-     10,000 ft; stated valid only for 3,000-10,000 ft (not applied here outside that range by the text, but this function extrapolates).
+     10,000 ft; stated valid only for 3,000-10,000 ft, so this function returns NaN (point left out) outside that range.
      The polynomial below is the curve fit as given on the SMU Geothermal Lab "BHT Calibration" poster (secondary source):
      https://smu.edu/dedman/academics/departments/Earth-Sciences/Research/GeothermalLab/DataMaps/GeothermalMapofNorthAmerica/BHTCallibrationPoster
      dT = -16.51213476 + 0.01826842109 Z - 2.344936959e-6 Z^2, Z in metres, dT in degC, added to the measured BHT. Units checked against the paper:
      +17.4 degC = +31.3 degF at 10,000 ft (paper: ~32 degF) and ~0 at 3,280 ft. Takes and returns degF, depth in feet. Depth-only (no time since
-     circulation); NaN without a usable depth. */
+     circulation); NaN outside 3,000-10,000 ft. */
   function harrisonBHT(tF, depthFt) {
-    if (!(depthFt > 0) || isNaN(tF)) return NaN;
+    if (!(depthFt >= 3000 && depthFt <= 10000) || isNaN(tF)) return NaN;   /* the paper's stated valid range */
     const z = depthFt * 0.3048; return tF + 1.8 * (-16.51213476 + 0.01826842109 * z - 2.344936959e-6 * z * z);
   }
   /* AAPG bottom-hole temperature correction (cubic in total depth, supplied by the user):
@@ -356,7 +356,7 @@
 <div class="row2"><label class="ck"><input type="checkbox" id="g_bhg" class="calc"> Show as a gradient (&deg;F/100 ft)</label><label>Surface temp (&deg;F) <input type="number" id="g_bhts" class="calc" value="68" step="1"></label></div>
 <div class="row2"><label>Depth col (ft) <select id="g_bhtd" class="calc"></select></label><label>If blank, use <select id="g_bhtd2" class="calc"></select></label></div>
 <label>Leave out points shallower than (ft) <input type="number" id="g_bhmin" class="calc" value="5000" min="0" step="500"></label>
-<div class="msg">Gradient: (corrected temperature &minus; surface temperature) / depth &times; 100, using the same depth column. AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (a curve from Oklahoma mud-drilled wells, valid 3,000-10,000 ft, fitted as on the SMU Geothermal Lab BHT calibration poster), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
+<div class="msg">Gradient: (corrected temperature &minus; surface temperature) / depth &times; 100, using the same depth column. AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (a curve from Oklahoma mud-drilled wells, valid 3,000-10,000 ft, fitted as on the SMU Geothermal Lab BHT calibration poster), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out, and with Harrison so are depths outside its valid 3,000-10,000 ft range. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
 </details>
 <div class="row2"><label>Lat col <select id="g_lat" class="calc"></select></label><label>Lon col <select id="g_lon" class="calc"></select></label></div>
 <details id="g_fmd"><summary>Filter by formation <span id="g_fmn"></span></summary>
