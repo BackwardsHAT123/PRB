@@ -285,6 +285,11 @@
     if (!(depthFt > 0) || isNaN(tF)) return NaN;
     const d = depthFt; return -0.000000000007972527 * d * d * d + -0.00000004406655 * d * d + 0.004480497 * d - 0.7423103 + tF;
   }
+  /* temperature gradient in degF per 100 ft from a corrected temperature: (T - surface temperature) / depth * 100; NaN without a usable depth */
+  function gradient100(tF, depthFt, surfF) {
+    if (!(depthFt > 0) || isNaN(tF)) return NaN;
+    return (tF - (isNaN(surfF) ? 68 : surfF)) / depthFt * 100;
+  }
   /* p-th quantile (0..1) of an ascending-sorted array, linear interpolation */
   function percentile(sorted, p) {
     if (!sorted.length) return NaN; const x = (sorted.length - 1) * p, i = Math.floor(x), f = x - i;
@@ -296,7 +301,7 @@
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
     return 3958.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
   }
-  return { confNote, cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, cmpExtent, harrisonBHT, aapgBHT, percentile, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
+  return { confNote, cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, cmpExtent, harrisonBHT, aapgBHT, gradient100, percentile, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
     niceStep, contourLevels, contours, chainSegments, labelSpots, colormap, PALETTES: Object.keys(STOPS) };
 });
 
@@ -342,9 +347,10 @@
 <details id="g_bhd"><summary>Bottom-hole temperature correction <span id="g_bhn"></span></summary>
 <label class="ck"><input type="checkbox" id="g_bht" class="calc"> Correct the variable as a raw bottom-hole temperature (&deg;F)</label>
 <label>Correction <select id="g_bhm" class="calc"><option value="aapg">AAPG (cubic in TD)</option><option value="harrison">Harrison et al. 1983 (depth)</option></select></label>
+<div class="row2"><label class="ck"><input type="checkbox" id="g_bhg" class="calc"> Show as a gradient (&deg;F/100 ft)</label><label>Surface temp (&deg;F) <input type="number" id="g_bhts" class="calc" value="68" step="1"></label></div>
 <div class="row2"><label>Depth col (ft) <select id="g_bhtd" class="calc"></select></label><label>If blank, use <select id="g_bhtd2" class="calc"></select></label></div>
 <label>Leave out points shallower than (ft) <input type="number" id="g_bhmin" class="calc" value="5000" min="0" step="500"></label>
-<div class="msg">AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (Oklahoma DST calibration), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
+<div class="msg">Gradient: (corrected temperature &minus; surface temperature) / depth &times; 100, using the same depth column. AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (Oklahoma DST calibration), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
 </details>
 <div class="row2"><label>Lat col <select id="g_lat" class="calc"></select></label><label>Lon col <select id="g_lon" class="calc"></select></label></div>
 <details id="g_fmd"><summary>Filter by formation <span id="g_fmn"></span></summary>
@@ -457,7 +463,7 @@
       if (isNaN(lat) || isNaN(lon) || isNaN(z) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return;
       const f = fc ? (r[fc] || '(blank)') : ''; if (fc && !S.fms.has(f)) return;
       const raw = z;
-      if (bht) { let dp = C.num(r[$('g_bhtd').value]); if (!(dp > 0)) dp = C.num(r[$('g_bhtd2').value]); z = ($('g_bhm').value === 'aapg' ? C.aapgBHT : C.harrisonBHT)(z, dp); if (isNaN(z)) { nodepth++; return; } if (dp < bmin) { nshallow++; return; } }
+      if (bht) { let dp = C.num(r[$('g_bhtd').value]); if (!(dp > 0)) dp = C.num(r[$('g_bhtd2').value]); z = ($('g_bhm').value === 'aapg' ? C.aapgBHT : C.harrisonBHT)(z, dp); if ($('g_bhg').checked) z = C.gradient100(z, dp, +$('g_bhts').value); if (isNaN(z)) { nodepth++; return; } if (dp < bmin) { nshallow++; return; } }
       out.push({ lat, lon, z, raw, f, id: r[S.label] || '', row: r });
     });
     S.nodepth = nodepth; $('g_bhn').textContent = bht ? '(on' + (nodepth ? ', ' + nodepth + ' without depth' : '') + (nshallow ? ', ' + nshallow + ' shallower than ' + bmin + ' ft left out' : '') + ')' : '';
@@ -570,7 +576,7 @@
     $('g_vdl').disabled = !S.grid; if (S.grid) drawLegend($('g_vleg'), lo, hi, cm); else $('g_vleg').innerHTML = '<span class="msg">Legend appears once a grid is built.</span>';
   }
   function drawLegend(el, lo, hi, cm) {
-    el.innerHTML = '<b>' + $('g_var').value + ($('g_bht').checked ? ' (BHT-corrected, ' + ($('g_bhm').value === 'aapg' ? 'AAPG' : 'Harrison') + ')' : '') + '</b><canvas width="200" height="12"></canvas><div class="tk"></div>';
+    el.innerHTML = '<b>' + $('g_var').value + ($('g_bht').checked ? ' (BHT-corrected, ' + ($('g_bhm').value === 'aapg' ? 'AAPG' : 'Harrison') + ($('g_bhg').checked ? ', gradient F/100 ft' : '') + ')' : '') + '</b><canvas width="200" height="12"></canvas><div class="tk"></div>';
     const c = el.querySelector('canvas').getContext('2d');
     for (let x = 0; x < 200; x++) { const k = cm(x / 199); c.fillStyle = 'rgb(' + k.join(',') + ')'; c.fillRect(x, 0, 1, 12); }
     const tk = el.querySelector('.tk'), st = C.niceStep(hi - lo, 4), fmt = v => (+v.toPrecision(4)).toString();
