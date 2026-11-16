@@ -341,7 +341,7 @@
 <label>Variable to grid <select id="g_var" class="calc"></select></label>
 <details id="g_bhd"><summary>Bottom-hole temperature correction <span id="g_bhn"></span></summary>
 <label class="ck"><input type="checkbox" id="g_bht" class="calc"> Correct the variable as a raw bottom-hole temperature (&deg;F)</label>
-<label>Correction <select id="g_bhm" class="calc"><option value="harrison">Harrison et al. 1983 (depth)</option><option value="aapg">AAPG (cubic in TD)</option></select></label>
+<label>Correction <select id="g_bhm" class="calc"><option value="aapg">AAPG (cubic in TD)</option><option value="harrison">Harrison et al. 1983 (depth)</option></select></label>
 <div class="row2"><label>Depth col (ft) <select id="g_bhtd" class="calc"></select></label><label>If blank, use <select id="g_bhtd2" class="calc"></select></label></div>
 <label>Leave out points shallower than (ft) <input type="number" id="g_bhmin" class="calc" value="5000" min="0" step="500"></label>
 <div class="msg">AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (Oklahoma DST calibration), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
@@ -434,7 +434,7 @@
     const pref = nc.find(h => /temp/i.test(h)) || nc[0];
     fillSelect($('g_var'), nc, nc.includes(keep) ? keep : pref);
     const k1 = $('g_bhtd').value, k2 = $('g_bhtd2').value;
-    fillSelect($('g_bhtd'), nc, nc.includes(k1) ? k1 : (nc.find(h => /bottom_?logged|bli/i.test(h)) || nc.find(h => /td/i.test(h)) || nc[0]));
+    fillSelect($('g_bhtd'), nc, nc.includes(k1) ? k1 : (($('g_bhm').value === 'aapg' && (nc.find(h => /^td_?header/i.test(h)) || nc.find(h => /^td(_ft)?$/i.test(h)))) || nc.find(h => /bottom_?logged|bli/i.test(h)) || nc.find(h => /td/i.test(h)) || nc[0]));
     fillSelect($('g_bhtd2'), nc, nc.includes(k2) ? k2 : (nc.find(h => /state_?td|^td|depth/i.test(h)) || nc[0]));
   }
   function refreshFms(all) {

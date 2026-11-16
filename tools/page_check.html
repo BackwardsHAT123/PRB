@@ -44,8 +44,8 @@ const f=document.getElementById('f');let errs=[];
  ok(w.document.getElementById('g_cmap').value=='turbo','GRID colour bar defaults to turbo');
  {const gp=w.document.getElementById('gridpop');ok(!!w.document.getElementById('g_vdl')&&w.document.getElementById('g_vdl').disabled,'wells layer item has a Download grid button (disabled before data)');
   let csv='API,Lat,Lon,Bottom_Logged_ft,Max_Temp_F\n';for(let i=0;i<120;i++)csv+='a'+i+','+(43.5+0.05*(i%10))+','+(-105.6+0.05*Math.floor(i/10))+','+(i==0?3081:10000)+','+(150+(i%10)*6+Math.floor(i/10)*4+((i*7)%5))+'\n';
-  const dt=new w.DataTransfer();dt.items.add(new w.File([csv],'t.csv',{type:'text/csv'}));const fi=w.document.getElementById('g_file');fi.files=dt.files;ok(fi.files.length==1,'test file attached ('+fi.files.length+')');try{fi.onchange({target:fi});await sleep(500)}catch(e){ok(false,'onchange threw '+e)}
-  for(let i=0;i<30&&w.document.getElementById('g_vdl').disabled;i++)await sleep(200);
+  const dt=new w.DataTransfer();dt.items.add(new w.File([csv],'t.csv',{type:'text/csv'}));const fi=w.document.getElementById('g_file');fi.files=dt.files;ok(fi.files.length==1,'test file attached ('+fi.files.length+')');try{fi.onchange({target:fi});await fi.files[0].text();await sleep(500)}catch(e){ok(false,'onchange threw '+e)}
+  for(let i=0;i<100&&w.document.getElementById('g_vdl').disabled;i++)await sleep(200);
   ok(!w.document.getElementById('g_vdl').disabled,'Download grid enables once a grid is built');
   ok(!!w.document.querySelector('#g_vleg canvas')&&/Max_Temp_F/.test(w.document.getElementById('g_vleg').textContent),'legend shows in the wells layer item');
   let got=null;const oc=w.URL.createObjectURL;w.URL.createObjectURL=b=>{got=b;return 'blob:x'};w.document.getElementById('g_vdl').click();await sleep(100);w.URL.createObjectURL=oc;
@@ -62,9 +62,11 @@ const f=document.getElementById('f');let errs=[];
   ok(/1 shallower than 5000 ft left out/.test(w.document.getElementById('g_bhn').textContent),'BHT correction leaves out points shallower than the depth limit ('+w.document.getElementById('g_bhn').textContent+')');
   const m=w.document.getElementById('g_bhmin');m.value=0;m.dispatchEvent(new w.Event('input',{bubbles:true}));await sleep(500);
   ok(!/shallower/.test(w.document.getElementById('g_bhn').textContent),'depth limit 0 keeps all points');
-  const mm=w.document.getElementById('g_bhm');ok(!!mm&&mm.value=='harrison'&&typeof G.aapgBHT=='function','GRID offers Harrison and AAPG corrections');
-  mm.value='aapg';mm.dispatchEvent(new w.Event('change',{bubbles:true}));await sleep(600);
-  ok(/AAPG/.test(w.document.getElementById('g_vleg').textContent+w.document.getElementById('gridlegend').textContent),'legend names the AAPG correction');}
+  const mm=w.document.getElementById('g_bhm');ok(!!mm&&mm.value=='aapg'&&typeof G.aapgBHT=='function'&&mm.options.length==2,'GRID offers AAPG (default) and Harrison corrections');
+  await sleep(300);const lg=()=>w.document.getElementById('g_vleg').textContent+w.document.getElementById('gridlegend').textContent;
+  ok(/AAPG/.test(lg()),'legend names the AAPG correction (default)');
+  mm.value='harrison';mm.dispatchEvent(new w.Event('change',{bubbles:true}));await sleep(600);
+  ok(/Harrison/.test(lg()),'legend names the Harrison correction when chosen');}
  ok(errs.length==0,'no uncaught page errors'+(errs.length?': '+errs.slice(0,2).join('; '):''));
 }catch(e){ok(false,'harness error: '+e.message)}
 document.getElementById('out').textContent='RESULT '+JSON.stringify(res)+' END'})();
