@@ -272,9 +272,12 @@
   function cmpOffsets(sa, sb, xmode) { return cmpOffsetsN([sa, sb], xmode); }
   /* x-axis length in months for the compare chart: the oldest producer's extent, capped (age axis only) */
   function cmpExtent(lens, xmode, cap) { const m = Math.max(...lens); return xmode === 'age' ? Math.min(cap, m) : m; }
-  /* Bottom-hole temperature correction after Harrison et al. (1983, Oklahoma Geological Survey SP 83-1; AAPG-type correction):
-     dT(degC) = -16.51213476 + 0.01826842109 Z - 2.344936959e-6 Z^2, Z = depth in metres, added to the measured BHT.
-     Takes and returns degF, depth in feet. Depth-only (it does not use time since circulation); NaN without a usable depth. */
+  /* Bottom-hole temperature correction attributed to Harrison et al. (1983), derived mostly from drill-stem temperatures in Oklahoma.
+     Source of the coefficients: the SMU Geothermal Lab "BHT Calibration" poster (secondary source; the original 1983 paper was not consulted):
+     https://smu.edu/dedman/academics/departments/Earth-Sciences/Research/GeothermalLab/DataMaps/GeothermalMapofNorthAmerica/BHTCallibrationPoster
+     dT = -16.51213476 + 0.01826842109 Z - 2.344936959e-6 Z^2, added to the measured BHT. The poster text gives Z only as "depth"; metres in and
+     degC out are assumed here (plausible: +28.7 F at 9,000 ft). Takes and returns degF, depth in feet. Depth-only (it does not use time since
+     circulation); NaN without a usable depth. */
   function harrisonBHT(tF, depthFt) {
     if (!(depthFt > 0) || isNaN(tF)) return NaN;
     const z = depthFt * 0.3048; return tF + 1.8 * (-16.51213476 + 0.01826842109 * z - 2.344936959e-6 * z * z);
@@ -350,7 +353,7 @@
 <div class="row2"><label class="ck"><input type="checkbox" id="g_bhg" class="calc"> Show as a gradient (&deg;F/100 ft)</label><label>Surface temp (&deg;F) <input type="number" id="g_bhts" class="calc" value="68" step="1"></label></div>
 <div class="row2"><label>Depth col (ft) <select id="g_bhtd" class="calc"></select></label><label>If blank, use <select id="g_bhtd2" class="calc"></select></label></div>
 <label>Leave out points shallower than (ft) <input type="number" id="g_bhmin" class="calc" value="5000" min="0" step="500"></label>
-<div class="msg">Gradient: (corrected temperature &minus; surface temperature) / depth &times; 100, using the same depth column. AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (Oklahoma DST calibration), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
+<div class="msg">Gradient: (corrected temperature &minus; surface temperature) / depth &times; 100, using the same depth column. AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (coefficients from the SMU Geothermal Lab BHT calibration poster; derived mostly from Oklahoma drill-stem tests), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
 </details>
 <div class="row2"><label>Lat col <select id="g_lat" class="calc"></select></label><label>Lon col <select id="g_lon" class="calc"></select></label></div>
 <details id="g_fmd"><summary>Filter by formation <span id="g_fmn"></span></summary>
