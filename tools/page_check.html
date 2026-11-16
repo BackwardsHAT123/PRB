@@ -61,7 +61,10 @@ const f=document.getElementById('f');let errs=[];
   const bd=w.document.getElementById('g_bhtd');bd.value='Bottom_Logged_ft';bd.dispatchEvent(new w.Event('change',{bubbles:true}));await sleep(500);
   ok(/1 shallower than 5000 ft left out/.test(w.document.getElementById('g_bhn').textContent),'BHT correction leaves out points shallower than the depth limit ('+w.document.getElementById('g_bhn').textContent+')');
   const m=w.document.getElementById('g_bhmin');m.value=0;m.dispatchEvent(new w.Event('input',{bubbles:true}));await sleep(500);
-  ok(!/shallower/.test(w.document.getElementById('g_bhn').textContent),'depth limit 0 keeps all points');}
+  ok(!/shallower/.test(w.document.getElementById('g_bhn').textContent),'depth limit 0 keeps all points');
+  const mm=w.document.getElementById('g_bhm');ok(!!mm&&mm.value=='harrison'&&typeof G.aapgBHT=='function','GRID offers Harrison and AAPG corrections');
+  mm.value='aapg';mm.dispatchEvent(new w.Event('change',{bubbles:true}));await sleep(600);
+  ok(/AAPG/.test(w.document.getElementById('g_vleg').textContent+w.document.getElementById('gridlegend').textContent),'legend names the AAPG correction');}
  ok(errs.length==0,'no uncaught page errors'+(errs.length?': '+errs.slice(0,2).join('; '):''));
 }catch(e){ok(false,'harness error: '+e.message)}
 document.getElementById('out').textContent='RESULT '+JSON.stringify(res)+' END'})();
