@@ -43,13 +43,20 @@ const f=document.getElementById('f');let errs=[];
   sel.value='';sel.dispatchEvent(new w.Event('change'));await sleep(100);ok(![...w.document.querySelectorAll('img')].some(i=>/prb_bht/.test(i.src)&&i.isConnected),'overlay removed when none selected');}
  ok(w.document.getElementById('g_cmap').value=='turbo','GRID colour bar defaults to turbo');
  {const gp=w.document.getElementById('gridpop');ok(!!w.document.getElementById('g_vdl')&&w.document.getElementById('g_vdl').disabled,'wells layer item has a Download grid button (disabled before data)');
-  let csv='API,Lat,Lon,Max_Temp_F\n';for(let i=0;i<30;i++)csv+='a'+i+','+(43.5+0.02*(i%6))+','+(-105.6+0.02*Math.floor(i/6))+','+(150+i*3)+'\n';
+  let csv='API,Lat,Lon,Max_Temp_F\n';for(let i=0;i<120;i++)csv+='a'+i+','+(43.5+0.05*(i%10))+','+(-105.6+0.05*Math.floor(i/10))+','+(150+(i%10)*6+Math.floor(i/10)*4+((i*7)%5))+'\n';
   const dt=new w.DataTransfer();dt.items.add(new w.File([csv],'t.csv',{type:'text/csv'}));const fi=w.document.getElementById('g_file');fi.files=dt.files;ok(fi.files.length==1,'test file attached ('+fi.files.length+')');try{fi.onchange({target:fi});await sleep(500)}catch(e){ok(false,'onchange threw '+e)}
   for(let i=0;i<30&&w.document.getElementById('g_vdl').disabled;i++)await sleep(200);
   ok(!w.document.getElementById('g_vdl').disabled,'Download grid enables once a grid is built');
   ok(!!w.document.querySelector('#g_vleg canvas')&&/Max_Temp_F/.test(w.document.getElementById('g_vleg').textContent),'legend shows in the wells layer item');
   let got=null;const oc=w.URL.createObjectURL;w.URL.createObjectURL=b=>{got=b;return 'blob:x'};w.document.getElementById('g_vdl').click();await sleep(100);w.URL.createObjectURL=oc;
   ok(got&&(await got.text()).split('\n').length>10,'Download grid button exports the grid CSV');}
+ {w.eval('map.setView([43.72,-105.3],9)');await sleep(400);const c=w.document.getElementById('g_cont');c.checked=true;c.dispatchEvent(new w.Event('input',{bubbles:true}));await sleep(500);
+  const labs=[...w.document.querySelectorAll('.gridclab.cl span')];ok(labs.length>=1,'contour labels are drawn ('+labs.length+')');
+  const pts=labs.map(s=>{const r=s.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]});let md=1e9;for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++)md=Math.min(md,Math.hypot(pts[i][0]-pts[j][0],pts[i][1]-pts[j][1]));
+  ok(pts.length<2||md>=25,'contour labels do not overlap (closest '+Math.round(md)+' px)');
+  const fs=labs.length?parseFloat(w.getComputedStyle(labs[0]).fontSize):0;ok(fs>=9&&fs<=15,'contour label size is scaled ('+fs+' px)');
+  const c2=w.document.getElementById('g_clab');c2.checked=false;c2.dispatchEvent(new w.Event('input',{bubbles:true}));await sleep(300);ok(!w.document.querySelector('.gridclab.cl span'),'contour labels switch off');
+  c2.checked=true;c2.dispatchEvent(new w.Event('input',{bubbles:true}));}
  ok(errs.length==0,'no uncaught page errors'+(errs.length?': '+errs.slice(0,2).join('; '):''));
 }catch(e){ok(false,'harness error: '+e.message)}
 document.getElementById('out').textContent='RESULT '+JSON.stringify(res)+' END'})();
