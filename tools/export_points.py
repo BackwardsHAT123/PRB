@@ -137,9 +137,14 @@ for api in apis:
     d["KB_State_ft"] = kbs.get(str(int(api[3:6]) * 100000 + int(api[7:])), "")   # state well-header ELEVKB (the log-header KB_ft above is kept as read)
     try: d["TD_Header_ft"] = int(float(g[0]["State_TD"]))   # the TD from the state's well-header record (scanned log-header depths were tried and dropped)
     except ValueError: d["TD_Header_ft"] = ""
+    try:   # AAPG bottom-hole temperature correction: cubic in TD (ft) plus the BHT (degF); TD = state TD, BHT = Max_Temp_F
+        D = float(d["TD_Header_ft"]); T = float(d["Max_Temp_F"])
+        d["Max_Temp_AAPG_F"] = round(-0.000000000007972527 * D ** 3 + -0.00000004406655 * D ** 2 + 0.004480497 * D - 0.7423103 + T, 1)
+    except ValueError:
+        d["Max_Temp_AAPG_F"] = ""
     d["Temp_Source"] = next((r["Temp_Source"] for r in g if r["Max_Temp_F"] == d["Max_Temp_F"] and r.get("Temp_Source")), "")
     out.append(d)
 with open(a.out, "w", newline="") as w:
     cw = csv.DictWriter(w, fieldnames=list(out[0].keys())); cw.writeheader(); cw.writerows(out)
 n = lambda k: sum(1 for d in out if d[k] != "")
-print(f"{len(out)} wells -> {a.out}; with location {n('Lat')}, formation {n('Formation')}, KB {n('KB_Log_ft')}, BLI {n('Bottom_Logged_ft')}, circ {n('Time_Since_Circ_hrs')}, temp {n('Max_Temp_F')}")
+print(f"{len(out)} wells -> {a.out}; with location {n('Lat')}, formation {n('Formation')}, KB {n('KB_Log_ft')}, BLI {n('Bottom_Logged_ft')}, circ {n('Time_Since_Circ_hrs')}, temp {n('Max_Temp_F')}, AAPG-corrected {n('Max_Temp_AAPG_F')}")
