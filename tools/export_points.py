@@ -141,11 +141,14 @@ for api in apis:
         D = float(d["TD_Header_ft"]); T = float(d["Max_Temp_F"])
         d["Max_Temp_AAPG_F"] = round(-0.000000000007972527 * D ** 3 + -0.00000004406655 * D ** 2 + 0.004480497 * D - 0.7423103 + T, 1)
         d["Gradient_AAPG_F_100ft"] = round((d["Max_Temp_AAPG_F"] - 68) / D * 100, 3)   # (AAPG - 68 F average surface temperature) / TD, per 100 ft
+        A = -0.000000000007972527 * D ** 3 + -0.00000004406655 * D ** 2 + 0.004480497 * D - 0.7423103 + T      # unrounded AAPG temperature
+        grad = (A - 68) / D                                                                                    # unrounded gradient, F per ft
+        d["Subsea_200F_ft"] = round(D - (A - 200) / grad) if grad > 0 else ""   # user's definition: TD - ((AAPG - 200) / temperature gradient), in ft (a depth, as defined)
     except ValueError:
-        d["Max_Temp_AAPG_F"] = ""; d["Gradient_AAPG_F_100ft"] = ""
+        d["Max_Temp_AAPG_F"] = ""; d["Gradient_AAPG_F_100ft"] = ""; d["Subsea_200F_ft"] = ""
     d["Temp_Source"] = next((r["Temp_Source"] for r in g if r["Max_Temp_F"] == d["Max_Temp_F"] and r.get("Temp_Source")), "")
     out.append(d)
 with open(a.out, "w", newline="") as w:
     cw = csv.DictWriter(w, fieldnames=list(out[0].keys())); cw.writeheader(); cw.writerows(out)
 n = lambda k: sum(1 for d in out if d[k] != "")
-print(f"{len(out)} wells -> {a.out}; with location {n('Lat')}, formation {n('Formation')}, KB {n('KB_Log_ft')}, BLI {n('Bottom_Logged_ft')}, circ {n('Time_Since_Circ_hrs')}, temp {n('Max_Temp_F')}, AAPG-corrected {n('Max_Temp_AAPG_F')}, gradient {n('Gradient_AAPG_F_100ft')}")
+print(f"{len(out)} wells -> {a.out}; with location {n('Lat')}, formation {n('Formation')}, KB {n('KB_Log_ft')}, BLI {n('Bottom_Logged_ft')}, circ {n('Time_Since_Circ_hrs')}, temp {n('Max_Temp_F')}, AAPG-corrected {n('Max_Temp_AAPG_F')}, gradient {n('Gradient_AAPG_F_100ft')}, 200F subsea {n('Subsea_200F_ft')}")
