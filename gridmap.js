@@ -336,7 +336,8 @@
 <details id="g_bhd"><summary>Bottom-hole temperature correction <span id="g_bhn"></span></summary>
 <label class="ck"><input type="checkbox" id="g_bht" class="calc"> Correct the variable as a raw bottom-hole temperature (&deg;F)</label>
 <div class="row2"><label>Depth col (ft) <select id="g_bhtd" class="calc"></select></label><label>If blank, use <select id="g_bhtd2" class="calc"></select></label></div>
-<div class="msg">Harrison et al. (1983) depth correction (Oklahoma DST calibration), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out.</div>
+<label>Leave out points shallower than (ft) <input type="number" id="g_bhmin" class="calc" value="5000" min="0" step="500"></label>
+<div class="msg">Harrison et al. (1983) depth correction (Oklahoma DST calibration), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
 </details>
 <div class="row2"><label>Lat col <select id="g_lat" class="calc"></select></label><label>Lon col <select id="g_lon" class="calc"></select></label></div>
 <details id="g_fmd"><summary>Filter by formation <span id="g_fmn"></span></summary>
@@ -443,16 +444,16 @@
     });
   }
   function currentPoints() {
-    const v = $('g_var').value, la = $('g_lat').value, lo = $('g_lon').value, fc = $('g_fmc').value, out = [], bht = $('g_bht').checked; let nodepth = 0;
+    const v = $('g_var').value, la = $('g_lat').value, lo = $('g_lon').value, fc = $('g_fmc').value, out = [], bht = $('g_bht').checked, bmin = +$('g_bhmin').value || 0; let nodepth = 0, nshallow = 0;
     S.data.rows.forEach(r => {
       const lat = C.num(r[la]), lon = C.num(r[lo]); let z = C.num(r[v]);
       if (isNaN(lat) || isNaN(lon) || isNaN(z) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return;
       const f = fc ? (r[fc] || '(blank)') : ''; if (fc && !S.fms.has(f)) return;
       const raw = z;
-      if (bht) { let dp = C.num(r[$('g_bhtd').value]); if (!(dp > 0)) dp = C.num(r[$('g_bhtd2').value]); z = C.harrisonBHT(z, dp); if (isNaN(z)) { nodepth++; return; } }
+      if (bht) { let dp = C.num(r[$('g_bhtd').value]); if (!(dp > 0)) dp = C.num(r[$('g_bhtd2').value]); z = C.harrisonBHT(z, dp); if (isNaN(z)) { nodepth++; return; } if (dp < bmin) { nshallow++; return; } }
       out.push({ lat, lon, z, raw, f, id: r[S.label] || '', row: r });
     });
-    S.nodepth = nodepth; $('g_bhn').textContent = bht ? '(on' + (nodepth ? ', ' + nodepth + ' without depth' : '') + ')' : '';
+    S.nodepth = nodepth; $('g_bhn').textContent = bht ? '(on' + (nodepth ? ', ' + nodepth + ' without depth' : '') + (nshallow ? ', ' + nshallow + ' shallower than ' + bmin + ' ft left out' : '') + ')' : '';
     return out;
   }
   function extent(pts) {
