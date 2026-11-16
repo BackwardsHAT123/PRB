@@ -133,7 +133,7 @@ for api in apis:
     d = {"API": api, "Well_Name": g[0]["Well_Name"], "Operator": g[0]["Operator"], "Spud_Year": g[0]["Spud_Year"], "TD_ft": g[0]["State_TD"],
          "Lat": round(ll[1], 6) if ll else "", "Lon": round(ll[0], 6) if ll else "", "Formation": bf.get(str(int(api[3:6]) * 100000 + int(api[7:])), "")}
     for col, conf in (("KB_ft", "KB_conf"), ("Bottom_Logged_ft", "BLI_conf"), ("Time_Since_Circ_hrs", "CIRC_conf"), ("Max_Temp_F", "TEMP_conf")):
-        v, c = best(g, col, conf); d[col] = v; d[conf] = c
+        v, c = best(g, col, conf); d["KB_Log_ft" if col == "KB_ft" else col] = v; d[conf] = c   # KB_Log_ft = KB read from the log header (KB_State_ft = state well header)
     d["KB_State_ft"] = kbs.get(str(int(api[3:6]) * 100000 + int(api[7:])), "")   # state well-header ELEVKB (the log-header KB_ft above is kept as read)
     try: d["TD_Header_ft"] = int(float(g[0]["State_TD"]))   # the TD from the state's well-header record (scanned log-header depths were tried and dropped)
     except ValueError: d["TD_Header_ft"] = ""
@@ -142,4 +142,4 @@ for api in apis:
 with open(a.out, "w", newline="") as w:
     cw = csv.DictWriter(w, fieldnames=list(out[0].keys())); cw.writeheader(); cw.writerows(out)
 n = lambda k: sum(1 for d in out if d[k] != "")
-print(f"{len(out)} wells -> {a.out}; with location {n('Lat')}, formation {n('Formation')}, KB {n('KB_ft')}, BLI {n('Bottom_Logged_ft')}, circ {n('Time_Since_Circ_hrs')}, temp {n('Max_Temp_F')}")
+print(f"{len(out)} wells -> {a.out}; with location {n('Lat')}, formation {n('Formation')}, KB {n('KB_Log_ft')}, BLI {n('Bottom_Logged_ft')}, circ {n('Time_Since_Circ_hrs')}, temp {n('Max_Temp_F')}")
