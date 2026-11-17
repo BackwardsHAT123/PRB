@@ -663,8 +663,9 @@
   $('g_expp').onclick = () => {
     if (!S.pts || !S.pts.length) { msg('Nothing to export yet', true); return; }
     const q = s => '"' + String(s).replace(/"/g, '""') + '"', v = $('g_var').value, tt = $('g_bhtt').value, f = (x, d) => (x == null || isNaN(x)) ? '' : +x.toFixed(d);
-    const rows = ['id,lat,lon,formation,' + q(v + '_raw') + ',depth_used_ft,' + q(v + '_corrected_' + ($('g_bhm').value)) + ',gradient_F_100ft,' + q('depth_of_' + tt + 'F_ft') + ',gridded_value'];
-    S.pts.forEach(p => { const e = p.extra; rows.push([q(p.id), p.lat.toFixed(6), p.lon.toFixed(6), q(p.f), p.raw, e ? e.depth : '', e ? f(e.corr, 1) : '', e ? f(e.grad, 3) : '', e ? f(e.dtt, 0) : '', f(p.z, 3)].join(',')); });
+    const ac = S.data.headers.find(h => /^api/i.test(h)), a14 = r => { const s = String(r[ac] || '').replace(/\D/g, ''); return s ? s.padEnd(14, '0').slice(0, 14) : ''; };
+    const rows = ['api_14,id,lat,lon,formation,' + q(v + '_raw') + ',depth_used_ft,' + q(v + '_corrected_' + ($('g_bhm').value)) + ',gradient_F_100ft,' + q('depth_of_' + tt + 'F_ft') + ',gridded_value'];
+    S.pts.forEach(p => { const e = p.extra; rows.push([a14(p.row), q(p.id), p.lat.toFixed(6), p.lon.toFixed(6), q(p.f), p.raw, e ? e.depth : '', e ? f(e.corr, 1) : '', e ? f(e.grad, 3) : '', e ? f(e.dtt, 0) : '', f(p.z, 3)].join(',')); });
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })); a.download = 'points_' + v + '.csv'; a.click();
   };
   map.on('zoomstart', () => { cv.style.visibility = 'hidden'; });
