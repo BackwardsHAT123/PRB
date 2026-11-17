@@ -152,7 +152,7 @@ out = []
 for api in apis:
     g = by[api]; ll = loc.get(api)
     lk = lnames.get(str(int(api[3:6]) * 100000 + int(api[7:])), ("", "")); wno = lk[1] or g[0]["Well_Name"]   # state WN; fall back to the readings file's number
-    d = {"API": api, "Lease_Name": lk[0], "Well_No": wno, "Well_Label": (lk[0] + " " + wno).strip(), "Operator": g[0]["Operator"], "Spud_Year": g[0]["Spud_Year"], "TD_ft": g[0]["State_TD"],
+    d = {"API": api, "API_14": re.sub(r"\D", "", api).ljust(14, "0")[:14], "Lease_Name": lk[0], "Well_No": wno, "Well_Label": (lk[0] + " " + wno).strip(), "Operator": g[0]["Operator"], "Spud_Year": g[0]["Spud_Year"], "TD_ft": g[0]["State_TD"],
          "Lat": round(ll[1], 6) if ll else "", "Lon": round(ll[0], 6) if ll else "", "Formation": bf.get(str(int(api[3:6]) * 100000 + int(api[7:])), "")}
     for col, conf in (("KB_ft", "KB_conf"), ("Bottom_Logged_ft", "BLI_conf"), ("Time_Since_Circ_hrs", "CIRC_conf"), ("Max_Temp_F", "TEMP_conf")):
         v, c = best(g, col, conf); d["KB_Log_ft" if col == "KB_ft" else col] = v; d[conf] = c   # KB_Log_ft = KB read from the log header (KB_State_ft = state well header)
