@@ -361,10 +361,10 @@
 <label class="ck"><input type="checkbox" id="g_bht" class="calc"> Correct the variable as a raw bottom-hole temperature (&deg;F)</label>
 <label>Correction <select id="g_bhm" class="calc"><option value="aapg">AAPG (cubic in TD)</option><option value="harrison">Harrison et al. 1983 (depth)</option></select></label>
 <div class="row2"><label class="ck"><input type="checkbox" id="g_bhg" class="calc"> Show as a gradient (&deg;F/100 ft)</label><label>Surface temp (&deg;F) <input type="number" id="g_bhts" class="calc" value="68" step="1"></label></div>
-<div class="row2"><label class="ck"><input type="checkbox" id="g_bhdt" class="calc"> Show depth of temperature (ft)</label><label>Target (&deg;F) <input type="number" id="g_bhtt" class="calc" value="200" step="1"></label></div>
+<div class="row2"><label class="ck"><input type="checkbox" id="g_bhdt" class="calc"> Show depth of temperature (ft)</label><label>Target (&deg;F) <input type="number" id="g_bhtt" class="calc" value="200" step="1"></label><label>Leave out deeper than (ft) <input type="number" id="g_bhdx" class="calc" value="15000" step="500"></label></div>
 <div class="row2"><label>Depth col (ft) <select id="g_bhtd" class="calc"></select></label><label>If blank, use <select id="g_bhtd2" class="calc"></select></label></div>
 <label>Leave out points shallower than (ft) <input type="number" id="g_bhmin" class="calc" value="5000" min="0" step="500"></label>
-<div class="msg">Depth of temperature: TD &minus; (corrected temperature &minus; target) / gradient, gradient = (corrected &minus; surface) / TD (takes precedence over the gradient option). Gradient: (corrected temperature &minus; surface temperature) / depth &times; 100, using the same depth column. AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (a curve from Oklahoma mud-drilled wells, valid 3,000-10,000 ft, fitted as on the SMU Geothermal Lab BHT calibration poster), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out, and with Harrison so are depths outside its valid 3,000-10,000 ft range. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
+<div class="msg">Depth of temperature (values deeper than the trim limit, 15,000 ft by default, are left out; 0 keeps all): TD &minus; (corrected temperature &minus; target) / gradient, gradient = (corrected &minus; surface) / TD (takes precedence over the gradient option). Gradient: (corrected temperature &minus; surface temperature) / depth &times; 100, using the same depth column. AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (a curve from Oklahoma mud-drilled wells, valid 3,000-10,000 ft, fitted as on the SMU Geothermal Lab BHT calibration poster), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out, and with Harrison so are depths outside its valid 3,000-10,000 ft range. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
 </details>
 <div class="row2"><label>Lat col <select id="g_lat" class="calc"></select></label><label>Lon col <select id="g_lon" class="calc"></select></label></div>
 <details id="g_fmd"><summary>Filter by formation <span id="g_fmn"></span></summary>
@@ -471,16 +471,16 @@
     });
   }
   function currentPoints() {
-    const v = $('g_var').value, la = $('g_lat').value, lo = $('g_lon').value, fc = $('g_fmc').value, out = [], bht = $('g_bht').checked, bmin = +$('g_bhmin').value || 0; let nodepth = 0, nshallow = 0;
+    const v = $('g_var').value, la = $('g_lat').value, lo = $('g_lon').value, fc = $('g_fmc').value, out = [], bht = $('g_bht').checked, bmin = +$('g_bhmin').value || 0; let nodepth = 0, nshallow = 0, ntrim = 0;
     S.data.rows.forEach(r => {
       const lat = C.num(r[la]), lon = C.num(r[lo]); let z = C.num(r[v]);
       if (isNaN(lat) || isNaN(lon) || isNaN(z) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return;
       const f = fc ? (r[fc] || '(blank)') : ''; if (fc && !S.fms.has(f)) return;
       const raw = z; let extra = null;
-      if (bht) { let dp = C.num(r[$('g_bhtd').value]); if (!(dp > 0)) dp = C.num(r[$('g_bhtd2').value]); z = ($('g_bhm').value === 'aapg' ? C.aapgBHT : C.harrisonBHT)(z, dp); extra = { corr: z, depth: dp, grad: C.gradient100(z, dp, +$('g_bhts').value), dtt: C.depthAtTemp(z, dp, +$('g_bhts').value, +$('g_bhtt').value) }; if ($('g_bhdt').checked) z = extra.dtt; else if ($('g_bhg').checked) z = extra.grad; if (isNaN(z)) { nodepth++; return; } if (dp < bmin) { nshallow++; return; } }
+      if (bht) { let dp = C.num(r[$('g_bhtd').value]); if (!(dp > 0)) dp = C.num(r[$('g_bhtd2').value]); z = ($('g_bhm').value === 'aapg' ? C.aapgBHT : C.harrisonBHT)(z, dp); extra = { corr: z, depth: dp, grad: C.gradient100(z, dp, +$('g_bhts').value), dtt: C.depthAtTemp(z, dp, +$('g_bhts').value, +$('g_bhtt').value) }; if ($('g_bhdt').checked) { z = extra.dtt; const mx = +$('g_bhdx').value; if (mx > 0 && z > mx) { ntrim++; return; } } else if ($('g_bhg').checked) z = extra.grad; if (isNaN(z)) { nodepth++; return; } if (dp < bmin) { nshallow++; return; } }
       out.push({ lat, lon, z, raw, f, id: r[S.label] || '', row: r, extra });
     });
-    S.nodepth = nodepth; $('g_bhn').textContent = bht ? '(on' + (nodepth ? ', ' + nodepth + ' without depth' : '') + (nshallow ? ', ' + nshallow + ' shallower than ' + bmin + ' ft left out' : '') + ')' : '';
+    S.nodepth = nodepth; $('g_bhn').textContent = bht ? '(on' + (nodepth ? ', ' + nodepth + ' without depth' : '') + (nshallow ? ', ' + nshallow + ' shallower than ' + bmin + ' ft left out' : '') + (ntrim ? ', ' + ntrim + ' deeper than ' + $('g_bhdx').value + ' ft left out' : '') + ')' : '';
     return out;
   }
   function extent(pts) {
