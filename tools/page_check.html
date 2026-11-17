@@ -68,7 +68,8 @@ const f=document.getElementById('f');let errs=[];
   mm.value='harrison';mm.dispatchEvent(new w.Event('change',{bubbles:true}));await sleep(600);
   ok(/Harrison/.test(lg()),'legend names the Harrison correction when chosen');
   mm.value='aapg';mm.dispatchEvent(new w.Event('change',{bubbles:true}));const gg=w.document.getElementById('g_bhg');gg.checked=true;gg.dispatchEvent(new w.Event('input',{bubbles:true}));await sleep(600);
-  ok(!!w.document.getElementById('g_bhts')&&w.document.getElementById('g_bhts').value=='68'&&/gradient/.test(lg()),'gradient option (surface temp 68) shows in the legend');}
+  ok(!!w.document.getElementById('g_bhts')&&w.document.getElementById('g_bhts').value=='68'&&/gradient/.test(lg()),'gradient option (surface temp 68) shows in the legend');
+  {const gd=w.document.getElementById('g_bhdt');gd.checked=true;gd.dispatchEvent(new w.Event('input',{bubbles:true}));await sleep(600);ok(w.document.getElementById('g_bhtt').value=='200'&&/depth of 200 F/.test(lg()),'depth-of-temperature option (200 F) shows in the legend: '+lg().slice(0,140));ok(!!w.document.getElementById('g_expp'),'Export points CSV button exists');gd.checked=false;gd.dispatchEvent(new w.Event('input',{bubbles:true}));}}
  ok(errs.length==0,'no uncaught page errors'+(errs.length?': '+errs.slice(0,2).join('; '):''));
 }catch(e){ok(false,'harness error: '+e.message)}
 document.getElementById('out').textContent='RESULT '+JSON.stringify(res)+' END'})();

@@ -296,6 +296,13 @@
     if (!(depthFt > 0) || isNaN(tF)) return NaN;
     return (tF - (isNaN(surfF) ? 68 : surfF)) / depthFt * 100;
   }
+  /* depth (ft) at which a target temperature is reached, user's definition: D - (T - target) / gradient, gradient = (T - surface) / D
+     (T = corrected temperature at depth D). NaN without a usable depth or a positive gradient. */
+  function depthAtTemp(tF, depthFt, surfF, targetF) {
+    const s = isNaN(surfF) ? 68 : surfF, g = (tF - s) / depthFt;
+    if (!(depthFt > 0) || isNaN(tF) || !(g > 0)) return NaN;
+    return depthFt - (tF - targetF) / g;
+  }
   /* p-th quantile (0..1) of an ascending-sorted array, linear interpolation */
   function percentile(sorted, p) {
     if (!sorted.length) return NaN; const x = (sorted.length - 1) * p, i = Math.floor(x), f = x - i;
@@ -307,7 +314,7 @@
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
     return 3958.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
   }
-  return { confNote, cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, cmpExtent, harrisonBHT, aapgBHT, gradient100, percentile, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
+  return { confNote, cmpMode, cmpWhy, cumSeries, cmpOffsets, cmpOffsetsN, cmpExtent, harrisonBHT, aapgBHT, gradient100, depthAtTemp, percentile, milesBetween, MI, parseCSV, num, detectColumns, numericColumns, makeProj, makeGrid, cx, cy, dedupe, declust, idw, tps, gridPoints, gridStats, sampleGrid,
     niceStep, contourLevels, contours, chainSegments, labelSpots, colormap, PALETTES: Object.keys(STOPS) };
 });
 
@@ -354,9 +361,10 @@
 <label class="ck"><input type="checkbox" id="g_bht" class="calc"> Correct the variable as a raw bottom-hole temperature (&deg;F)</label>
 <label>Correction <select id="g_bhm" class="calc"><option value="aapg">AAPG (cubic in TD)</option><option value="harrison">Harrison et al. 1983 (depth)</option></select></label>
 <div class="row2"><label class="ck"><input type="checkbox" id="g_bhg" class="calc"> Show as a gradient (&deg;F/100 ft)</label><label>Surface temp (&deg;F) <input type="number" id="g_bhts" class="calc" value="68" step="1"></label></div>
+<div class="row2"><label class="ck"><input type="checkbox" id="g_bhdt" class="calc"> Show depth of temperature (ft)</label><label>Target (&deg;F) <input type="number" id="g_bhtt" class="calc" value="200" step="1"></label></div>
 <div class="row2"><label>Depth col (ft) <select id="g_bhtd" class="calc"></select></label><label>If blank, use <select id="g_bhtd2" class="calc"></select></label></div>
 <label>Leave out points shallower than (ft) <input type="number" id="g_bhmin" class="calc" value="5000" min="0" step="500"></label>
-<div class="msg">Gradient: (corrected temperature &minus; surface temperature) / depth &times; 100, using the same depth column. AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (a curve from Oklahoma mud-drilled wells, valid 3,000-10,000 ft, fitted as on the SMU Geothermal Lab BHT calibration poster), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out, and with Harrison so are depths outside its valid 3,000-10,000 ft range. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
+<div class="msg">Depth of temperature: TD &minus; (corrected temperature &minus; target) / gradient, gradient = (corrected &minus; surface) / TD (takes precedence over the gradient option). Gradient: (corrected temperature &minus; surface temperature) / depth &times; 100, using the same depth column. AAPG: the cubic correction in total depth (use a TD column for the depth). Harrison et al. (1983) depth correction (a curve from Oklahoma mud-drilled wells, valid 3,000-10,000 ft, fitted as on the SMU Geothermal Lab BHT calibration poster), added to the measured temperature. It ignores time since circulation, so treat it as a first-order correction. Wells with no depth in either column are left out, and with Harrison so are depths outside its valid 3,000-10,000 ft range. Shallow run-1 readings (surface-hole runs) are not formation temperatures, so points above the depth limit are left out too; set 0 to keep them.</div>
 </details>
 <div class="row2"><label>Lat col <select id="g_lat" class="calc"></select></label><label>Lon col <select id="g_lon" class="calc"></select></label></div>
 <details id="g_fmd"><summary>Filter by formation <span id="g_fmn"></span></summary>
@@ -390,7 +398,7 @@
 <label class="ck"><input type="checkbox" id="g_wlab" class="disp" checked> Show well values (when grid shown, zoom 10+)</label>
 <label class="ck"><input type="checkbox" id="g_box" class="disp"> Show extent box</label>
 <div class="msg" id="g_msg"></div>
-<div class="row2"><button type="button" class="pbtn" id="g_go">Update</button><button type="button" class="pbtn" id="g_exp">Export grid CSV</button><button type="button" class="pbtn" id="g_clear">Clear</button></div>`;
+<div class="row2"><button type="button" class="pbtn" id="g_go">Update</button><button type="button" class="pbtn" id="g_exp">Export grid CSV</button><button type="button" class="pbtn" id="g_expp" title="Per-point values: raw, corrected temperature, gradient and depth of the target temperature">Export points CSV</button><button type="button" class="pbtn" id="g_clear">Clear</button></div>`;
   const $ = id => pop.querySelector('#' + id);
   C.PALETTES.forEach(p => $('g_cmap').add(new Option(p, p)));
   if (C.PALETTES.includes('turbo')) $('g_cmap').value = 'turbo';   // default colour bar
@@ -468,9 +476,9 @@
       const lat = C.num(r[la]), lon = C.num(r[lo]); let z = C.num(r[v]);
       if (isNaN(lat) || isNaN(lon) || isNaN(z) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return;
       const f = fc ? (r[fc] || '(blank)') : ''; if (fc && !S.fms.has(f)) return;
-      const raw = z;
-      if (bht) { let dp = C.num(r[$('g_bhtd').value]); if (!(dp > 0)) dp = C.num(r[$('g_bhtd2').value]); z = ($('g_bhm').value === 'aapg' ? C.aapgBHT : C.harrisonBHT)(z, dp); if ($('g_bhg').checked) z = C.gradient100(z, dp, +$('g_bhts').value); if (isNaN(z)) { nodepth++; return; } if (dp < bmin) { nshallow++; return; } }
-      out.push({ lat, lon, z, raw, f, id: r[S.label] || '', row: r });
+      const raw = z; let extra = null;
+      if (bht) { let dp = C.num(r[$('g_bhtd').value]); if (!(dp > 0)) dp = C.num(r[$('g_bhtd2').value]); z = ($('g_bhm').value === 'aapg' ? C.aapgBHT : C.harrisonBHT)(z, dp); extra = { corr: z, depth: dp, grad: C.gradient100(z, dp, +$('g_bhts').value), dtt: C.depthAtTemp(z, dp, +$('g_bhts').value, +$('g_bhtt').value) }; if ($('g_bhdt').checked) z = extra.dtt; else if ($('g_bhg').checked) z = extra.grad; if (isNaN(z)) { nodepth++; return; } if (dp < bmin) { nshallow++; return; } }
+      out.push({ lat, lon, z, raw, f, id: r[S.label] || '', row: r, extra });
     });
     S.nodepth = nodepth; $('g_bhn').textContent = bht ? '(on' + (nodepth ? ', ' + nodepth + ' without depth' : '') + (nshallow ? ', ' + nshallow + ' shallower than ' + bmin + ' ft left out' : '') + ')' : '';
     return out;
@@ -582,7 +590,7 @@
     $('g_vdl').disabled = !S.grid; if (S.grid) drawLegend($('g_vleg'), lo, hi, cm); else $('g_vleg').innerHTML = '<span class="msg">Legend appears once a grid is built.</span>';
   }
   function drawLegend(el, lo, hi, cm) {
-    el.innerHTML = '<b>' + $('g_var').value + ($('g_bht').checked ? ' (BHT-corrected, ' + ($('g_bhm').value === 'aapg' ? 'AAPG' : 'Harrison') + ($('g_bhg').checked ? ', gradient F/100 ft' : '') + ')' : '') + '</b><canvas width="200" height="12"></canvas><div class="tk"></div>';
+    el.innerHTML = '<b>' + $('g_var').value + ($('g_bht').checked ? ' (BHT-corrected, ' + ($('g_bhm').value === 'aapg' ? 'AAPG' : 'Harrison') + ($('g_bhdt').checked ? ', depth of ' + $('g_bhtt').value + ' F, ft' : $('g_bhg').checked ? ', gradient F/100 ft' : '') + ')' : '') + '</b><canvas width="200" height="12"></canvas><div class="tk"></div>';
     const c = el.querySelector('canvas').getContext('2d');
     for (let x = 0; x < 200; x++) { const k = cm(x / 199); c.fillStyle = 'rgb(' + k.join(',') + ')'; c.fillRect(x, 0, 1, 12); }
     const tk = el.querySelector('.tk'), st = C.niceStep(hi - lo, 4), fmt = v => (+v.toPrecision(4)).toString();
@@ -650,6 +658,13 @@
     const g = S.grid, rows = ['i,j,lon,lat,' + $('g_var').value.replace(/[",]/g, '_')];
     for (let j = 0; j < g.ny; j++) for (let i = 0; i < g.nx; i++) { const z = g.z[j * g.nx + i]; if (isNaN(z)) continue; const ll = S.proj.inv(C.cx(g, i), C.cy(g, j)); rows.push([i, j, ll[0].toFixed(6), ll[1].toFixed(6), +z.toPrecision(6)].join(',')); }
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })); a.download = 'grid_' + $('g_var').value + '.csv'; a.click();
+  };
+  $('g_expp').onclick = () => {
+    if (!S.pts || !S.pts.length) { msg('Nothing to export yet', true); return; }
+    const q = s => '"' + String(s).replace(/"/g, '""') + '"', v = $('g_var').value, tt = $('g_bhtt').value, f = (x, d) => (x == null || isNaN(x)) ? '' : +x.toFixed(d);
+    const rows = ['id,lat,lon,formation,' + q(v + '_raw') + ',depth_used_ft,' + q(v + '_corrected_' + ($('g_bhm').value)) + ',gradient_F_100ft,' + q('depth_of_' + tt + 'F_ft') + ',gridded_value'];
+    S.pts.forEach(p => { const e = p.extra; rows.push([q(p.id), p.lat.toFixed(6), p.lon.toFixed(6), q(p.f), p.raw, e ? e.depth : '', e ? f(e.corr, 1) : '', e ? f(e.grad, 3) : '', e ? f(e.dtt, 0) : '', f(p.z, 3)].join(',')); });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })); a.download = 'points_' + v + '.csv'; a.click();
   };
   map.on('zoomstart', () => { cv.style.visibility = 'hidden'; });
   map.on('zoomend', () => { if ((map.getZoom() >= LABZ) !== labShown && S.pts.length) redraw(); });
