@@ -80,6 +80,26 @@ def state_kb(path):
     return res
 
 
+def lease_names(path):
+    """Lease/unit name (UNIT_LEASE) and well number (WN) per well from the state well-header DBF."""
+    f = open(path, "rb"); h = f.read(32); n, hl, rl = struct.unpack("<IHH", h[4:12]); fl = []
+    while True:
+        d = f.read(32)
+        if d[0] == 0x0D: break
+        fl.append((d[:11].split(b"\0")[0].decode(), d[16]))
+    off, o = {}, 1
+    for nm, ln in fl: off[nm] = (o, ln); o += ln
+    f.seek(hl); res = {}
+    for _ in range(n):
+        r = f.read(rl)
+        g = lambda k: r[off[k][0]:off[k][0] + off[k][1]].decode("latin-1").strip() if k in off else ""
+        try:
+            res[str(int(round(float(g("APINO")))))] = (re.sub(r"\s+", " ", g("UNIT_LEASE")), g("WN"))
+        except ValueError:
+            pass
+    return res
+
+
 def botform(path):
     f = open(path, "rb"); h = f.read(32); n, hl, rl = struct.unpack("<IHH", h[4:12]); fl = []
     while True:
@@ -106,6 +126,7 @@ apis = sorted(by)
 loc = {}
 bf = botform(a.dbf) if a.dbf else {}
 kbs = state_kb(a.dbf) if a.dbf else {}
+lnames = lease_names(a.dbf) if a.dbf else {}
 if a.dbf:      # the state well-header DBF carries the same surface lat/lon as the WFS layer, so use it first (fast, no server load)
     dc = dbf_coords(a.dbf)
     for api in apis:
@@ -130,7 +151,8 @@ def best(group, col, conf):
 out = []
 for api in apis:
     g = by[api]; ll = loc.get(api)
-    d = {"API": api, "Well_Name": g[0]["Well_Name"], "Operator": g[0]["Operator"], "Spud_Year": g[0]["Spud_Year"], "TD_ft": g[0]["State_TD"],
+    lk = lnames.get(str(int(api[3:6]) * 100000 + int(api[7:])), ("", "")); wno = lk[1] or g[0]["Well_Name"]   # state WN; fall back to the readings file's number
+    d = {"API": api, "Lease_Name": lk[0], "Well_No": wno, "Well_Label": (lk[0] + " " + wno).strip(), "Operator": g[0]["Operator"], "Spud_Year": g[0]["Spud_Year"], "TD_ft": g[0]["State_TD"],
          "Lat": round(ll[1], 6) if ll else "", "Lon": round(ll[0], 6) if ll else "", "Formation": bf.get(str(int(api[3:6]) * 100000 + int(api[7:])), "")}
     for col, conf in (("KB_ft", "KB_conf"), ("Bottom_Logged_ft", "BLI_conf"), ("Time_Since_Circ_hrs", "CIRC_conf"), ("Max_Temp_F", "TEMP_conf")):
         v, c = best(g, col, conf); d["KB_Log_ft" if col == "KB_ft" else col] = v; d[conf] = c   # KB_Log_ft = KB read from the log header (KB_State_ft = state well header)

@@ -35,7 +35,7 @@
       lat: pick(headers, [/^lat(itude)?$/i, /^shl[_ ]?lat/i, /lat/i, /^y$/i]),
       lon: pick(headers, [/^lon(g|gitude)?$/i, /^shl[_ ]?lon/i, /lon/i, /^x$/i]),
       fm: pick(headers, [/^botform$/i, /^formation$/i, /^fm$/i, /form/i]),
-      label: pick(headers, [/^api/i, /well/i, /^name$/i, /^id$/i])
+      label: pick(headers, [/well_?label/i, /^api/i, /well/i, /^name$/i, /^id$/i])
     };
   }
   function numericColumns(rows, headers, skip) {
