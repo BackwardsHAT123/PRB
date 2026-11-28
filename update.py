@@ -182,11 +182,21 @@ def build_wells(log):
         log(f"state layer, {cname}: {len(cw)} horizontal wells")
     log(f"state layer total: {len(wells)} horizontal wells, {len(tracks)} tracks")
     cache = json.load(open(HEADERS)) if os.path.exists(HEADERS) else {}
-    stale = [w["properties"]["PKey"] for w in wells
-             if w["properties"]["PKey"] not in cache
-             or cache[w["properties"]["PKey"]].get("Well Status") != w["properties"]["WellStatus"]
-             or cache[w["properties"]["PKey"]].get("Well Status") in ("Active Permit", "Well Spudded")]
-    log(f"headers to fetch: {len(stale)} (new, status changed, or still permit/spud)")
+    # Permit/spud wells whose status has not changed are rechecked every other day (half each day, by PKey parity),
+    # so the run fits in the 30-minute limit (Tom, Nov 28 2026). New and status-changed wells are fetched every day.
+    day = datetime.date.today().toordinal() % 2
+    stale, skipped = [], 0
+    for w in wells:
+        k, st = w["properties"]["PKey"], w["properties"]["WellStatus"]
+        c = cache.get(k)
+        if c is None or c.get("Well Status") != st:
+            stale.append(k)
+        elif c.get("Well Status") in ("Active Permit", "Well Spudded"):
+            if int(re.sub(r"\D", "", k) or 0) % 2 == day:
+                stale.append(k)
+            else:
+                skipped += 1
+    log(f"headers to fetch: {len(stale)} (new, status changed, or permit/spud due today; {skipped} permit/spud left for tomorrow)")
     with cf.ThreadPoolExecutor(4) as ex:
         for k, d in ex.map(fetch_header, stale):
             if d.get("API Number"):
